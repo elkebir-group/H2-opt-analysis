@@ -31,4 +31,4 @@ uv run python -m h2opt_analysis.launch --jobs 8 --threads 1 --log-dir results/so
 | `scripts/sorghum/train_h2opt.py --fold k` | linear H2-opt for genotype fold k (paper settings) |
 | `scripts/sorghum/train_h2opt_lbfgs.py --fold k` | linear H2-opt trained to convergence with L-BFGS (ridge and stopping tuned on inner validation) |
 | `scripts/sorghum/evaluate_heritability.py [--paper \| --lbfgs]` | train/test heritability of H2-opt, PCA, genetic PCA, LDA, PCH and max features |
-| `scripts/sorghum/gwas.py --paper --fold k [--legacy --compare]` | GEMMA GWAS of the per-line trait means (intercept + 5 genotype PCs); `--legacy` reproduces the paper's GWAS exactly |
+| `scripts/sorghum/gwas.py --paper --fold k` | GEMMA GWAS of the per-line trait means (intercept + 5 genotype PCs) |

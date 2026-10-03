@@ -35,23 +35,15 @@ def line_names():
     return np.array([first[f] for f in np.loadtxt(f'{GENOTYPES}.fam', dtype=str, usecols=0)])
 
 
-def line_phenotypes(Y, genotypes, legacy=False):
+def line_phenotypes(Y, genotypes):
     """Per-line phenotypes for GWAS, in .fam order: the mean of each standardized trait over the plants of the line.
-    Lines without plants get NaN. legacy reproduces the paper's GWAS: each trait standardized over plants and clipped
-    to [-2, 2] in its own precision (float32 for the paper's traits), means truncated to 6 characters, and lines
-    without plants given 0."""
-    Y = np.asarray(Y).reshape(len(Y), -1)
-    if not legacy:
-        Y = Y.astype(np.float64)
+    Lines without plants get NaN."""
+    Y = np.asarray(Y, dtype=np.float64).reshape(len(Y), -1)
+    Y = (Y - Y.mean(axis=0)) / Y.std(axis=0)
     names = line_names()
-    plants = [np.flatnonzero(genotypes == name) for name in names]
-    out = np.full((len(names), Y.shape[1]), 0.0 if legacy else np.nan)
-    for t in range(Y.shape[1]):
-        y = Y[:, t] - np.mean(Y[:, t])
-        y = y / np.mean(y ** 2) ** 0.5
-        if legacy:
-            y = np.clip(y, -2, 2)
-        for i, rows in enumerate(plants):
-            if len(rows):
-                out[i, t] = float(str(np.mean(y[rows]))[:6]) if legacy else np.mean(y[rows])
+    out = np.full((len(names), Y.shape[1]), np.nan)
+    for i, name in enumerate(names):
+        plants = genotypes == name
+        if plants.any():
+            out[i] = Y[plants].mean(axis=0)
     return out
