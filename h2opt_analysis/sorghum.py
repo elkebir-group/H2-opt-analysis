@@ -38,24 +38,27 @@ def folds(genotypes, seed=0):
 GENOTYPES = data('software', 'data', 'WEST_original')  # PLINK set of the 836 sequenced lines
 
 
-def line_names():
-    """Name, as in the genotype labels, of each line of the genotype .fam file (the first synonym in the name key)."""
+def line_accessions():
+    """Accessions (genotype labels of the plants) of each line of the genotype .fam file, in .fam order.
+
+    From nameKey_corrected.tsv, which follows Supplemental Table S1 of Ferguson et al. (2021): 8 sequenced lines
+    stand for several field accessions each (2-7, of the same landrace), all assigned the line's genotype."""
     key = np.loadtxt(data('software', 'data', 'nameKey_corrected.tsv'), dtype=str, delimiter='\t', skiprows=1)
-    first = {}
+    accessions = {}
     for fam_id, _, name in key:
-        first.setdefault(fam_id, name.replace(' ', ''))
-    return np.array([first[f] for f in np.loadtxt(f'{GENOTYPES}.fam', dtype=str, usecols=0)])
+        accessions.setdefault(fam_id, []).append(name.replace(' ', ''))
+    return [accessions[f] for f in np.loadtxt(f'{GENOTYPES}.fam', dtype=str, usecols=0)]
 
 
 def line_phenotypes(Y, genotypes):
-    """Per-line phenotypes for GWAS, in .fam order: the mean of each standardized trait over the plants of the line.
-    Lines without plants get NaN."""
+    """Per-line phenotypes for GWAS, in .fam order: the mean of each standardized trait over the plants of all
+    accessions of the line. Lines without plants get NaN."""
     Y = np.asarray(Y, dtype=np.float64).reshape(len(Y), -1)
     Y = (Y - Y.mean(axis=0)) / Y.std(axis=0)
-    names = line_names()
-    out = np.full((len(names), Y.shape[1]), np.nan)
-    for i, name in enumerate(names):
-        plants = genotypes == name
+    lines = line_accessions()
+    out = np.full((len(lines), Y.shape[1]), np.nan)
+    for i, accessions in enumerate(lines):
+        plants = np.isin(genotypes, accessions)
         if plants.any():
             out[i] = Y[plants].mean(axis=0)
     return out
