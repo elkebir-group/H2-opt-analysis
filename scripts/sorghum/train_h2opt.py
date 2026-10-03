@@ -4,7 +4,7 @@
 noise up to 0.005, and a penalty of 1e-4 on the total variation of the weights across adjacent wavelengths.
 Writes results/sorghum/h2opt/fold{k}.pt (model) and fold{k}.npz (traits of all plants).
 
-    uv run python scripts/sorghum/train_h2opt.py --fold 0 [--steps 10000] [--traits 10]
+    uv run python scripts/sorghum/train_h2opt.py --fold 0 [--steps 10000] [--traits 10] [--device cuda]
 """
 
 import argparse
@@ -34,6 +34,7 @@ def main():
     parser.add_argument('--steps', type=int, default=10000)
     parser.add_argument('--traits', type=int, default=10)
     parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('--device', default='cpu', help="e.g. 'cuda'")
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
@@ -44,11 +45,11 @@ def main():
     model_file = RESULTS / f'fold{args.fold}.pt'
     model = TraitModels(args.traits, LinearModel, X.shape[1])
     train(model, X, genotypes, environment, train_test, model_file=model_file, n_traits=args.traits,
-          n_iter=args.steps, learning_rate=1e-5, noise_level=0.005, penalty=smoothness_penalty(1e-4))
+          n_iter=args.steps, learning_rate=1e-5, noise_level=0.005, penalty=smoothness_penalty(1e-4), device=args.device)
     torch.save(model, model_file)
 
     with torch.no_grad():
-        traits = model(torch.tensor(X).float()).numpy()
+        traits = model(torch.tensor(X).float().to(args.device)).cpu().numpy()
     np.savez(RESULTS / f'fold{args.fold}.npz', traits=traits)
 
 
