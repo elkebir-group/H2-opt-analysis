@@ -6,6 +6,18 @@ from h2opt import load_npz
 from .paths import data
 
 N_FOLDS = 10
+FIRST_WAVELENGTH = 350  # nm; column j of X is wavelength 350 + j nm
+
+
+def band(X, low, high):
+    """Mean measurement over wavelengths low to high nm (inclusive)."""
+    return X[:, low - FIRST_WAVELENGTH:high - FIRST_WAVELENGTH + 1].mean(axis=1)
+
+
+def ndvi(X):
+    """NDVI with 20 nm bands centered at 680 nm (red) and 800 nm (near infrared) (Sims and Gamon, 2002)."""
+    red, nir = band(X, 670, 689), band(X, 790, 809)
+    return (nir - red) / (nir + red)
 
 
 def load():
