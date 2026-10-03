@@ -1,0 +1,28 @@
+[project]
+name = "h2opt-analysis"
+version = "0.1.0"
+description = "Analyses and figures of the H2-opt paper"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "h2opt",
+    "numpy",
+    "scipy",
+    "torch==2.4.1",
+    "scikit-learn",
+    "pandas",
+    "matplotlib",
+    "seaborn",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.uv.sources]
+h2opt = { git = "https://github.com/elkebir-group/H2-opt", branch = "refactor" }
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["h2opt_analysis"]
