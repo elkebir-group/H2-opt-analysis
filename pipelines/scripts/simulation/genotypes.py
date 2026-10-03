@@ -3,7 +3,7 @@ instance's 300 QTNs (the causal SNPs are not tested themselves; they are found t
 and the top genotype PCs of that set over all lines.
 
     python pipelines/scripts/simulation/genotypes.py --instance 0 --out-prefix genotypes \\
-        --out-pcs pcs.npy [--pcs 5]
+        --out-pcs pcs.npy --pcs 5
 """
 
 import argparse
@@ -18,11 +18,10 @@ def main():
     parser.add_argument('--instance', type=int, required=True)
     parser.add_argument('--out-prefix', required=True, help='PLINK prefix to write')
     parser.add_argument('--out-pcs', required=True, help='.npy, lines x pcs, .fam order')
-    parser.add_argument('--pcs', type=int, default=5)
+    parser.add_argument('--pcs', type=int, required=True)
     args = parser.parse_args()
 
-    bim = np.loadtxt(f'{sorghum.GENOTYPES}.bim', dtype=str, usecols=(0, 3))
-    located = bim.astype(np.int64)
+    located = gwas.read_bim(sorghum.GENOTYPES)[:, [0, 3]].astype(np.int64)
     qtns = simulation.qtns(args.instance).reshape(-1, 2)
     is_qtn = (located[:, None, :] == qtns[None, :, :]).all(axis=2).any(axis=1)
     if is_qtn.sum() != len(np.unique(qtns, axis=0)):

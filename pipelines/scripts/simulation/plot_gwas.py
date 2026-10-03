@@ -20,6 +20,7 @@ import numpy as np  # noqa: E402
 
 from h2opt_analysis import simulation  # noqa: E402
 from h2opt_analysis.figures import COLORS, save_trait_boxplots  # noqa: E402
+from h2opt_analysis.methods import LABELS  # noqa: E402
 
 
 def main():
@@ -44,7 +45,7 @@ def main():
         for j, m in enumerate(roc_methods):
             median = np.median(roc['auc'][t, j])
             ax.plot(roc['fpr'], roc['tpr'][t, j], color=COLORS[m],
-                    label=f'{simulation.METHODS[m]}: AUC {median:.3f}')
+                    label=f'{LABELS[m]}: AUC {median:.3f}')
         ax.plot([0, 1], [0, 1], 'k:', linewidth=1)
         ax.set_xlabel('false positive rate')
         ax.set_ylabel('true positive rate')
@@ -86,7 +87,6 @@ def main():
     fig.suptitle(args.example_label, fontsize=9)
     fig.tight_layout()
     fig.savefig(out / f'gwas_{args.example_name}.png', dpi=150)
-
 
 
 if __name__ == '__main__':

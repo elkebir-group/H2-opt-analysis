@@ -80,3 +80,12 @@ def test_run_gemma_matches_exact_lmm(tmp_path):
             sigma2 = (y @ P @ y - beta ** 2 * (x @ P @ x)) / (len(y) - W.shape[1] - 1)
             assert result['beta'][t, k] == pytest.approx(beta, rel=1e-5)
             assert result['se'][t, k] == pytest.approx(np.sqrt(sigma2 / (x @ P @ x)), rel=1e-5)
+
+
+def test_line_means():
+    Y = np.array([[1.0, 0.0], [3.0, 2.0], [5.0, 4.0], [7.0, 6.0]])
+    out = gwas.line_means(Y, [2, 2, -1, 0], n_lines=4)
+    Z = (Y - Y.mean(axis=0)) / Y.std(axis=0)  # standardized over all rows, line -1 included
+    np.testing.assert_allclose(out[0], Z[3])
+    np.testing.assert_allclose(out[2], Z[:2].mean(axis=0))
+    assert np.isnan(out[[1, 3]]).all()

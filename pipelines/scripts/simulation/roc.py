@@ -7,8 +7,8 @@ trait, method and instance, and the ROC curves are averaged over the instances o
 false-positive-rate grid. Writes an .npz (methods, auc: traits x methods x instances, fpr,
 tpr: traits x methods x grid).
 
-    python pipelines/scripts/simulation/roc.py --method pca g0.npz ... g9.npz [--method ...] \\
-        --out roc.npz [--bin 100000]
+    python pipelines/scripts/simulation/roc.py --instances 0 ... 9 \\
+        --method pca g0.npz ... g9.npz [--method ...] --out roc.npz [--bin 100000]
 """
 
 import argparse
@@ -17,6 +17,7 @@ import numpy as np
 from sklearn.metrics import roc_auc_score, roc_curve
 
 from h2opt_analysis import simulation
+from h2opt_analysis.methods import LABELS
 
 
 def binned(chromosome, position, score, qtns, bin_size):
@@ -37,20 +38,23 @@ def binned(chromosome, position, score, qtns, bin_size):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--method', nargs=1 + simulation.N_INSTANCES, action='append',
-                        required=True, metavar='SLUG_OR_FILE',
-                        help='a method slug and its GWAS file per instance')
+    parser.add_argument('--instances', type=int, nargs='+', required=True)
+    parser.add_argument('--method', nargs='+', action='append', required=True,
+                        metavar='SLUG_OR_FILE',
+                        help='a method slug and its GWAS file per instance, in instance order')
     parser.add_argument('--out', required=True)
     parser.add_argument('--bin', type=int, default=100000, help='bin size (bp)')
     args = parser.parse_args()
+    n_t, n_i = simulation.N_TRAITS, len(args.instances)
+    if any(len(m) != 1 + n_i for m in args.method):
+        parser.error('give one GWAS file per instance for each method')
 
     methods = [m[0] for m in args.method]
-    n_t, n_i = simulation.N_TRAITS, simulation.N_INSTANCES
     grid = np.linspace(0, 1, 101)
     auc = np.zeros((n_t, len(methods), n_i))
     tpr = np.zeros((n_t, len(methods), len(grid)))
-    for i in range(n_i):
-        qtns = simulation.qtns(i)
+    for i, instance in enumerate(args.instances):
+        qtns = simulation.qtns(instance)
         for m, method in enumerate(args.method):
             with np.load(method[1 + i]) as f:
                 chromosome, position, score = f['chr'], f['ps'], f['neg_log10_p']
@@ -63,7 +67,7 @@ def main():
     np.savez(args.out, methods=methods, auc=auc, fpr=grid, tpr=tpr)
     print('median AUC over instances (traits 1-3)')
     for m, method in enumerate(methods):
-        print(f'{simulation.METHODS[method]:16s} {np.median(auc[:, m], axis=1).round(3)}')
+        print(f'{LABELS[method]:16s} {np.median(auc[:, m], axis=1).round(3)}')
 
 
 if __name__ == '__main__':

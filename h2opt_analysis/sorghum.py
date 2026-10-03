@@ -5,11 +5,15 @@ Also the genotype labels, field sets, folds and the PLINK set of the sequenced l
 
 import numpy as np
 from h2opt import load_npz
+from h2opt.selection import per_group
 
 from .paths import data
 
 N_FOLDS = 10
 FIRST_WAVELENGTH = 350  # nm; column j of X is wavelength 350 + j nm
+PROCESSED = data('plant', 'processed', 'sor')
+SPECTRA = PROCESSED / 'X.npz'  # plants x wavelengths
+GENOTYPES = data('software', 'data', 'WEST_original')  # PLINK set of the 836 sequenced lines
 
 
 def band(X, low, high):
@@ -25,17 +29,15 @@ def ndvi(X):
 
 def load():
     """Measurements X, genotype labels and environment (field set) as an (n, 1) array."""
-    folder = data('plant', 'processed', 'sor')
-    X = load_npz(folder / 'X.npz')
-    genotypes = load_npz(folder / 'names.npz')
-    environment = load_npz(folder / 'set1.npz').reshape((-1, 1))
+    X = load_npz(SPECTRA)
+    genotypes = load_npz(PROCESSED / 'names.npz')
+    environment = load_npz(PROCESSED / 'set1.npz').reshape((-1, 1))
     return X, genotypes, environment
 
 
 def folds(genotypes, seed=0):
     """Fold (0-9) of each plant; all plants of a genotype share a fold. The paper used seed 0."""
-    _, inverse = np.unique(genotypes, return_inverse=True)
-    return np.random.RandomState(seed).randint(N_FOLDS, size=inverse.max() + 1)[inverse]
+    return per_group(genotypes, lambda c: np.random.RandomState(seed).randint(N_FOLDS, size=c))
 
 
 def paper_traits(fold):
@@ -47,9 +49,6 @@ def load_traits(path):
     """Traits of all plants from an .npz: the pipeline's 'traits' array, or the paper's arr_0."""
     with np.load(path) as f:
         return f['traits'] if 'traits' in f else f['arr_0']
-
-
-GENOTYPES = data('software', 'data', 'WEST_original')  # PLINK set of the 836 sequenced lines
 
 
 def line_accessions():
@@ -66,18 +65,13 @@ def line_accessions():
     return [accessions[f] for f in np.loadtxt(f'{GENOTYPES}.fam', dtype=str, usecols=0)]
 
 
-def line_phenotypes(Y, genotypes):
-    """Per-line phenotypes for GWAS, in .fam order.
-
-    The phenotype of a line is the mean of each standardized trait over the plants of all
-    accessions of the line. Lines without plants get NaN.
-    """
-    Y = np.asarray(Y, dtype=np.float64).reshape(len(Y), -1)
-    Y = (Y - Y.mean(axis=0)) / Y.std(axis=0)
-    lines = line_accessions()
-    out = np.full((len(lines), Y.shape[1]), np.nan)
-    for i, accessions in enumerate(lines):
-        plants = np.isin(genotypes, accessions)
-        if plants.any():
-            out[i] = Y[plants].mean(axis=0)
-    return out
+def line_of_plant(genotypes):
+    """Row in the .fam of GENOTYPES of each plant's line (see line_accessions), -1 for a plant of
+    no sequenced line."""
+    row = {}
+    for i, accessions in enumerate(line_accessions()):
+        for accession in accessions:
+            if accession in row:
+                raise ValueError(f'accession {accession} is in lines {row[accession]} and {i}')
+            row[accession] = i
+    return np.array([row.get(g, -1) for g in genotypes])

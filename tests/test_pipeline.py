@@ -18,4 +18,5 @@ def test_pipeline_parses():
             'sorghum_heritability', 'sorghum_plot_heritability', 'sorghum_gwas',
             'simulation_all', 'sim_encode', 'sim_train_rmsprop', 'sim_train_lbfgs', 'sim_baseline',
             'sim_genotypes', 'sim_gwas', 'sim_evaluate', 'sim_roc', 'sim_plot_traits',
-            'sim_plot_gwas', 'simulation_gwas_all', 'sorghum_gwas_all'} <= rules
+            'sim_plot_gwas', 'simulation_gwas_all', 'sorghum_gwas_all',
+            'sorghum_genotype_pcs'} <= rules

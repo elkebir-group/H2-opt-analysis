@@ -15,9 +15,10 @@ from the true traits, and the mean test heritability of synthetic traits 4-5.
 import argparse
 
 import numpy as np
+from h2opt import anova_heritability
 
 from h2opt_analysis import simulation
-from h2opt_analysis.evaluate import heritability
+from h2opt_analysis.methods import LABELS
 
 
 def correlations(truth, Y):
@@ -36,16 +37,18 @@ def span_correlations(truth, Y):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--spectra', nargs=simulation.N_INSTANCES, required=True)
-    parser.add_argument('--truth', nargs=simulation.N_INSTANCES, required=True)
-    parser.add_argument('--method', nargs=1 + simulation.N_INSTANCES, action='append',
-                        required=True, metavar='SLUG_OR_FILE',
+    parser.add_argument('--spectra', nargs='+', required=True, help='one file per instance')
+    parser.add_argument('--truth', nargs='+', required=True, help='in the order of --spectra')
+    parser.add_argument('--method', nargs='+', action='append', required=True,
+                        metavar='SLUG_OR_FILE',
                         help='a method slug and its traits file per instance')
     parser.add_argument('--out', required=True)
     args = parser.parse_args()
+    n_inst, n_true = len(args.spectra), simulation.N_TRAITS
+    if len(args.truth) != n_inst or any(len(m) != 1 + n_inst for m in args.method):
+        parser.error('give one truth and one traits file per method for each spectra file')
 
     methods = [m[0] for m in args.method]
-    n_inst, n_true = simulation.N_INSTANCES, simulation.N_TRAITS
     cor = herit = span = None
     herit_truth = np.zeros((n_inst, 2, n_true))
     for i in range(n_inst):
@@ -54,7 +57,8 @@ def main():
         with np.load(args.truth[i]) as f:
             truth = f['traits']
         environment = np.zeros((len(names), 0))
-        herit_truth[i] = [heritability(truth, names, environment, rows) for rows in (~test, test)]
+        herit_truth[i] = [anova_heritability(truth[rows], names[rows], environment[rows])
+                          for rows in (~test, test)]
         for m, method in enumerate(args.method):
             with np.load(method[1 + i]) as f:
                 Y = f['traits']
@@ -65,7 +69,8 @@ def main():
                 span = np.zeros((len(methods), n_inst, n_true))
             cor[m, i] = correlations(truth, Y)
             span[m, i] = span_correlations(truth, Y[:, :n_true])
-            herit[m, i] = [heritability(Y, names, environment, rows) for rows in (~test, test)]
+            herit[m, i] = [anova_heritability(Y[rows], names[rows], environment[rows])
+                           for rows in (~test, test)]
 
     np.savez(args.out, methods=methods, cor=cor, span_cor=span, herit=herit,
              herit_truth=herit_truth)
@@ -78,7 +83,7 @@ def main():
     print(f'{"method":16s} {"median |r| t-t":>22s} {"median best |r|":>22s} '
           f'{"median span r":>22s} {"MAD h2 1-3":>11s} {"h2 4-5":>7s}')
     for m, method in enumerate(methods):
-        print(f'{simulation.METHODS[method]:16s} {np.median(diagonal[m], 0).round(3)!s:>22s} '
+        print(f'{LABELS[method]:16s} {np.median(diagonal[m], 0).round(3)!s:>22s} '
               f'{np.median(best[m], 0).round(3)!s:>22s} {np.median(span[m], 0).round(3)!s:>22s} '
               f'{deviation[m].mean():11.4f} {test_herit[m, :, n_true:].mean():7.3f}')
 

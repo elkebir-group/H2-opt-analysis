@@ -5,8 +5,9 @@ This repository holds the code that reproduces the analyses and figures of the
 metabolomics and simulations. There are three parts:
 
 - **`h2opt_analysis/`**: the dataset-specific library. Data loading and folds
-  (`sorghum.py`), heritability of synthetic traits and baselines (`evaluate.py`),
-  GEMMA GWAS (`gwas.py`) and permuted-genotype nulls (`nulls.py`).
+  (`sorghum.py`, `simulation.py`), the methods and their baseline fits
+  (`methods.py`), GEMMA GWAS and per-line phenotypes (`gwas.py`), permuted-genotype
+  nulls (`nulls.py`) and shared figure helpers (`figures.py`).
 - **`pipelines/`**: a Snakemake pipeline that runs every analysis from the raw
   data to the figures. See "Running the pipeline" below.
 - **`scripts/`**: setup scripts (`install_gemma.sh`).

@@ -1,9 +1,9 @@
 """Encode the true traits of all simulation instances into simulated spectra (the paper's way).
 
 One random stream (seed 0) runs over the instances in order, so all instances are made in one
-run. Writes, per instance, spectra.npz (X: spectra, names: line of each plant, lines: .fam row of
-each line, test: test plants, dimensions: latent dimension of each trait) and truth.npz (traits:
-the true traits).
+run, and --out-dirs names one directory per instance. Writes, per instance, spectra.npz (X:
+spectra, names: line of each plant, lines: .fam row of each line, test: test plants, dimensions:
+latent dimension of each trait) and truth.npz (traits: the true traits).
 
     python pipelines/scripts/simulation/encode.py --autoencoder autoencode_2.pt \\
         --reference X.npz --out-dirs instance0 ... instance9
@@ -22,9 +22,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--autoencoder', required=True, help="the paper's pickled autoencoder")
     parser.add_argument('--reference', required=True, help='real spectra (.npz, arr_0)')
-    parser.add_argument('--out-dirs', nargs=simulation.N_INSTANCES, required=True,
+    parser.add_argument('--out-dirs', nargs='+', required=True,
                         help='output directory of each instance, in instance order')
     args = parser.parse_args()
+    if len(args.out_dirs) != simulation.N_INSTANCES:
+        parser.error(f'give {simulation.N_INSTANCES} output directories, one per instance')
 
     autoencoder = simulation.load_paper_autoencoder(args.autoencoder)
     reference = load_npz(args.reference)

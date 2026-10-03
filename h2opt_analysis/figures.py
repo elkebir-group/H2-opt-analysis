@@ -2,11 +2,11 @@
 
 import matplotlib.pyplot as plt
 
-from .simulation import METHODS
+from .methods import LABELS
 
-COLORS = {'truth': 'tab:red', 'h2opt_rmsprop': 'tab:blue', 'h2opt_lbfgs': 'tab:cyan',
-          'pca': 'tab:orange', 'genetic_pca': 'tab:purple', 'lda': 'tab:brown', 'pch': 'tab:pink',
-          'max_features': 'tab:green'}
+COLORS = {'truth': 'tab:red', 'h2opt_paper': 'tab:blue', 'h2opt_rmsprop': 'tab:blue',
+          'h2opt_lbfgs': 'tab:cyan', 'pca': 'tab:orange', 'genetic_pca': 'tab:purple',
+          'lda': 'tab:brown', 'pch': 'tab:pink', 'max_features': 'tab:green'}
 
 
 def grouped_boxplot(ax, groups, slugs, values):
@@ -30,7 +30,7 @@ def grouped_boxplot(ax, groups, slugs, values):
 def legend(fig, slugs):
     """Figure legend with one colored patch per method."""
     handles = [plt.Rectangle((0, 0), 1, 1, color=COLORS[s]) for s in slugs]
-    fig.legend(handles, [METHODS[s] for s in slugs], loc='upper center',
+    fig.legend(handles, [LABELS[s] for s in slugs], loc='upper center',
                ncol=min(len(slugs), 4), frameon=False, fontsize=8)
 
 

@@ -7,7 +7,7 @@ equivalent input-noise standard deviation (noise_sd), and the cross-validation s
 ridge.
 
     python pipelines/scripts/simulation/train_h2opt_lbfgs.py --spectra spectra.npz \\
-        --out h2opt_lbfgs.npz [--traits 5] [--steps 200] [--seed 0]
+        --out h2opt_lbfgs.npz --traits 5 --steps 200 --seed 0
 """
 
 import argparse
@@ -20,9 +20,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--spectra', required=True)
     parser.add_argument('--out', required=True)
-    parser.add_argument('--traits', type=int, default=5)
-    parser.add_argument('--steps', type=int, default=200, help='L-BFGS steps per trait')
-    parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('--traits', type=int, required=True)
+    parser.add_argument('--steps', type=int, required=True, help='L-BFGS steps per trait')
+    parser.add_argument('--seed', type=int, required=True)
     args = parser.parse_args()
 
     with np.load(args.spectra) as f:

@@ -6,7 +6,8 @@
 # Per instance, under simulation/instance{i}/: spectra.npz, truth.npz, one traits file per
 # method ({method}.npz, array 'traits'), the GWAS genotypes, and gwas/{method}.npz.
 
-from h2opt_analysis import simulation
+from h2opt_analysis import simulation, sorghum
+from h2opt_analysis.methods import BASELINES, LABELS
 
 SIM = config["simulation"]
 SIM_OUT = OUT_ROOT / "simulation"
@@ -16,8 +17,8 @@ SIM_GWAS_METHODS = ["truth"] + SIM["methods"]
 
 wildcard_constraints:
     instance=r"\d+",
-    method="|".join(simulation.METHODS),
-    baseline="|".join(simulation.BASELINES),
+    method="|".join(LABELS),
+    baseline="|".join(BASELINES),
 
 
 def sim_file(instance, name):
@@ -51,10 +52,9 @@ rule simulation_gwas_all:
 
 rule sim_encode:
     input:
-        autoencoder=str(RAW_ROOT / "plant" / "models" / "autoencode_2.pt"),
-        reference=str(RAW_ROOT / "plant" / "processed" / "sor" / "X.npz"),
-        truth=[str(simulation.folder(i) / "Simulated_Data_2_Reps_Herit_0.6_0.4_0.2.txt")
-               for i in range(simulation.N_INSTANCES)],
+        autoencoder=str(simulation.PAPER_AUTOENCODER),
+        reference=str(sorghum.SPECTRA),
+        truth=[str(simulation.truth_file(i)) for i in range(simulation.N_INSTANCES)],
     output:
         spectra=sim_files("spectra.npz", range(simulation.N_INSTANCES)),
         truth=sim_files("truth.npz", range(simulation.N_INSTANCES)),
@@ -186,11 +186,13 @@ rule sim_roc:
     log:
         str(SIM_OUT / "roc.log"),
     params:
+        instances=" ".join(str(i) for i in SIM_INSTANCES),
         methods=" ".join(
             f"--method {m} " + " ".join(sim_files(f"gwas/{m}.npz")) for m in SIM_GWAS_METHODS),
     threads: 2
     shell:
-        "python -u {SIM_SCRIPTS}/roc.py {params.methods} --out {output} > {log} 2>&1"
+        "python -u {SIM_SCRIPTS}/roc.py --instances {params.instances} {params.methods}"
+        " --out {output} > {log} 2>&1"
 
 
 rule sim_plot_traits:
@@ -222,7 +224,7 @@ rule sim_plot_gwas:
     params:
         out_dir=str(SIM_OUT / "figures"),
         name=f"{SIM['example']['method']}_instance{SIM['example']['instance']}",
-        label=(f"{simulation.METHODS[SIM['example']['method']]}, "
+        label=(f"{LABELS[SIM['example']['method']]}, "
                f"instance {SIM['example']['instance']}"),
     threads: 1
     shell:

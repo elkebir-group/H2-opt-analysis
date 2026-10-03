@@ -57,8 +57,8 @@ rule sorghum_train_rmsprop:
     shell:
         "python -u {SORGHUM_SCRIPTS}/train_h2opt.py --fold {wildcards.fold}"
         " --out-traits {output.traits} --out-model {output.model}"
-        " --traits {params.traits} --steps {params.steps} --device {params.device}"
-        " > {log} 2>&1"
+        " --traits {params.traits} --steps {params.steps} --seed {wildcards.fold}"
+        " --device {params.device} > {log} 2>&1"
 
 
 rule sorghum_train_lbfgs:
@@ -72,7 +72,7 @@ rule sorghum_train_lbfgs:
     threads: 2
     shell:
         "python -u {SORGHUM_SCRIPTS}/train_h2opt_lbfgs.py --fold {wildcards.fold} --out {output}"
-        " --traits {params.traits} --steps {params.steps}"
+        " --traits {params.traits} --steps {params.steps} --seed {wildcards.fold}"
         " > {log} 2>&1"
 
 
@@ -84,11 +84,12 @@ rule sorghum_heritability:
     log:
         str(SORGHUM_OUT / "heritability_{source}.log"),
     params:
-        traits=lambda wc: SORGHUM["evaluate_traits"][wc.source],
+        traits=lambda wc: SORGHUM[wc.source]["traits"],
+        folds=" ".join(str(f) for f in SORGHUM_FOLDS),
     threads: 4
     shell:
         "python -u {SORGHUM_SCRIPTS}/evaluate_heritability.py --source {wildcards.source}"
-        " --h2opt-traits {input} --out {output} --traits {params.traits}"
+        " --folds {params.folds} --h2opt-traits {input} --out {output} --traits {params.traits}"
         " > {log} 2>&1"
 
 
@@ -106,9 +107,25 @@ rule sorghum_plot_heritability:
         " --out {output.pdf} > {log} 2>&1"
 
 
+rule sorghum_genotype_pcs:
+    input:
+        multiext(str(sorghum.GENOTYPES), ".bed", ".bim", ".fam"),
+    output:
+        str(SORGHUM_OUT / "genotype_pcs.npy"),
+    log:
+        str(SORGHUM_OUT / "genotype_pcs.log"),
+    params:
+        pcs=SORGHUM["gwas"]["pcs"],
+    threads: 4
+    shell:
+        "python -u {SORGHUM_SCRIPTS}/genotype_pcs.py --out {output} --pcs {params.pcs}"
+        " > {log} 2>&1"
+
+
 rule sorghum_gwas:
     input:
         traits=lambda wc: sorghum_traits(wc.source, wc.fold),
+        pcs=str(SORGHUM_OUT / "genotype_pcs.npy"),
     output:
         str(SORGHUM_OUT / "gwas" / "{source}_fold{fold}.npz"),
     log:
@@ -116,12 +133,11 @@ rule sorghum_gwas:
     params:
         work=lambda wc: str(SORGHUM_OUT / "gwas" / "work" / f"{wc.source}_fold{wc.fold}"),
         traits=SORGHUM["gwas"]["traits"],
-        pcs=SORGHUM["gwas"]["pcs"],
         jobs=SORGHUM["gwas"]["jobs"],
         threads=SORGHUM["gwas"]["threads"],
     threads: SORGHUM["gwas"]["jobs"] * SORGHUM["gwas"]["threads"]
     shell:
-        "python -u {SORGHUM_SCRIPTS}/gwas.py --h2opt-traits {input.traits} --out {output}"
-        " --work {params.work} --traits {params.traits} --pcs {params.pcs}"
+        "python -u {SORGHUM_SCRIPTS}/gwas.py --h2opt-traits {input.traits} --pcs {input.pcs}"
+        " --out {output} --work {params.work} --traits {params.traits}"
         " --jobs {params.jobs} --threads {params.threads}"
         " > {log} 2>&1"

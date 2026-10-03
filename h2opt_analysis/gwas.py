@@ -17,10 +17,15 @@ import subprocess
 from pathlib import Path
 
 import numpy as np
+from scipy import stats
 
 from .paths import REPO
 
 ASSOC_FIELDS = ['beta', 'se', 'l_remle', 'p_wald']
+BED_MAGIC = b'\x6c\x1b\x01'  # SNP-major PLINK .bed
+# Genotype of each 2-bit PLINK code, as the count of allele 1: 0 = homozygous allele 1,
+# 1 = missing, 2 = heterozygous, 3 = homozygous allele 2.
+DOSAGE = np.array([2, np.nan, 1, 0], dtype=np.float32)
 
 
 def gemma_binary():
@@ -33,21 +38,44 @@ def read_fam(prefix):
     return np.loadtxt(f'{prefix}.fam', dtype=str, usecols=(0, 1), ndmin=2)
 
 
+def read_bim(prefix):
+    """The .bim file as an (m, 6) string array: chromosome, ID, cM, position, allele 1, allele 2."""
+    return np.loadtxt(f'{prefix}.bim', dtype=str, ndmin=2)
+
+
+def _bed_blocks(prefix, n, chunk=20000):
+    """Raw SNP rows of the .bed file of n individuals, up to chunk SNPs at a time, each an
+    (SNPs, bytes per SNP) uint8 array."""
+    row_bytes = (n + 3) // 4
+    with open(f'{prefix}.bed', 'rb') as f:
+        if f.read(3) != BED_MAGIC:
+            raise ValueError(f'{prefix}.bed is not a SNP-major PLINK .bed file')
+        while block := f.read(row_bytes * chunk):
+            yield np.frombuffer(block, dtype=np.uint8).reshape(-1, row_bytes)
+
+
+def _unpack(raw, n):
+    """2-bit codes (SNPs x n) of raw .bed rows."""
+    codes = (raw[:, :, None] >> np.array([0, 2, 4, 6], dtype=np.uint8)) & 3
+    return codes.reshape(len(raw), -1)[:, :n]
+
+
+def _pack(codes):
+    """Raw .bed rows of 2-bit codes (SNPs x individuals)."""
+    codes = np.pad(codes, ((0, 0), (0, (-codes.shape[1]) % 4))).reshape(len(codes), -1, 4)
+    return (codes[..., 0] | codes[..., 1] << 2 | codes[..., 2] << 4 | codes[..., 3] << 6)
+
+
 def read_bed(prefix, snps=None):
     """Genotypes as counts of allele 1 (individuals x SNPs), NaN where missing.
 
     snps selects SNP rows of the .bim.
     """
     n = len(read_fam(prefix))
-    with open(f'{prefix}.bed', 'rb') as f:
-        assert f.read(3) == b'\x6c\x1b\x01', 'expected a SNP-major PLINK .bed file'
-        raw = np.frombuffer(f.read(), dtype=np.uint8).reshape(-1, (n + 3) // 4)
+    raw = np.concatenate(list(_bed_blocks(prefix, n)))
     if snps is not None:
         raw = raw[snps]
-    codes = (raw[:, :, None] >> np.array([0, 2, 4, 6], dtype=np.uint8)) & 3
-    codes = codes.reshape(len(raw), -1)[:, :n]
-    # PLINK codes: 0 = homozygous allele 1, 1 = missing, 2 = heterozygous, 3 = homozygous allele 2
-    return np.array([2, np.nan, 1, 0], dtype=np.float32)[codes].T
+    return DOSAGE[_unpack(raw, n)].T
 
 
 def genotype_pcs(prefix, n_pcs=5, individuals=None, chunk=20000):
@@ -58,10 +86,9 @@ def genotype_pcs(prefix, n_pcs=5, individuals=None, chunk=20000):
     """
     n = len(read_fam(prefix))
     keep = np.ones(n, bool) if individuals is None else np.asarray(individuals, bool)
-    m = sum(1 for _ in open(f'{prefix}.bim'))
     gram = np.zeros((keep.sum(), keep.sum()))
-    for start in range(0, m, chunk):
-        G = read_bed(prefix, slice(start, start + chunk))[keep].astype(np.float64)
+    for raw in _bed_blocks(prefix, n, chunk):
+        G = DOSAGE[_unpack(raw, n)].T[keep].astype(np.float64)
         G -= np.nanmean(G, axis=0)
         G[np.isnan(G)] = 0
         gram += G @ G.T
@@ -79,18 +106,10 @@ def write_bed_subset(prefix, keep, out_prefix, chunk=20000):
     The .bim is symlinked.
     """
     keep = np.asarray(keep, bool)
-    n, out_prefix = len(keep), Path(out_prefix)
-    in_bytes, pad = (n + 3) // 4, (-keep.sum()) % 4
-    with open(f'{prefix}.bed', 'rb') as src, open(f'{out_prefix}.bed', 'wb') as dst:
-        assert src.read(3) == b'\x6c\x1b\x01', 'expected a SNP-major PLINK .bed file'
-        dst.write(b'\x6c\x1b\x01')
-        while block := src.read(in_bytes * chunk):
-            raw = np.frombuffer(block, dtype=np.uint8).reshape(-1, in_bytes)
-            codes = (raw[:, :, None] >> np.array([0, 2, 4, 6], dtype=np.uint8)) & 3
-            codes = codes.reshape(len(raw), -1)
-            codes = np.pad(codes[:, :n][:, keep], ((0, 0), (0, pad))).reshape(len(raw), -1, 4)
-            packed = codes[..., 0] | codes[..., 1] << 2 | codes[..., 2] << 4 | codes[..., 3] << 6
-            dst.write(packed.tobytes())
+    with open(f'{out_prefix}.bed', 'wb') as dst:
+        dst.write(BED_MAGIC)
+        for raw in _bed_blocks(prefix, len(keep), chunk):
+            dst.write(_pack(_unpack(raw, len(keep))[:, keep]).tobytes())
     link = Path(f'{out_prefix}.bim')
     link.unlink(missing_ok=True)
     link.symlink_to(Path(f'{prefix}.bim').resolve())
@@ -100,14 +119,10 @@ def write_snp_subset(prefix, snps, out_prefix, chunk=20000):
     """Complete PLINK set (.bed, .bim, .fam) with only the SNPs where snps (boolean, .bim order) is
     true; all individuals are kept."""
     snps = np.asarray(snps, bool)
-    n = len(read_fam(prefix))
-    row_bytes = (n + 3) // 4
-    with open(f'{prefix}.bed', 'rb') as src, open(f'{out_prefix}.bed', 'wb') as dst:
-        assert src.read(3) == b'\x6c\x1b\x01', 'expected a SNP-major PLINK .bed file'
-        dst.write(b'\x6c\x1b\x01')
-        start = 0
-        while block := src.read(row_bytes * chunk):
-            raw = np.frombuffer(block, dtype=np.uint8).reshape(-1, row_bytes)
+    start = 0
+    with open(f'{out_prefix}.bed', 'wb') as dst:
+        dst.write(BED_MAGIC)
+        for raw in _bed_blocks(prefix, len(read_fam(prefix)), chunk):
             dst.write(raw[snps[start:start + len(raw)]].tobytes())
             start += len(raw)
     if start != len(snps):
@@ -115,6 +130,23 @@ def write_snp_subset(prefix, snps, out_prefix, chunk=20000):
     with open(f'{prefix}.bim') as src, open(f'{out_prefix}.bim', 'w') as dst:
         dst.writelines(line for line, kept in zip(src, snps, strict=True) if kept)
     shutil.copyfile(f'{prefix}.fam', f'{out_prefix}.fam')
+
+
+def line_means(Y, line_of_row, n_lines):
+    """Phenotypes for GWAS: the mean of each standardized column of Y over the rows of each line.
+
+    Y is standardized over all its rows. line_of_row is the .fam row of the line of each row of Y,
+    -1 for a row of no line. Returns (n_lines, k) in .fam order; lines without rows get NaN.
+    """
+    Y = np.asarray(Y, dtype=np.float64).reshape(len(Y), -1)
+    Y = (Y - Y.mean(axis=0)) / Y.std(axis=0)
+    line_of_row = np.asarray(line_of_row)
+    on_line = line_of_row >= 0
+    sums = np.zeros((n_lines, Y.shape[1]))
+    np.add.at(sums, line_of_row[on_line], Y[on_line])
+    counts = np.bincount(line_of_row[on_line], minlength=n_lines)
+    with np.errstate(invalid='ignore'):
+        return sums / counts[:, None]
 
 
 def run_gemma(prefix, phenotypes, workdir, covariates=None, intercept=True, jobs=1, threads=1,
@@ -204,3 +236,12 @@ def read_assoc(path):
         return rows[:, i].astype(np.int64 if name in integer else float)
 
     return {name: column(i, name) for i, name in enumerate(header)}
+
+
+def summarize(result):
+    """The saved form of a run_gemma result: chr and ps (per SNP), neg_log10_p (traits x SNPs,
+    float32) and lambda_gc, the genomic inflation factor of each trait."""
+    p = result['p_wald']
+    return {'chr': result['chr'].astype(np.int16), 'ps': result['ps'].astype(np.int64),
+            'neg_log10_p': (-np.log10(p)).astype(np.float32),
+            'lambda_gc': np.median(stats.chi2.isf(p, 1), axis=1) / stats.chi2.ppf(0.5, 1)}

@@ -1,7 +1,7 @@
-"""Train and test heritability of each method's top trait over the 10 genotype folds (boxplots).
+"""Train and test heritability of each method's top trait over the genotype folds (boxplots).
 
-Reads the .npz of evaluate_heritability.py; method labels come from the names saved with the
-values. Writes the figure as .pdf and, beside it, .png.
+Reads the .npz of evaluate_heritability.py; method labels and colors come from the slugs saved
+with the values. Writes the figure as .pdf and, beside it, .png.
 
     python pipelines/scripts/sorghum/plot_heritability.py --heritability heritability_lbfgs.npz \\
         --out top_trait_heritability_lbfgs.pdf [--trait 1]
@@ -10,10 +10,14 @@ values. Writes the figure as .pdf and, beside it, .png.
 import argparse
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-import numpy as np
+import matplotlib
 
-COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948']
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+
+from h2opt_analysis.figures import COLORS  # noqa: E402
+from h2opt_analysis.methods import LABELS  # noqa: E402
 
 
 def main():
@@ -30,9 +34,10 @@ def main():
         values = results[split][:, :, args.trait - 1]  # methods x folds
         boxes = ax.boxplot(values.T, patch_artist=True, widths=0.6,
                            medianprops={'color': 'black'})
-        for box, color in zip(boxes['boxes'], COLORS, strict=False):
-            box.set(facecolor=color, edgecolor=color, alpha=0.8)
-        ax.set_xticks(range(1, len(methods) + 1), methods, rotation=30, ha='right')
+        for box, method in zip(boxes['boxes'], methods, strict=True):
+            box.set(facecolor=COLORS[method], edgecolor=COLORS[method], alpha=0.8)
+        ax.set_xticks(range(1, len(methods) + 1), [LABELS[m] for m in methods], rotation=30,
+                      ha='right')
         ax.set_title(f'{split} genotypes', fontsize=10)
         ax.grid(axis='y', color='0.9')
         ax.set_axisbelow(True)
@@ -43,7 +48,7 @@ def main():
     fig.savefig(out)
     fig.savefig(out.with_suffix('.png'), dpi=150)
     for m, method in enumerate(methods):
-        print(f'{method:13s} train {results["train"][m, :, args.trait - 1].mean():.3f}  '
+        print(f'{LABELS[method]:16s} train {results["train"][m, :, args.trait - 1].mean():.3f}  '
               f'test {results["test"][m, :, args.trait - 1].mean():.3f}')
 
 

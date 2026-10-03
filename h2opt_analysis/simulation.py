@@ -15,7 +15,8 @@ import types
 import numpy as np
 import torch
 import torch.nn as nn
-from h2opt import AutoEncoder
+from h2opt import AutoEncoder, encode_latent, latent_scale
+from h2opt.selection import per_group
 
 from .paths import data
 
@@ -24,22 +25,7 @@ N_TRAITS = 3
 HERITABILITY = (0.6, 0.4, 0.2)
 N_QTNS = 100  # per trait
 N_LATENT = 5
-
-# Ways to get synthetic traits, by the slug used in file names, with their figure labels. 'truth'
-# are the simulated traits themselves.
-METHODS = {
-    'truth': 'ground truth',
-    'h2opt_rmsprop': 'H2-opt',
-    'h2opt_lbfgs': 'H2-opt (L-BFGS)',
-    'pca': 'PCA',
-    'genetic_pca': 'genetic PCA',
-    'lda': 'LDA',
-    'pch': 'PCH',
-    'max_features': 'single trait',
-}
-# Baselines of h2opt_analysis.evaluate.fit_baseline, by slug.
-BASELINES = {'pca': 'PCA', 'genetic_pca': 'genetic PCA', 'lda': 'LDA', 'pch': 'PCH',
-             'max_features': 'max features'}
+PAPER_AUTOENCODER = data('plant', 'models', 'autoencode_2.pt')  # pickled model of the paper code
 
 
 def folder(instance):
@@ -47,10 +33,14 @@ def folder(instance):
     return data('plant', 'simulations', 'simPhen', 'seperate100SNP', str(instance))
 
 
+def truth_file(instance):
+    """simplePHENOTYPES table of the plants of an instance (the folders also hold other runs)."""
+    return folder(instance) / 'Simulated_Data_2_Reps_Herit_0.6_0.4_0.2.txt'
+
+
 def load_truth(instance):
     """Plant names (line of each plant, n) and the true traits (n, 3) of an instance."""
-    path = folder(instance) / 'Simulated_Data_2_Reps_Herit_0.6_0.4_0.2.txt'
-    table = np.loadtxt(path, dtype=str, delimiter='\t', skiprows=1)
+    table = np.loadtxt(truth_file(instance), dtype=str, delimiter='\t', skiprows=1)
     return table[:, 0], table[:, 1:1 + N_TRAITS].astype(float)
 
 
@@ -101,16 +91,12 @@ def encode_instances(truths, autoencoder, reference, seed=0):
     """Simulated spectra of each instance, as in the paper (one random stream over the instances).
 
     truths: list of (n, 3) true traits. reference: real spectra whose encodings set the mean and
-    scale of each latent dimension. Each trait is standardized; the n x 5 latent matrix is
-    N(0, 1) with the traits placed in a random permutation of the dimensions; it is rescaled to
-    the reference encodings and decoded. Returns a list of (spectra (n, m), dimensions (3,)), where
+    scale of each latent dimension (h2opt.latent_scale). Each trait is standardized; the n x 5
+    latent matrix is N(0, 1) with the traits placed in a random permutation of the dimensions, and
+    is decoded by h2opt.encode_latent. Returns a list of (spectra (n, m), dimensions (3,)), where
     dimensions[t] is the latent dimension that holds trait t.
     """
-    with torch.no_grad():
-        encoded = autoencoder.encode(torch.tensor(reference).float()).numpy()
-    means = np.mean(encoded, axis=0)
-    stds = np.mean((encoded - means) ** 2, axis=0) ** 0.5
-
+    scale = latent_scale(autoencoder, reference)
     rng = np.random.RandomState(seed)
     out = []
     for Y in truths:
@@ -119,10 +105,7 @@ def encode_instances(truths, autoencoder, reference, seed=0):
         latent = rng.normal(size=len(Y) * N_LATENT).reshape((len(Y), N_LATENT))
         dimensions = rng.permutation(N_LATENT)[:Y.shape[1]]
         latent[:, dimensions] = Y
-        latent = latent * stds + means
-        with torch.no_grad():
-            spectra = autoencoder.decode(torch.tensor(latent).float()).numpy()
-        out.append((spectra, dimensions))
+        out.append((encode_latent(latent, autoencoder, scale), dimensions))
     return out
 
 
@@ -130,19 +113,5 @@ def test_lines(names_per_instance, seed=0):
     """Test plants of each instance, as in the paper: one random stream over the instances, a third
     of the lines (value 0 of randint(3) per line) are test lines."""
     rng = np.random.RandomState(seed)
-    out = []
-    for names in names_per_instance:
-        _, inverse = np.unique(names, return_inverse=True)
-        out.append(rng.randint(3, size=inverse.max() + 1)[inverse] == 0)
-    return out
-
-
-def line_means(Y, lines, n_lines):
-    """Mean of each standardized column of Y over the plants of each line, (n_lines, k)."""
-    Y = np.asarray(Y, dtype=np.float64).reshape(len(Y), -1)
-    Y = (Y - Y.mean(axis=0)) / Y.std(axis=0)
-    sums = np.zeros((n_lines, Y.shape[1]))
-    np.add.at(sums, lines, Y)
-    counts = np.bincount(lines, minlength=n_lines)
-    with np.errstate(invalid='ignore'):
-        return sums / counts[:, None]
+    return [per_group(names, lambda c: rng.randint(3, size=c) == 0)
+            for names in names_per_instance]
