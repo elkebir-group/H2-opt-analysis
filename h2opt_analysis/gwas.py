@@ -12,6 +12,7 @@ size).
 """
 
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -93,6 +94,27 @@ def write_bed_subset(prefix, keep, out_prefix, chunk=20000):
     link = Path(f'{out_prefix}.bim')
     link.unlink(missing_ok=True)
     link.symlink_to(Path(f'{prefix}.bim').resolve())
+
+
+def write_snp_subset(prefix, snps, out_prefix, chunk=20000):
+    """Complete PLINK set (.bed, .bim, .fam) with only the SNPs where snps (boolean, .bim order) is
+    true; all individuals are kept."""
+    snps = np.asarray(snps, bool)
+    n = len(read_fam(prefix))
+    row_bytes = (n + 3) // 4
+    with open(f'{prefix}.bed', 'rb') as src, open(f'{out_prefix}.bed', 'wb') as dst:
+        assert src.read(3) == b'\x6c\x1b\x01', 'expected a SNP-major PLINK .bed file'
+        dst.write(b'\x6c\x1b\x01')
+        start = 0
+        while block := src.read(row_bytes * chunk):
+            raw = np.frombuffer(block, dtype=np.uint8).reshape(-1, row_bytes)
+            dst.write(raw[snps[start:start + len(raw)]].tobytes())
+            start += len(raw)
+    if start != len(snps):
+        raise ValueError(f'{len(snps)} SNP flags for {start} SNPs in {prefix}.bed')
+    with open(f'{prefix}.bim') as src, open(f'{out_prefix}.bim', 'w') as dst:
+        dst.writelines(line for line, kept in zip(src, snps, strict=True) if kept)
+    shutil.copyfile(f'{prefix}.fam', f'{out_prefix}.fam')
 
 
 def run_gemma(prefix, phenotypes, workdir, covariates=None, intercept=True, jobs=1, threads=1,

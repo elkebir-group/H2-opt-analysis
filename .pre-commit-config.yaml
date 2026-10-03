@@ -13,6 +13,8 @@ repos:
         args:
           - --builtin=clear,rare,en-GB_to_en-US
           - --regex=[\w]+
+          # fpr: false positive rate (sklearn.metrics.roc_curve).
+          - --ignore-words-list=fpr
           # Base64 cell outputs in notebooks.
           - --ignore-regex=[A-Za-z0-9+/]{32,}={0,2}
 

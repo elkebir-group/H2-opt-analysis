@@ -36,6 +36,16 @@ def test_bed_roundtrip_and_subset(tmp_path):
     assert np.array_equal(gwas.read_bed(tmp_path / 's'), G[keep], equal_nan=True)
 
 
+def test_snp_subset(tmp_path):
+    G = genotypes()
+    write_plink(tmp_path / 'g', G)
+    snps = np.random.default_rng(2).random(G.shape[1]) < 0.7
+    gwas.write_snp_subset(tmp_path / 'g', snps, tmp_path / 's')
+    assert np.array_equal(gwas.read_bed(tmp_path / 's'), G[:, snps], equal_nan=True)
+    bim = np.loadtxt(tmp_path / 's.bim', dtype=str)
+    assert list(bim[:, 1]) == [f'snp{j}' for j in np.flatnonzero(snps)]
+
+
 @pytest.mark.skipif(not Path(gwas.gemma_binary()).exists(), reason='GEMMA binary not installed')
 def test_run_gemma_matches_exact_lmm(tmp_path):
     """Wald betas and standard errors at GEMMA's per-SNP variance ratio.

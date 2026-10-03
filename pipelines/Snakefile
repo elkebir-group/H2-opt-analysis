@@ -23,9 +23,11 @@ OUT_ROOT = Path(config["outputs_root"])
 os.environ["H2OPT_DATA"] = str(RAW_ROOT if RAW_ROOT.is_absolute() else REPO_ROOT / RAW_ROOT)
 
 include: "rules/sorghum.smk"
+include: "rules/simulation.smk"
 
 
 rule all:
     default_target: True
     input:
         rules.sorghum_all.input,
+        rules.simulation_all.input,

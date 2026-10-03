@@ -15,4 +15,6 @@ def test_pipeline_parses():
                             cwd=REPO, capture_output=True, text=True, check=True)
     rules = set(result.stdout.split())
     assert {'all', 'sorghum_all', 'sorghum_train_rmsprop', 'sorghum_train_lbfgs',
-            'sorghum_heritability', 'sorghum_plot_heritability', 'sorghum_gwas'} <= rules
+            'sorghum_heritability', 'sorghum_plot_heritability', 'sorghum_gwas',
+            'simulation_all', 'sim_encode', 'sim_train_rmsprop', 'sim_train_lbfgs', 'sim_baseline',
+            'sim_genotypes', 'sim_gwas', 'sim_evaluate', 'sim_roc', 'sim_plot'} <= rules

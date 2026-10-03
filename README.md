@@ -79,6 +79,26 @@ on inner validation genotypes).
 | `sorghum_plot_heritability` | `figures/top_trait_heritability_{source}.{pdf,png}` | boxplots of the top trait over the folds |
 | `sorghum_gwas` | `gwas/{source}_fold{k}.npz` | GEMMA LMM of the per-line trait means (intercept + 5 genotype PCs) |
 
+### Simulation
+
+The paper's simulation (`h2opt_analysis/simulation.py`): in each of 10 instances, three traits
+with heritability 0.6, 0.4 and 0.2 (100 additive QTNs each, simulated with simplePHENOTYPES on the
+836 sequenced lines, 2 plants per line) are encoded into simulated spectra with the sorghum
+autoencoder. The simplePHENOTYPES outputs are raw data; the encoding, the test lines (a third of
+the lines) and everything after are rebuilt here. All outputs are under `data/derived/simulation/`.
+
+| Rule | Output | Content |
+|---|---|---|
+| `sim_encode` | `instance{i}/{spectra,truth}.npz` | simulated spectra, test plants, line of each plant, true traits |
+| `sim_train_rmsprop` | `instance{i}/h2opt_rmsprop.{npz,pt}` | H2-opt with the paper's simulation settings (GPU) |
+| `sim_train_lbfgs` | `instance{i}/h2opt_lbfgs.npz` | linear H2-opt with L-BFGS |
+| `sim_baseline` | `instance{i}/{pca,genetic_pca,lda,pch,max_features}.npz` | baselines fitted on the training lines |
+| `sim_genotypes` | `instance{i}/genotypes.{bed,bim,fam}`, `genotype_pcs.npy` | genotypes without the instance's QTNs, and their PCs |
+| `sim_gwas` | `instance{i}/gwas/{method}.npz` | GEMMA LMM of the line means of traits 1-3 (intercept + 5 PCs) |
+| `sim_evaluate` | `evaluation.npz` | correlation with the true traits, train/test heritability |
+| `sim_roc` | `roc.npz` | AUC and ROC curves of causal 100 kb bins |
+| `sim_plot` | `figures/` | Fig. 3 and Fig. S2 panels |
+
 Each script under `pipelines/scripts/` also runs by hand; its docstring gives
 the arguments.
 
