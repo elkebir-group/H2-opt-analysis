@@ -2,7 +2,8 @@
 
 10 traits, one linear model per trait, RMSprop with learning rate 1e-5 for 10,000 steps per trait, uniform input
 noise up to 0.005, and a penalty of 1e-4 on the total variation of the weights across adjacent wavelengths.
-Writes results/sorghum/h2opt/fold{k}.pt (model) and fold{k}.npz (traits of all plants).
+Writes results/sorghum/h2opt/fold{k}.pt (model) and fold{k}.npz (traits of all plants); with --seed s > 0,
+fold{k}_seed{s}.pt/.npz.
 
     uv run python scripts/sorghum/train_h2opt.py --fold 0 [--steps 10000] [--traits 10] [--device cuda]
 """
@@ -42,7 +43,8 @@ def main():
     train_test = (sorghum.folds(genotypes) == args.fold).astype(int)
 
     RESULTS.mkdir(parents=True, exist_ok=True)
-    model_file = RESULTS / f'fold{args.fold}.pt'
+    name = f'fold{args.fold}' + (f'_seed{args.seed}' if args.seed else '')
+    model_file = RESULTS / f'{name}.pt'
     model = TraitModels(args.traits, LinearModel, X.shape[1])
     train(model, X, genotypes, environment, train_test, model_file=model_file, n_traits=args.traits,
           n_iter=args.steps, learning_rate=1e-5, noise_level=0.005, penalty=smoothness_penalty(1e-4), device=args.device)
@@ -50,7 +52,7 @@ def main():
 
     with torch.no_grad():
         traits = model(torch.tensor(X).float().to(args.device)).cpu().numpy()
-    np.savez(RESULTS / f'fold{args.fold}.npz', traits=traits)
+    np.savez(RESULTS / f'{name}.npz', traits=traits)
 
 
 if __name__ == '__main__':

@@ -14,6 +14,13 @@ ln -s /path/to/h2opt-data data   # or set H2OPT_DATA=/path/to/h2opt-data
 
 Scripts are run from the repository root and write to `results/`.
 
+To run a script over folds or seeds, several jobs at once (about 8 small GPU jobs fit on one GPU with near-linear speedup):
+
+```bash
+uv run python -m h2opt_analysis.launch --jobs 8 --threads 1 --log-dir results/sorghum/logs --grid fold=0-9 \
+    -- python scripts/sorghum/train_h2opt.py --fold {fold} --device cuda
+```
+
 ## Sorghum
 
 | Script | Result |
