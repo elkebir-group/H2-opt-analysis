@@ -26,4 +26,5 @@ uv run python -m h2opt_analysis.launch --jobs 8 --threads 1 --log-dir results/so
 | Script | Result |
 |---|---|
 | `scripts/sorghum/train_h2opt.py --fold k` | linear H2-opt for genotype fold k (paper settings) |
-| `scripts/sorghum/evaluate_heritability.py [--paper]` | train/test heritability of H2-opt, PCA, genetic PCA, LDA, PCH and max features |
+| `scripts/sorghum/train_h2opt_lbfgs.py --fold k` | linear H2-opt trained to convergence with L-BFGS (ridge and stopping tuned on inner validation) |
+| `scripts/sorghum/evaluate_heritability.py [--paper \| --lbfgs]` | train/test heritability of H2-opt, PCA, genetic PCA, LDA, PCH and max features |

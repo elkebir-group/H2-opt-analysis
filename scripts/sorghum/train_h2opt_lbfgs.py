@@ -30,18 +30,12 @@ def main():
     is_train = sorghum.folds(genotypes) != args.fold
     fit, val = validation_rows(genotypes, is_train)
 
-    curves = np.zeros((len(RIDGES), args.steps))
-    for i, ridge in enumerate(RIDGES):
-        model = LinearH2opt(1, ridge=ridge, n_iter=args.steps, seed=args.fold)
-        model.fit(X[fit], genotypes[fit], environment[fit], validation=(X[val], genotypes[val], environment[val]))
-        curves[i] = model.validation_curves_[0]
-        print(f'ridge {ridge:g}: best validation heritability {curves[i].max():.3f} at step {curves[i].argmax() + 1}', flush=True)
-    best, step = np.unravel_index(np.argmax(curves), curves.shape)
-    ridge, steps = RIDGES[best], step + 1
+    ridge, steps, curves = LinearH2opt.tune(X[fit], genotypes[fit], environment[fit], (X[val], genotypes[val], environment[val]),
+                                            RIDGES, n_iter=args.steps, seed=args.fold)
 
     model = LinearH2opt(args.traits, ridge=ridge, n_iter=steps, seed=10 * args.fold)
     traits = model.fit(X[is_train], genotypes[is_train], environment[is_train]).transform(X)
-    print(f'fold {args.fold}: ridge {ridge:g}, {steps} steps', flush=True)
+    print(f'fold {args.fold}: ridge {ridge:g}, {steps} steps, validation heritability {curves.max():.3f}', flush=True)
 
     RESULTS.mkdir(parents=True, exist_ok=True)
     np.savez(RESULTS / f'fold{args.fold}.npz', traits=traits, ridge=ridge, steps=steps, ridges=RIDGES, curves=curves)

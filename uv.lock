@@ -260,7 +260,7 @@ wheels = [
 [[package]]
 name = "h2opt"
 version = "0.2.0"
-source = { git = "https://github.com/elkebir-group/H2-opt?branch=refactor#0477f7e04242d2ef34bac39e369a961936dc9453" }
+source = { git = "https://github.com/elkebir-group/H2-opt?branch=refactor#1d74a9b36a707e556e7efe0f9eec6073d0e6e476" }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
