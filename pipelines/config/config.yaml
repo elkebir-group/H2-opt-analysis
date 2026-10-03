@@ -1,0 +1,33 @@
+# Config of the H2-opt analysis pipeline. Relative paths resolve against the
+# repository root, which is also the working directory of every job.
+
+# Raw data: the lab's H2-opt data directory (plant/, miscPlant/, metab/,
+# software/, ...). null means data/raw, a symlink to it. A path here is also
+# exported as $H2OPT_DATA, which h2opt_analysis.paths reads.
+raw_root: null
+
+# Everything the pipeline writes.
+outputs_root: data/derived
+
+sorghum:
+  folds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+  # H2-opt retrained with the paper's settings (RMSprop, train_h2opt.py).
+  rmsprop:
+    traits: 10
+    steps: 10000
+    device: cuda
+  # Linear H2-opt trained to convergence with L-BFGS (train_h2opt_lbfgs.py).
+  lbfgs:
+    traits: 5
+    max_steps: 100
+  # Traits scored per method in evaluate_heritability.py, per trait source.
+  evaluate_traits:
+    paper: 10
+    rmsprop: 10
+    lbfgs: 5
+  # GEMMA LMM of the per-line trait means.
+  gwas:
+    traits: 5
+    pcs: 5
+    jobs: 1      # traits run at once
+    threads: 4   # OpenBLAS threads per GEMMA run

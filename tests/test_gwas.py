@@ -12,8 +12,10 @@ def write_plink(prefix, G):
     code = np.where(np.isnan(G), 1, np.select([G == 2, G == 1], [0, 2], 3)).T.astype(np.uint8)
     code = np.pad(code, ((0, 0), (0, (-n) % 4))).reshape(m, -1, 4)
     with open(f'{prefix}.bed', 'wb') as f:
-        f.write(b'\x6c\x1b\x01' + (code[..., 0] | code[..., 1] << 2 | code[..., 2] << 4 | code[..., 3] << 6).tobytes())
-    np.savetxt(f'{prefix}.bim', [[1, f'snp{j}', 0, j + 1, 'A', 'C'] for j in range(m)], fmt='%s', delimiter='\t')
+        packed = code[..., 0] | code[..., 1] << 2 | code[..., 2] << 4 | code[..., 3] << 6
+        f.write(b'\x6c\x1b\x01' + packed.tobytes())
+    bim = [[1, f'snp{j}', 0, j + 1, 'A', 'C'] for j in range(m)]
+    np.savetxt(f'{prefix}.bim', bim, fmt='%s', delimiter='\t')
     np.savetxt(f'{prefix}.fam', [[f'i{i}', f'i{i}', 0, 0, 0, -9] for i in range(n)], fmt='%s')
 
 
@@ -36,20 +38,26 @@ def test_bed_roundtrip_and_subset(tmp_path):
 
 @pytest.mark.skipif(not Path(gwas.gemma_binary()).exists(), reason='GEMMA binary not installed')
 def test_run_gemma_matches_exact_lmm(tmp_path):
-    """Wald betas and standard errors at GEMMA's per-SNP variance ratio, with missing phenotypes and covariates."""
+    """Wald betas and standard errors at GEMMA's per-SNP variance ratio.
+
+    With missing phenotypes and covariates.
+    """
     G = genotypes()
     write_plink(tmp_path / 'g', G)
     rng = np.random.default_rng(1)
     n = len(G)
     covariates = rng.normal(size=(n, 2))
-    Y = np.nan_to_num(G[:, :5] - np.nanmean(G[:, :5], 0)) @ rng.normal(size=(5, 2)) + rng.normal(size=(n, 2)) + 3
+    causal = np.nan_to_num(G[:, :5] - np.nanmean(G[:, :5], 0))
+    Y = causal @ rng.normal(size=(5, 2)) + rng.normal(size=(n, 2)) + 3
     Y[[2, 7, 30]] = np.nan
     result = gwas.run_gemma(tmp_path / 'g', Y, tmp_path / 'work', covariates=covariates)
 
     keep = ~np.isnan(Y[:, 0])
     X = gwas.read_bed(tmp_path / 'g')[keep].astype(float)
-    X = np.where(np.isnan(X), np.nanmean(X, 0), X) - np.nanmean(X, 0)  # GEMMA: mean-imputed, centered
-    snps = [int(s[3:]) for s in result['rs']]  # SNPs passing GEMMA's filters, which also make up the relatedness
+    # GEMMA: mean-imputed, centered
+    X = np.where(np.isnan(X), np.nanmean(X, 0), X) - np.nanmean(X, 0)
+    # SNPs passing GEMMA's filters, which also make up the relatedness
+    snps = [int(s[3:]) for s in result['rs']]
     K = X[:, snps] @ X[:, snps].T / len(snps)
     W = np.hstack([np.ones((keep.sum(), 1)), covariates[keep]])
     for t in range(Y.shape[1]):

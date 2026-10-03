@@ -1,6 +1,57 @@
-/data
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
 *.egg-info/
+*.egg
+.eggs/
+
+# Build / dist
+build/
+dist/
+wheels/
+*.whl
+
+# uv lockfile (not committed, matching prolyG's convention)
+uv.lock
+
+# Test / coverage
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+
+# Virtual environments
 .venv/
-results/
+venv/
+env/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Notebook cache
+.ipynb_checkpoints/
+
+# Data: the raw datasets (data/raw, a symlink to the lab's H2-opt data) and
+# everything the pipeline derives from them (data/derived). Large, and
+# regenerable from the raw data and the pipeline.
+/data/
+
+# GEMMA 0.97, installed by scripts/install_gemma.sh.
 /bin/
+
+# Snakemake run state.
+.snakemake/
+
+# Top-level scratch directory: agent <-> user artifacts that persist across
+# Claude Code sessions (handoff notes, ad-hoc notes, throwaway data), matching
+# prolyG's convention. Committed files never cite a .scratch/ path.
+.scratch/
+
+# Local Claude Code session state.
+.claude/*

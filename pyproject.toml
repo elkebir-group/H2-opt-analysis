@@ -1,28 +1,79 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "h2opt-analysis"
 version = "0.1.0"
 description = "Analyses and figures of the H2-opt paper"
-requires-python = ">=3.10,<3.13"
+readme = "README.md"
+# snakemake>=8 needs 3.11+; torch 2.4.1 has no wheels for 3.13.
+requires-python = ">=3.11,<3.13"
+license = { text = "MIT" }
+authors = [
+    { name = "El-Kebir Lab", email = "melkebir@illinois.edu" },
+]
 dependencies = [
     "h2opt",
-    "numpy",
-    "scipy",
+    "numpy>=1.26,<3",
+    "scipy>=1.11",
+    # The torch version of the paper's runs.
     "torch==2.4.1",
     "scikit-learn",
-    "pandas",
-    "matplotlib",
+    "pandas>=2.0",
+    "matplotlib>=3.8",
     "seaborn",
+    "pyyaml>=6",
 ]
 
 [project.optional-dependencies]
-test = ["pytest"]
+dev = [
+    "pytest>=7",
+    "pytest-cov",
+    "ruff",
+    "pre-commit",
+]
+# pipelines/ (Snakemake rules and scripts).
+pipeline = ["snakemake>=8"]
+
+[project.urls]
+Homepage = "https://github.com/elkebir-group/H2-opt-analysis"
+Parent = "https://github.com/elkebir-group/H2-opt"
+
+[tool.hatch.build.targets.wheel]
+packages = ["h2opt_analysis"]
 
 [tool.uv.sources]
-h2opt = { git = "https://github.com/elkebir-group/H2-opt", branch = "refactor" }
+# A local editable path, as prolyG-analysis does for prolyG: a change to the
+# method is live here without a re-pin, and there is one copy of h2opt on disk.
+# The cost is that nothing in git records which h2opt commit produced a result;
+# each pipeline run records it in its log instead (pipelines/run.sh). Point
+# elsewhere with `uv pip install -e /path/to/H2-opt`.
+h2opt = { path = "../H2-opt", editable = true }
 
-[build-system]
-requires = ["setuptools>=61"]
-build-backend = "setuptools.build_meta"
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
-[tool.setuptools]
-packages = ["h2opt_analysis"]
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B"]
+# E: pycodestyle errors;  F: pyflakes;  I: isort;
+# N: pep8-naming;  UP: pyupgrade;  B: flake8-bugbear
+
+[tool.ruff.lint.isort]
+known-first-party = ["h2opt_analysis"]
+
+[tool.ruff.lint.pep8-naming]
+# Math notation allowed as variables (N806) and arguments (N803), as in H2-opt's
+# own pyproject.toml. The explicit list keeps the allowlist from absorbing typos.
+extend-ignore-names = [
+    # Measurements X, traits Y, genotype matrix G, heritability H, kinship K.
+    "X", "Y", "G", "H", "K",
+    # Linear-algebra factors and design matrices.
+    "U", "V", "W", "Z", "Vt",
+    # Inverse covariance and projection of the exact LMM in the tests.
+    "H_inv", "P",
+]

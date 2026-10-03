@@ -1,9 +1,10 @@
 """Train and test heritability of each method's top trait over the 10 genotype folds (boxplots).
 
-Reads results/sorghum/heritability[_lbfgs].npz (evaluate_heritability.py); method labels come from the names
-saved with the values. Writes results/sorghum/figures/top_trait_heritability[_lbfgs].pdf.
+Reads the .npz of evaluate_heritability.py; method labels come from the names saved with the
+values. Writes the figure as .pdf and, beside it, .png.
 
-    uv run python scripts/sorghum/plot_heritability.py [--lbfgs] [--trait 1]
+    python pipelines/scripts/sorghum/plot_heritability.py --heritability heritability_lbfgs.npz \\
+        --out top_trait_heritability_lbfgs.pdf [--trait 1]
 """
 
 import argparse
@@ -12,24 +13,24 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-RESULTS = Path('results/sorghum')
 COLORS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948']
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--lbfgs', action='store_true', help='results of evaluate_heritability.py --lbfgs')
+    parser.add_argument('--heritability', required=True)
+    parser.add_argument('--out', required=True, help='.pdf; a .png is written beside it')
     parser.add_argument('--trait', type=int, default=1)
     args = parser.parse_args()
 
-    suffix = '_lbfgs' if args.lbfgs else ''
-    results = np.load(RESULTS / f'heritability{suffix}.npz')
+    results = np.load(args.heritability)
     methods = list(results['methods'])
     fig, axes = plt.subplots(1, 2, figsize=(7, 2.8), sharey=True)
-    for ax, split in zip(axes, ['train', 'test']):
+    for ax, split in zip(axes, ['train', 'test'], strict=True):
         values = results[split][:, :, args.trait - 1]  # methods x folds
-        boxes = ax.boxplot(values.T, patch_artist=True, widths=0.6, medianprops={'color': 'black'})
-        for box, color in zip(boxes['boxes'], COLORS):
+        boxes = ax.boxplot(values.T, patch_artist=True, widths=0.6,
+                           medianprops={'color': 'black'})
+        for box, color in zip(boxes['boxes'], COLORS, strict=False):
             box.set(facecolor=color, edgecolor=color, alpha=0.8)
         ax.set_xticks(range(1, len(methods) + 1), methods, rotation=30, ha='right')
         ax.set_title(f'{split} genotypes', fontsize=10)
@@ -38,8 +39,7 @@ def main():
         ax.spines[['top', 'right']].set_visible(False)
     axes[0].set_ylabel(f'heritability of trait {args.trait}')
     fig.tight_layout()
-    out = RESULTS / 'figures' / f'top_trait_heritability{suffix}.pdf'
-    out.parent.mkdir(parents=True, exist_ok=True)
+    out = Path(args.out)
     fig.savefig(out)
     fig.savefig(out.with_suffix('.png'), dpi=150)
     for m, method in enumerate(methods):

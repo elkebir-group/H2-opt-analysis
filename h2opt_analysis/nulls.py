@@ -1,19 +1,21 @@
 """Permuted-genotype null of the whole H2-opt -> GWAS pipeline.
 
-Each measured individual (row) is attributed to the genotype of another row, so no genotype-phenotype relation
-remains while the genotype structure (group sizes per stratum) is kept. The permuted labels must be computed
-once, on all rows, and used everywhere a genotype label is used: training H2-opt, the folds, heritability
-evaluation and the per-genotype phenotypes given to GWAS (which then pairs them with the real SNPs of the
-permuted label). Environment stays attached to the row. Subset rows (an environment, a fold) after permuting.
+Each measured individual (row) is attributed to the genotype of another row, so no
+genotype-phenotype relation remains while the genotype structure (group sizes per stratum) is kept.
+The permuted labels must be computed once, on all rows, and used everywhere a genotype label is
+used: training H2-opt, the folds, heritability evaluation and the per-genotype phenotypes given to
+GWAS (which then pairs them with the real SNPs of the permuted label). Environment stays attached to
+the row. Subset rows (an environment, a fold) after permuting.
 """
 
 import numpy as np
 
 
 def permute_genotypes(genotypes, strata=None, seed=0):
-    """Genotype labels permuted among the rows of each stratum (e.g. field set or darkness treatment).
+    """Genotype labels permuted among the rows of each stratum (e.g. field set or treatment).
 
-    strata: (n,) or (n, k) array; rows with equal values form a stratum. None permutes across all rows."""
+    strata: (n,) or (n, k) array; rows with equal values form a stratum. None permutes across all
+    rows."""
     genotypes = np.asarray(genotypes)
     if strata is None:
         groups = np.zeros(len(genotypes), dtype=int)

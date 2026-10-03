@@ -1,0 +1,31 @@
+"""H2-opt analysis pipeline. Run it through pipelines/run.sh; see pipelines/README.md."""
+
+import os
+from pathlib import Path
+
+PIPELINE_DIR = Path(workflow.basedir)
+REPO_ROOT = PIPELINE_DIR.parent
+
+configfile: str(PIPELINE_DIR / "config" / "config.yaml")
+
+# Every job runs in the repository root, so relative paths in the config, the
+# rules and the targets all mean the same thing.
+workdir: str(REPO_ROOT)
+
+
+# Paths stay as the config gives them: relative ones are relative to the
+# working directory, so a target can be named as data/derived/... .
+RAW_ROOT = Path(config["raw_root"] or "data/raw")
+OUT_ROOT = Path(config["outputs_root"])
+
+# One answer to "where is the raw data" for the rules and for the scripts, which
+# read it through h2opt_analysis.paths.
+os.environ["H2OPT_DATA"] = str(RAW_ROOT if RAW_ROOT.is_absolute() else REPO_ROOT / RAW_ROOT)
+
+include: "rules/sorghum.smk"
+
+
+rule all:
+    default_target: True
+    input:
+        rules.sorghum_all.input,

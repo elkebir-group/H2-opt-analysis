@@ -1,38 +1,97 @@
 # H2-opt-analysis
 
-Analysis code for the H2-opt paper (sorghum, Miscanthus, metabolomics, simulations): data pipelines, baselines,
-permuted-genotype nulls, cross-fit GWAS, genomic inflation (λGC), and figures.
+This repository holds the code that reproduces the analyses and figures of the
+[H2-opt](https://github.com/elkebir-group/H2-opt) paper: sorghum, Miscanthus,
+metabolomics and simulations. There are three parts:
 
-The method itself lives in [H2-opt](https://github.com/elkebir-group/H2-opt); this repo depends on it.
+- **`h2opt_analysis/`**: the dataset-specific library. Data loading and folds
+  (`sorghum.py`), heritability of synthetic traits and baselines (`evaluate.py`),
+  GEMMA GWAS (`gwas.py`) and permuted-genotype nulls (`nulls.py`).
+- **`pipelines/`**: a Snakemake pipeline that runs every analysis from the raw
+  data to the figures. See "Running the pipeline" below.
+- **`scripts/`**: setup scripts (`install_gemma.sh`).
 
-## Setup
+## Install
 
-```bash
-uv sync                      # installs h2opt from the refactor branch of H2-opt
-ln -s /path/to/h2opt-data data   # or set H2OPT_DATA=/path/to/h2opt-data
-```
-
-GWAS use GEMMA 0.97, the version used for the paper; `scripts/install_gemma.sh` installs it into `bin/` (Linux or
-macOS). Set `GEMMA=/path/to/gemma` to use another binary.
-
-Permutation nulls use `h2opt_analysis.nulls.permute_genotypes`: genotype labels permuted once, within strata, and
-then used for training, folds, evaluation and GWAS alike.
-
-Scripts are run from the repository root and write to `results/`.
-
-To run a script over folds or seeds, several jobs at once (about 8 small GPU jobs fit on one GPU with near-linear speedup):
+Needs [uv](https://docs.astral.sh/uv/) and an `H2-opt` checkout at `../H2-opt`,
+which is installed as an editable package.
 
 ```bash
-uv run python -m h2opt_analysis.launch --jobs 8 --threads 1 --log-dir results/sorghum/logs --grid fold=0-9 \
-    -- python scripts/sorghum/train_h2opt.py --fold {fold} --device cuda
+git clone git@github.com:elkebir-group/H2-opt.git ../H2-opt
+uv sync --all-extras        # creates .venv; the pipeline extra holds Snakemake
+uv run pre-commit install   # one-time, after cloning: runs ruff and codespell on commit
+scripts/install_gemma.sh    # GEMMA 0.97, into bin/ (Linux or macOS)
 ```
 
-## Sorghum
+Always pass `--all-extras`. A bare `uv sync` removes Snakemake and the dev tools.
+To use an `H2-opt` checkout elsewhere, run `uv pip install -e /path/to/H2-opt`.
+GWAS use GEMMA 0.97, the version used for the paper. Set `GEMMA=/path/to/gemma`
+to use another binary.
 
-| Script | Result |
-|---|---|
-| `scripts/sorghum/train_h2opt.py --fold k` | linear H2-opt for genotype fold k (paper settings) |
-| `scripts/sorghum/train_h2opt_lbfgs.py --fold k` | linear H2-opt trained to convergence with L-BFGS (ridge and stopping tuned on inner validation) |
-| `scripts/sorghum/evaluate_heritability.py [--paper \| --lbfgs]` | train/test heritability of H2-opt, PCA, genetic PCA, LDA, PCH and max features |
-| `scripts/sorghum/plot_heritability.py [--lbfgs]` | boxplots of train/test heritability of each method's top trait over the folds |
-| `scripts/sorghum/gwas.py --paper --fold k` | GEMMA GWAS of the per-line trait means (intercept + 5 genotype PCs) |
+## Data
+
+Nothing under `data/` is committed.
+
+| Path | What | Source |
+|---|---|---|
+| `data/raw/` | the H2-opt datasets (`plant/`, `miscPlant/`, `metab/`, `software/`, ...) | a symlink to the lab's H2-opt data directory |
+| `data/derived/` | everything the pipeline writes | `pipelines/run.sh` |
+
+```bash
+mkdir -p data && ln -s /path/to/h2opt-data data/raw
+```
+
+Alternatively set `raw_root` in `pipelines/config/config.yaml` (or `$H2OPT_DATA`
+when you run a script by hand).
+
+## Running the pipeline
+
+`pipelines/run.sh` runs `pipelines/Snakefile` with the config in
+`pipelines/config/config.yaml`. A target is an output path relative to the
+repository root, or a rule name.
+
+```bash
+pipelines/run.sh --dry-run                                        # what would run
+pipelines/run.sh -- data/derived/sorghum/gwas/paper_fold0.npz     # one output
+pipelines/run.sh -- sorghum_all                                   # all sorghum analyses
+pipelines/run.sh                                                  # everything
+```
+
+`run.sh` always passes `--rerun-triggers mtime`, so a code or config change never
+reruns existing outputs by itself. To rerun one output, delete it or add
+`--forcerun <rule>` with that one target. Each job's BLAS threads are capped at
+its rule's `threads`, and `--cores` (default: all cores but two) caps their sum.
+GPU training jobs share the GPU, 8 at a time (`--gpu-jobs N`).
+
+### Sorghum
+
+All outputs are under `data/derived/sorghum/`. A trait source is one way to get
+the H2-opt traits of a genotype fold: `paper` (the predictions behind the paper),
+`rmsprop` (retrained with the paper's settings) or `lbfgs` (linear H2-opt
+trained to convergence with L-BFGS, with the ridge and the number of steps tuned
+on inner validation genotypes).
+
+| Rule | Output | Content |
+|---|---|---|
+| `sorghum_train_rmsprop` | `h2opt_rmsprop/fold{k}.{npz,pt}` | H2-opt with the paper's settings, fold k |
+| `sorghum_train_lbfgs` | `h2opt_lbfgs/fold{k}.npz` | L-BFGS H2-opt, fold k |
+| `sorghum_heritability` | `heritability_{source}.npz` | train and test heritability of H2-opt, PCA, genetic PCA, LDA, PCH and the most heritable features |
+| `sorghum_plot_heritability` | `figures/top_trait_heritability_{source}.{pdf,png}` | boxplots of the top trait over the folds |
+| `sorghum_gwas` | `gwas/{source}_fold{k}.npz` | GEMMA LMM of the per-line trait means (intercept + 5 genotype PCs) |
+
+Each script under `pipelines/scripts/` also runs by hand; its docstring gives
+the arguments.
+
+## Permutation nulls
+
+`h2opt_analysis.nulls.permute_genotypes` permutes the genotype labels once,
+within strata. Use the permuted labels everywhere a genotype label is used:
+training, folds, heritability evaluation and GWAS.
+
+## Tests
+
+```bash
+uv run --all-extras pytest
+```
+
+The GEMMA test is skipped when GEMMA is not installed.
