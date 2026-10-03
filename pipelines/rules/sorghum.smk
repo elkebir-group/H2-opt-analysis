@@ -26,10 +26,16 @@ def sorghum_traits(source, fold):
     return str(SORGHUM_OUT / f"h2opt_{source}" / f"fold{fold}.npz")
 
 
+# Traits and their heritability only. The GWAS is a separate target, sorghum_gwas_all, run only
+# on request once the methods and their tuning are settled.
 rule sorghum_all:
     input:
         expand(str(SORGHUM_OUT / "figures" / "top_trait_heritability_{source}.pdf"),
                source=SORGHUM_SOURCES),
+
+
+rule sorghum_gwas_all:
+    input:
         expand(str(SORGHUM_OUT / "gwas" / "{source}_fold{fold}.npz"),
                source=["paper", "lbfgs"], fold=SORGHUM_FOLDS),
 
@@ -62,11 +68,11 @@ rule sorghum_train_lbfgs:
         str(SORGHUM_OUT / "h2opt_lbfgs" / "fold{fold}.log"),
     params:
         traits=SORGHUM["lbfgs"]["traits"],
-        max_steps=SORGHUM["lbfgs"]["max_steps"],
+        steps=SORGHUM["lbfgs"]["steps"],
     threads: 2
     shell:
         "python -u {SORGHUM_SCRIPTS}/train_h2opt_lbfgs.py --fold {wildcards.fold} --out {output}"
-        " --traits {params.traits} --steps {params.max_steps}"
+        " --traits {params.traits} --steps {params.steps}"
         " > {log} 2>&1"
 
 

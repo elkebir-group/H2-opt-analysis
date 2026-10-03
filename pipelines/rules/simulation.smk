@@ -35,11 +35,18 @@ def sim_method_args(name_pattern):
         for m in SIM["methods"])
 
 
+# Traits and their heritability only. The GWAS (causal-SNP detection) is a separate target,
+# simulation_gwas_all, run only on request once the methods and their tuning are settled.
 rule simulation_all:
     input:
         str(SIM_OUT / "evaluation.npz"),
-        str(SIM_OUT / "roc.npz"),
         str(SIM_OUT / "figures" / "heritability.pdf"),
+
+
+rule simulation_gwas_all:
+    input:
+        str(SIM_OUT / "roc.npz"),
+        str(SIM_OUT / "figures" / "auc.pdf"),
 
 
 rule sim_encode:
@@ -92,11 +99,11 @@ rule sim_train_lbfgs:
         sim_file("{instance}", "h2opt_lbfgs.log"),
     params:
         traits=SIM["traits"],
-        max_steps=SIM["lbfgs"]["max_steps"],
+        steps=SIM["lbfgs"]["steps"],
     threads: 2
     shell:
         "python -u {SIM_SCRIPTS}/train_h2opt_lbfgs.py --spectra {input} --out {output}"
-        " --traits {params.traits} --steps {params.max_steps} --seed {wildcards.instance}"
+        " --traits {params.traits} --steps {params.steps} --seed {wildcards.instance}"
         " > {log} 2>&1"
 
 
@@ -186,18 +193,32 @@ rule sim_roc:
         "python -u {SIM_SCRIPTS}/roc.py {params.methods} --out {output} > {log} 2>&1"
 
 
-rule sim_plot:
+rule sim_plot_traits:
     input:
-        evaluation=str(SIM_OUT / "evaluation.npz"),
+        str(SIM_OUT / "evaluation.npz"),
+    output:
+        str(SIM_OUT / "figures" / "heritability.pdf"),
+        str(SIM_OUT / "figures" / "correlation.pdf"),
+    log:
+        str(SIM_OUT / "figures" / "plot_traits.log"),
+    params:
+        out_dir=str(SIM_OUT / "figures"),
+    threads: 1
+    shell:
+        "python -u {SIM_SCRIPTS}/plot_traits.py --evaluation {input}"
+        " --out-dir {params.out_dir} > {log} 2>&1"
+
+
+rule sim_plot_gwas:
+    input:
         roc=str(SIM_OUT / "roc.npz"),
         example=sim_file(SIM["example"]["instance"], f"gwas/{SIM['example']['method']}.npz"),
     output:
         [str(SIM_OUT / "figures" / name) for name in
-         ["heritability.pdf", "correlation.pdf", "auc.pdf", "roc_trait1.pdf", "roc_trait2.pdf",
-          "roc_trait3.pdf",
+         ["auc.pdf", "roc_trait1.pdf", "roc_trait2.pdf", "roc_trait3.pdf",
           f"gwas_{SIM['example']['method']}_instance{SIM['example']['instance']}.png"]],
     log:
-        str(SIM_OUT / "figures" / "plot.log"),
+        str(SIM_OUT / "figures" / "plot_gwas.log"),
     params:
         out_dir=str(SIM_OUT / "figures"),
         name=f"{SIM['example']['method']}_instance{SIM['example']['instance']}",
@@ -205,6 +226,6 @@ rule sim_plot:
                f"instance {SIM['example']['instance']}"),
     threads: 1
     shell:
-        "python -u {SIM_SCRIPTS}/plot.py --evaluation {input.evaluation} --roc {input.roc}"
+        "python -u {SIM_SCRIPTS}/plot_gwas.py --roc {input.roc}"
         " --gwas-example {input.example} --example-name {params.name}"
         " --example-label '{params.label}' --out-dir {params.out_dir} > {log} 2>&1"

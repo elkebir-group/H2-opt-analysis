@@ -19,7 +19,7 @@ sorghum:
   # Linear H2-opt trained to convergence with L-BFGS (train_h2opt_lbfgs.py).
   lbfgs:
     traits: 5
-    max_steps: 100
+    steps: 200
   # Traits scored per method in evaluate_heritability.py, per trait source.
   evaluate_traits:
     paper: 10
@@ -42,7 +42,7 @@ simulation:
     steps: 10000
     device: cuda
   lbfgs:
-    max_steps: 100
+    steps: 200
   # GEMMA LMM of the per-line means of traits 1-3, for the truth and every method.
   gwas:
     pcs: 5
