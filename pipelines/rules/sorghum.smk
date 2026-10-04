@@ -1,5 +1,6 @@
 # Sorghum hyperspectral analyses: H2-opt per genotype fold, heritability of
-# H2-opt and the baselines, and GWAS of the per-line trait means.
+# H2-opt and the baselines, a scan of the H2-opt noise level on held-out
+# genotypes, and GWAS of the per-line trait means.
 #
 # A trait source is one way to get the H2-opt traits of a fold:
 #   paper - the predictions behind the paper (raw data, not built here)
@@ -47,6 +48,7 @@ rule sorghum_all:
     input:
         expand(str(SORGHUM_OUT / "figures" / "top_trait_heritability_{source}.pdf"),
                source=SORGHUM_SOURCES),
+        str(SORGHUM_OUT / "noise_scan" / "noise_scan.npz"),
 
 
 rule sorghum_gwas_all:
@@ -64,16 +66,67 @@ rule sorghum_train_h2opt:
     params:
         traits=SORGHUM["h2opt"]["traits"],
         steps=SORGHUM["h2opt"]["steps"],
+        noise=SORGHUM["h2opt"]["noise"],
+        noise_level=SORGHUM["h2opt"]["noise_level"],
         device=SORGHUM["h2opt"]["device"],
     threads: 1
     resources:
         # Small GPU jobs are limited by Python overhead, so several share one GPU.
         gpu=lambda wc: 1 if SORGHUM["h2opt"]["device"] == "cuda" else 0,
     shell:
-        "python -u {SORGHUM_SCRIPTS}/train_h2opt.py --fold {wildcards.fold}"
+        "python -u {SORGHUM_SCRIPTS}/train_h2opt.py --test-folds {wildcards.fold}"
         " --out-traits {output.traits} --out-model {output.model}"
-        " --traits {params.traits} --steps {params.steps} --seed {wildcards.fold}"
+        " --traits {params.traits} --steps {params.steps}"
+        " --noise {params.noise} --noise-level {params.noise_level} --seed {wildcards.fold}"
         " --device {params.device} > {log} 2>&1"
+
+
+NOISE_SCAN = SORGHUM["noise_scan"]
+NOISE_SCAN_OUT = SORGHUM_OUT / "noise_scan"
+
+
+rule sorghum_noise_scan_train:
+    output:
+        traits=str(NOISE_SCAN_OUT / "sd{level}.npz"),
+        model=str(NOISE_SCAN_OUT / "sd{level}.pt"),
+    log:
+        str(NOISE_SCAN_OUT / "sd{level}.log"),
+    wildcard_constraints:
+        level=r"[0-9.e-]+",
+    params:
+        test_folds=" ".join(str(f) for f in NOISE_SCAN["test_folds"]),
+        traits=NOISE_SCAN["traits"],
+        steps=NOISE_SCAN["steps"],
+        noise_level=lambda wc: float(wc.level) * sorghum.feature_sd(),
+        device=NOISE_SCAN["device"],
+    threads: 1
+    resources:
+        gpu=lambda wc: 1 if NOISE_SCAN["device"] == "cuda" else 0,
+    shell:
+        "python -u {SORGHUM_SCRIPTS}/train_h2opt.py --test-folds {params.test_folds}"
+        " --out-traits {output.traits} --out-model {output.model}"
+        " --traits {params.traits} --steps {params.steps}"
+        " --noise normal --noise-level {params.noise_level} --seed 0"
+        " --device {params.device} > {log} 2>&1"
+
+
+rule sorghum_noise_scan:
+    input:
+        [str(NOISE_SCAN_OUT / f"sd{level}.npz") for level in NOISE_SCAN["levels"]],
+    output:
+        npz=str(NOISE_SCAN_OUT / "noise_scan.npz"),
+        pdf=str(SORGHUM_OUT / "figures" / "noise_scan.pdf"),
+        png=str(SORGHUM_OUT / "figures" / "noise_scan.png"),
+    log:
+        str(NOISE_SCAN_OUT / "noise_scan.log"),
+    params:
+        test_folds=" ".join(str(f) for f in NOISE_SCAN["test_folds"]),
+        levels=" ".join(f"--level {level} {NOISE_SCAN_OUT}/sd{level}.npz"
+                        for level in NOISE_SCAN["levels"]),
+    threads: 1
+    shell:
+        "python -u {SORGHUM_SCRIPTS}/noise_scan.py --test-folds {params.test_folds}"
+        " {params.levels} --out {output.npz} --figure {output.pdf} > {log} 2>&1"
 
 
 rule sorghum_baseline:

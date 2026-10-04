@@ -35,6 +35,11 @@ def load():
     return X, genotypes, environment
 
 
+def feature_sd():
+    """Root of the mean variance of the wavelengths over all plants, the scale of the noise."""
+    return float(np.sqrt(np.mean(np.var(load_npz(SPECTRA), axis=0))))
+
+
 def folds(genotypes, seed=0):
     """Fold (0-9) of each plant; all plants of a genotype share a fold. The paper used seed 0."""
     return per_group(genotypes, lambda c: np.random.RandomState(seed).randint(N_FOLDS, size=c))

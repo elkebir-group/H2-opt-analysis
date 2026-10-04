@@ -19,6 +19,17 @@ sorghum:
   h2opt:
     traits: 10
     steps: 10000
+    noise: uniform
+    noise_level: 0.005
+    device: cuda
+  # H2-opt (as above, but normal noise) trained once per noise level with the plants of
+  # test_folds held out, to choose one noise level for all folds. A level is the noise
+  # standard deviation as a fraction of the root mean variance of the wavelengths.
+  noise_scan:
+    test_folds: [0, 1]
+    levels: [0.003, 0.01, 0.03, 0.1, 0.3, 1.0]
+    traits: 3
+    steps: 10000
     device: cuda
   # Baselines fitted once per fold (baseline.py) and evaluated against every source;
   # traits must be at least the traits of every source.
