@@ -1,7 +1,8 @@
-"""Train linear H2-opt on sorghum for one of the paper's 10 genotype folds (the paper's settings).
+"""Train linear H2-opt on sorghum for one of the paper's 10 genotype folds.
 
-One linear model per trait, RMSprop with learning rate 1e-5, uniform input noise up to 0.005, and a
-penalty of 1e-4 on the total variation of the weights across adjacent wavelengths. Writes the model
+The paper's objective: one linear model per trait, uniform input noise up to 0.005, traits clipped
+at 2 in the loss, and a penalty of 1e-4 on the total variation of the weights across adjacent
+wavelengths. Trained with h2opt.train's default optimizer (Adam). Writes the model
 (.pt) and the traits of all plants, uncorrelated on the training plants (.npz, array 'traits').
 
     python pipelines/scripts/sorghum/train_h2opt.py --fold 0 --out-traits fold0.npz \\
@@ -31,7 +32,7 @@ def main():
     parser.add_argument('--fold', type=int, required=True)
     parser.add_argument('--out-traits', required=True)
     parser.add_argument('--out-model', required=True)
-    parser.add_argument('--steps', type=int, required=True, help='RMSprop steps per trait')
+    parser.add_argument('--steps', type=int, required=True, help='steps per trait')
     parser.add_argument('--traits', type=int, required=True)
     parser.add_argument('--seed', type=int, required=True)
     parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
@@ -43,7 +44,7 @@ def main():
 
     model = TraitModels(args.traits, LinearModel, X.shape[1])
     train(model, X, genotypes, environment, (~is_train).astype(int), model_file=args.out_model,
-          n_traits=args.traits, n_iter=args.steps, learning_rate=1e-5, noise_level=0.005,
+          n_traits=args.traits, n_iter=args.steps, noise_level=0.005,
           penalty=smoothness_penalty(1e-4), device=args.device)
     np.savez(args.out_traits, traits=synthetic_traits(model, X, is_train))
 

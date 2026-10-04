@@ -2,9 +2,8 @@
 # H2-opt and the baselines, and GWAS of the per-line trait means.
 #
 # A trait source is one way to get the H2-opt traits of a fold:
-#   paper   - the predictions behind the paper (raw data, not built here)
-#   rmsprop - retrained with the paper's settings (train_h2opt.py)
-#   lbfgs   - linear H2-opt trained to convergence with L-BFGS
+#   paper - the predictions behind the paper (raw data, not built here)
+#   h2opt - retrained here (train_h2opt.py)
 
 from h2opt_analysis import sorghum
 from h2opt_analysis.methods import BASELINES
@@ -13,7 +12,8 @@ SORGHUM = config["sorghum"]
 SORGHUM_OUT = OUT_ROOT / "sorghum"
 SORGHUM_SCRIPTS = PIPELINE_DIR / "scripts" / "sorghum"
 SORGHUM_FOLDS = SORGHUM["folds"]
-SORGHUM_SOURCES = ["paper", "rmsprop", "lbfgs"]
+# Method slug (h2opt_analysis.methods.LABELS) of each trait source.
+SORGHUM_SOURCES = {"paper": "h2opt_paper", "h2opt": "h2opt"}
 assert all(SORGHUM[s]["traits"] <= SORGHUM["baselines"]["traits"] for s in SORGHUM_SOURCES), \
     "sorghum.baselines.traits must cover the traits of every source"
 
@@ -26,7 +26,7 @@ def sorghum_traits(source, fold):
     """Traits file of one fold for one trait source."""
     if source == "paper":
         return str(sorghum.paper_traits(fold))
-    return str(SORGHUM_OUT / f"h2opt_{source}" / f"fold{fold}.npz")
+    return str(SORGHUM_OUT / "h2opt" / f"fold{fold}.npz")
 
 
 def sorghum_baseline(baseline, fold):
@@ -36,7 +36,7 @@ def sorghum_baseline(baseline, fold):
 
 def sorghum_method_args(source):
     """'--method slug file0 ... file9' for the H2-opt source and every baseline."""
-    files = {f"h2opt_{source}": [sorghum_traits(source, f) for f in SORGHUM_FOLDS]}
+    files = {SORGHUM_SOURCES[source]: [sorghum_traits(source, f) for f in SORGHUM_FOLDS]}
     files.update({b: [sorghum_baseline(b, f) for f in SORGHUM_FOLDS] for b in BASELINES})
     return " ".join(f"--method {m} " + " ".join(fs) for m, fs in files.items())
 
@@ -52,44 +52,26 @@ rule sorghum_all:
 rule sorghum_gwas_all:
     input:
         expand(str(SORGHUM_OUT / "gwas" / "{source}_fold{fold}.npz"),
-               source=["paper", "lbfgs"], fold=SORGHUM_FOLDS),
+               source=["paper", "h2opt"], fold=SORGHUM_FOLDS),
 
 
-rule sorghum_train_rmsprop:
+rule sorghum_train_h2opt:
     output:
-        traits=str(SORGHUM_OUT / "h2opt_rmsprop" / "fold{fold}.npz"),
-        model=str(SORGHUM_OUT / "h2opt_rmsprop" / "fold{fold}.pt"),
+        traits=str(SORGHUM_OUT / "h2opt" / "fold{fold}.npz"),
+        model=str(SORGHUM_OUT / "h2opt" / "fold{fold}.pt"),
     log:
-        str(SORGHUM_OUT / "h2opt_rmsprop" / "fold{fold}.log"),
+        str(SORGHUM_OUT / "h2opt" / "fold{fold}.log"),
     params:
-        traits=SORGHUM["rmsprop"]["traits"],
-        steps=SORGHUM["rmsprop"]["steps"],
-        device=SORGHUM["rmsprop"]["device"],
+        traits=SORGHUM["h2opt"]["traits"],
+        steps=SORGHUM["h2opt"]["steps"],
+        device=SORGHUM["h2opt"]["device"],
     threads: 1
     resources:
         # Small GPU jobs are limited by Python overhead, so several share one GPU.
-        gpu=lambda wc: 1 if SORGHUM["rmsprop"]["device"] == "cuda" else 0,
+        gpu=lambda wc: 1 if SORGHUM["h2opt"]["device"] == "cuda" else 0,
     shell:
         "python -u {SORGHUM_SCRIPTS}/train_h2opt.py --fold {wildcards.fold}"
         " --out-traits {output.traits} --out-model {output.model}"
-        " --traits {params.traits} --steps {params.steps} --seed {wildcards.fold}"
-        " --device {params.device} > {log} 2>&1"
-
-
-rule sorghum_train_lbfgs:
-    output:
-        str(SORGHUM_OUT / "h2opt_lbfgs" / "fold{fold}.npz"),
-    log:
-        str(SORGHUM_OUT / "h2opt_lbfgs" / "fold{fold}.log"),
-    params:
-        traits=SORGHUM["lbfgs"]["traits"],
-        steps=SORGHUM["lbfgs"]["steps"],
-        device=SORGHUM["lbfgs"]["device"],
-    threads: 2
-    resources:
-        gpu=lambda wc: 1 if SORGHUM["lbfgs"]["device"] == "cuda" else 0,
-    shell:
-        "python -u {SORGHUM_SCRIPTS}/train_h2opt_lbfgs.py --fold {wildcards.fold} --out {output}"
         " --traits {params.traits} --steps {params.steps} --seed {wildcards.fold}"
         " --device {params.device} > {log} 2>&1"
 

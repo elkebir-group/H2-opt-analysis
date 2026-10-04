@@ -68,46 +68,26 @@ rule sim_encode:
         " --reference {input.reference} --out-dirs {params.out_dirs} > {log} 2>&1"
 
 
-rule sim_train_rmsprop:
+rule sim_train_h2opt:
     input:
         sim_file("{instance}", "spectra.npz"),
     output:
-        traits=sim_file("{instance}", "h2opt_rmsprop.npz"),
-        model=sim_file("{instance}", "h2opt_rmsprop.pt"),
+        traits=sim_file("{instance}", "h2opt.npz"),
+        model=sim_file("{instance}", "h2opt.pt"),
     log:
-        sim_file("{instance}", "h2opt_rmsprop.log"),
+        sim_file("{instance}", "h2opt.log"),
     params:
         traits=SIM["traits"],
-        steps=SIM["rmsprop"]["steps"],
-        device=SIM["rmsprop"]["device"],
+        steps=SIM["h2opt"]["steps"],
+        device=SIM["h2opt"]["device"],
     threads: 1
     resources:
-        gpu=lambda wc: 1 if SIM["rmsprop"]["device"] == "cuda" else 0,
+        gpu=lambda wc: 1 if SIM["h2opt"]["device"] == "cuda" else 0,
     shell:
         "python -u {SIM_SCRIPTS}/train_h2opt.py --spectra {input}"
         " --out-traits {output.traits} --out-model {output.model} --traits {params.traits}"
         " --steps {params.steps} --seed {wildcards.instance} --device {params.device}"
         " > {log} 2>&1"
-
-
-rule sim_train_lbfgs:
-    input:
-        sim_file("{instance}", "spectra.npz"),
-    output:
-        sim_file("{instance}", "h2opt_lbfgs.npz"),
-    log:
-        sim_file("{instance}", "h2opt_lbfgs.log"),
-    params:
-        traits=SIM["traits"],
-        steps=SIM["lbfgs"]["steps"],
-        device=SIM["lbfgs"]["device"],
-    threads: 2
-    resources:
-        gpu=lambda wc: 1 if SIM["lbfgs"]["device"] == "cuda" else 0,
-    shell:
-        "python -u {SIM_SCRIPTS}/train_h2opt_lbfgs.py --spectra {input} --out {output}"
-        " --traits {params.traits} --steps {params.steps} --seed {wildcards.instance}"
-        " --device {params.device} > {log} 2>&1"
 
 
 rule sim_baseline:

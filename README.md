@@ -67,15 +67,12 @@ GPU training jobs share the GPU, 8 at a time (`--gpu-jobs N`).
 ### Sorghum
 
 All outputs are under `data/derived/sorghum/`. A trait source is one way to get
-the H2-opt traits of a genotype fold: `paper` (the predictions behind the paper),
-`rmsprop` (retrained with the paper's settings) or `lbfgs` (linear H2-opt
-trained to convergence with L-BFGS, with one ridge chosen by 5-fold
-cross-validation over the training genotypes).
+the H2-opt traits of a genotype fold: `paper` (the predictions behind the paper)
+or `h2opt` (retrained here: the paper's objective, trained with Adam).
 
 | Rule | Output | Content |
 |---|---|---|
-| `sorghum_train_rmsprop` | `h2opt_rmsprop/fold{k}.{npz,pt}` | H2-opt with the paper's settings, fold k |
-| `sorghum_train_lbfgs` | `h2opt_lbfgs/fold{k}.npz` | L-BFGS H2-opt, fold k |
+| `sorghum_train_h2opt` | `h2opt/fold{k}.{npz,pt}` | H2-opt with the paper's objective, fold k |
 | `sorghum_baseline` | `{pca,genetic_pca,lda,pch,max_features}/fold{k}.npz` | baselines fitted on the training genotypes of fold k, once for all sources |
 | `sorghum_heritability` | `heritability_{source}.npz` | train and test heritability of the source's H2-opt traits and the baselines' |
 | `sorghum_plot_heritability` | `figures/top_trait_heritability_{source}.{pdf,png}` | boxplots of the top trait over the folds |
@@ -92,8 +89,7 @@ the lines) and everything after are rebuilt here. All outputs are under `data/de
 | Rule | Output | Content |
 |---|---|---|
 | `sim_encode` | `instance{i}/{spectra,truth}.npz` | simulated spectra, test plants, line of each plant, true traits |
-| `sim_train_rmsprop` | `instance{i}/h2opt_rmsprop.{npz,pt}` | H2-opt with the paper's simulation settings (GPU) |
-| `sim_train_lbfgs` | `instance{i}/h2opt_lbfgs.npz` | linear H2-opt with L-BFGS |
+| `sim_train_h2opt` | `instance{i}/h2opt.{npz,pt}` | H2-opt with the paper's simulation objective (GPU) |
 | `sim_baseline` | `instance{i}/{pca,genetic_pca,lda,pch,max_features}.npz` | baselines fitted on the training lines |
 | `sim_genotypes` | `instance{i}/genotypes.{bed,bim,fam}`, `genotype_pcs.npy` | genotypes without the instance's QTNs, and their PCs |
 | `sim_gwas` | `instance{i}/gwas/{method}.npz` | GEMMA LMM of the line means of traits 1-3 (intercept + 5 PCs) |

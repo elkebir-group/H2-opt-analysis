@@ -5,7 +5,7 @@ ROC curves) and gwas_{example-name}.png (Manhattan and QQ plots of the GWAS of o
 1-3 on one instance).
 
     python pipelines/scripts/simulation/plot_gwas.py --roc roc.npz \\
-        --gwas-example gwas/h2opt_rmsprop.npz --example-name h2opt_rmsprop_instance0 \\
+        --gwas-example gwas/h2opt.npz --example-name h2opt_instance0 \\
         --example-label "H2-opt, instance 0" --out-dir figures
 """
 

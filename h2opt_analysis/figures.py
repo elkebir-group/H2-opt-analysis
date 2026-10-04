@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 
 from .methods import LABELS
 
-COLORS = {'truth': 'tab:red', 'h2opt_paper': 'tab:blue', 'h2opt_rmsprop': 'tab:blue',
-          'h2opt_lbfgs': 'tab:cyan', 'pca': 'tab:orange', 'genetic_pca': 'tab:purple',
+COLORS = {'truth': 'tab:red', 'h2opt_paper': 'tab:blue', 'h2opt': 'tab:blue',
+          'pca': 'tab:orange', 'genetic_pca': 'tab:purple',
           'lda': 'tab:brown', 'pch': 'tab:pink', 'max_features': 'tab:green'}
 
 

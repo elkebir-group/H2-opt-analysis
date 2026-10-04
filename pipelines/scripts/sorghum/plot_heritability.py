@@ -3,8 +3,8 @@
 Reads the .npz of evaluate_heritability.py; method labels and colors come from the slugs saved
 with the values. Writes the figure as .pdf and, beside it, .png.
 
-    python pipelines/scripts/sorghum/plot_heritability.py --heritability heritability_lbfgs.npz \\
-        --out top_trait_heritability_lbfgs.pdf [--trait 1]
+    python pipelines/scripts/sorghum/plot_heritability.py --heritability heritability_h2opt.npz \\
+        --out top_trait_heritability_h2opt.pdf [--trait 1]
 """
 
 import argparse

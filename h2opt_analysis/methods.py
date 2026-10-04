@@ -7,8 +7,7 @@ from h2opt import baselines
 LABELS = {
     'truth': 'ground truth',
     'h2opt_paper': 'H2-opt (paper)',
-    'h2opt_rmsprop': 'H2-opt',
-    'h2opt_lbfgs': 'H2-opt (L-BFGS)',
+    'h2opt': 'H2-opt',
     'pca': 'PCA',
     'genetic_pca': 'genetic PCA',
     'lda': 'LDA',

@@ -8,8 +8,8 @@ evaluated. Writes an .npz (methods; folds; train and test: methods x folds x tra
 mean test heritability of each trait.
 
     python pipelines/scripts/sorghum/evaluate_heritability.py --folds 0 ... 9 \\
-        --method h2opt_lbfgs h2opt_lbfgs/fold0.npz ... --method pch pch/fold0.npz ... \\
-        --out heritability_lbfgs.npz --traits 5
+        --method h2opt h2opt/fold0.npz ... --method pch pch/fold0.npz ... \\
+        --out heritability_h2opt.npz --traits 10
 """
 
 import argparse
