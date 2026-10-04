@@ -48,7 +48,8 @@ rule sorghum_all:
     input:
         expand(str(SORGHUM_OUT / "figures" / "top_trait_heritability_{source}.pdf"),
                source=SORGHUM_SOURCES),
-        str(SORGHUM_OUT / "noise_scan" / "noise_scan.npz"),
+        expand(str(SORGHUM_OUT / "noise_scan" / "{variant}" / "noise_scan.npz"),
+               variant=SORGHUM["noise_scan"]["variants"]),
 
 
 rule sorghum_gwas_all:
@@ -68,6 +69,7 @@ rule sorghum_train_h2opt:
         steps=SORGHUM["h2opt"]["steps"],
         noise=SORGHUM["h2opt"]["noise"],
         noise_level=SORGHUM["h2opt"]["noise_level"],
+        penalty=SORGHUM["h2opt"]["penalty"],
         device=SORGHUM["h2opt"]["device"],
     threads: 1
     resources:
@@ -77,7 +79,8 @@ rule sorghum_train_h2opt:
         "python -u {SORGHUM_SCRIPTS}/train_h2opt.py --test-folds {wildcards.fold}"
         " --out-traits {output.traits} --out-model {output.model}"
         " --traits {params.traits} --steps {params.steps}"
-        " --noise {params.noise} --noise-level {params.noise_level} --seed {wildcards.fold}"
+        " --noise {params.noise} --noise-level {params.noise_level}"
+        " --penalty {params.penalty} --seed {wildcards.fold}"
         " --device {params.device} > {log} 2>&1"
 
 
@@ -85,19 +88,27 @@ NOISE_SCAN = SORGHUM["noise_scan"]
 NOISE_SCAN_OUT = SORGHUM_OUT / "noise_scan"
 
 
+rule sorghum_noise_scan_all:
+    input:
+        expand(str(NOISE_SCAN_OUT / "{variant}" / "noise_scan.npz"),
+               variant=NOISE_SCAN["variants"]),
+
+
 rule sorghum_noise_scan_train:
     output:
-        traits=str(NOISE_SCAN_OUT / "sd{level}.npz"),
-        model=str(NOISE_SCAN_OUT / "sd{level}.pt"),
+        traits=str(NOISE_SCAN_OUT / "{variant}" / "sd{level}.npz"),
+        model=str(NOISE_SCAN_OUT / "{variant}" / "sd{level}.pt"),
     log:
-        str(NOISE_SCAN_OUT / "sd{level}.log"),
+        str(NOISE_SCAN_OUT / "{variant}" / "sd{level}.log"),
     wildcard_constraints:
+        variant="|".join(NOISE_SCAN["variants"]),
         level=r"[0-9.e-]+",
     params:
         test_folds=" ".join(str(f) for f in NOISE_SCAN["test_folds"]),
         traits=NOISE_SCAN["traits"],
-        steps=NOISE_SCAN["steps"],
+        steps=lambda wc: NOISE_SCAN["variants"][wc.variant]["steps"],
         noise_level=lambda wc: float(wc.level) * sorghum.feature_sd(),
+        penalty=lambda wc: NOISE_SCAN["variants"][wc.variant]["penalty"],
         device=NOISE_SCAN["device"],
     threads: 1
     resources:
@@ -106,23 +117,26 @@ rule sorghum_noise_scan_train:
         "python -u {SORGHUM_SCRIPTS}/train_h2opt.py --test-folds {params.test_folds}"
         " --out-traits {output.traits} --out-model {output.model}"
         " --traits {params.traits} --steps {params.steps}"
-        " --noise normal --noise-level {params.noise_level} --seed 0"
-        " --device {params.device} > {log} 2>&1"
+        " --noise normal --noise-level {params.noise_level} --penalty {params.penalty}"
+        " --seed 0 --device {params.device} > {log} 2>&1"
 
 
 rule sorghum_noise_scan:
     input:
-        [str(NOISE_SCAN_OUT / f"sd{level}.npz") for level in NOISE_SCAN["levels"]],
+        lambda wc: [str(NOISE_SCAN_OUT / wc.variant / f"sd{level}.npz")
+                    for level in NOISE_SCAN["levels"]],
     output:
-        npz=str(NOISE_SCAN_OUT / "noise_scan.npz"),
-        pdf=str(SORGHUM_OUT / "figures" / "noise_scan.pdf"),
-        png=str(SORGHUM_OUT / "figures" / "noise_scan.png"),
+        npz=str(NOISE_SCAN_OUT / "{variant}" / "noise_scan.npz"),
+        pdf=str(SORGHUM_OUT / "figures" / "noise_scan_{variant}.pdf"),
+        png=str(SORGHUM_OUT / "figures" / "noise_scan_{variant}.png"),
     log:
-        str(NOISE_SCAN_OUT / "noise_scan.log"),
+        str(NOISE_SCAN_OUT / "{variant}" / "noise_scan.log"),
+    wildcard_constraints:
+        variant="|".join(NOISE_SCAN["variants"]),
     params:
         test_folds=" ".join(str(f) for f in NOISE_SCAN["test_folds"]),
-        levels=" ".join(f"--level {level} {NOISE_SCAN_OUT}/sd{level}.npz"
-                        for level in NOISE_SCAN["levels"]),
+        levels=lambda wc: " ".join(f"--level {level} {NOISE_SCAN_OUT}/{wc.variant}/sd{level}.npz"
+                                   for level in NOISE_SCAN["levels"]),
     threads: 1
     shell:
         "python -u {SORGHUM_SCRIPTS}/noise_scan.py --test-folds {params.test_folds}"
