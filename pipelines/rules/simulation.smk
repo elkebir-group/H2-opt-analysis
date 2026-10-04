@@ -68,9 +68,29 @@ rule sim_encode:
         " --reference {input.reference} --out-dirs {params.out_dirs} > {log} 2>&1"
 
 
-rule sim_train_h2opt:
+rule sim_choose_noise:
     input:
         sim_file("{instance}", "spectra.npz"),
+    output:
+        sim_file("{instance}", "h2opt_noise.npz"),
+    log:
+        sim_file("{instance}", "h2opt_noise.log"),
+    params:
+        steps=SIM["h2opt"]["steps"],
+        device=SIM["h2opt"]["device"],
+    threads: 1
+    resources:
+        gpu=lambda wc: 1 if SIM["h2opt"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {SIM_SCRIPTS}/choose_noise.py --spectra {input} --out {output}"
+        " --steps {params.steps} --seed {wildcards.instance} --device {params.device}"
+        " > {log} 2>&1"
+
+
+rule sim_train_h2opt:
+    input:
+        spectra=sim_file("{instance}", "spectra.npz"),
+        noise=sim_file("{instance}", "h2opt_noise.npz"),
     output:
         traits=sim_file("{instance}", "h2opt.npz"),
         model=sim_file("{instance}", "h2opt.pt"),
@@ -84,7 +104,7 @@ rule sim_train_h2opt:
     resources:
         gpu=lambda wc: 1 if SIM["h2opt"]["device"] == "cuda" else 0,
     shell:
-        "python -u {SIM_SCRIPTS}/train_h2opt.py --spectra {input}"
+        "python -u {SIM_SCRIPTS}/train_h2opt.py --spectra {input.spectra} --noise {input.noise}"
         " --out-traits {output.traits} --out-model {output.model} --traits {params.traits}"
         " --steps {params.steps} --seed {wildcards.instance} --device {params.device}"
         " > {log} 2>&1"

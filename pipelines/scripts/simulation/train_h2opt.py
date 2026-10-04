@@ -1,11 +1,11 @@
 """Train linear H2-opt on one simulation instance.
 
-The paper's simulation objective: 5 traits, one linear model per trait, Gaussian input noise with
-standard deviation 0.02 and no clipping. Trained with h2opt.train's default optimizer (Adam) for
-10,000 steps per trait. Writes the model (.pt) and the
-traits of all plants, uncorrelated on the training plants (.npz, array 'traits').
+One linear model per trait, normal input noise with the standard deviation chosen by
+choose_noise.py, and no clipping (the paper's simulation setting). Trained with h2opt.train's
+default optimizer (Adam). Writes the model (.pt) and the traits of all plants, uncorrelated on the
+training plants (.npz, array 'traits').
 
-    python pipelines/scripts/simulation/train_h2opt.py --spectra spectra.npz \\
+    python pipelines/scripts/simulation/train_h2opt.py --spectra spectra.npz --noise noise.npz \\
         --out-traits h2opt.npz --out-model h2opt.pt --traits 5 --steps 10000 \\
         --seed 0 --device cuda
 """
@@ -20,6 +20,7 @@ from h2opt import LinearModel, TraitModels, synthetic_traits, train
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--spectra', required=True)
+    parser.add_argument('--noise', required=True, help='the noise chosen by choose_noise.py')
     parser.add_argument('--out-traits', required=True)
     parser.add_argument('--out-model', required=True)
     parser.add_argument('--traits', type=int, required=True)
@@ -31,10 +32,12 @@ def main():
     torch.manual_seed(args.seed)
     with np.load(args.spectra) as f:
         X, names, test = f['X'], f['names'], f['test']
+    with np.load(args.noise) as f:
+        noise_sd = float(f['noise_sd'])
 
     model = TraitModels(args.traits, LinearModel, X.shape[1])
     train(model, X, names, None, test.astype(int), model_file=args.out_model,
-          n_traits=args.traits, n_iter=args.steps, noise_level=0.02,
+          n_traits=args.traits, n_iter=args.steps, noise_level=noise_sd,
           noise='normal', clip=None, device=args.device)
     np.savez(args.out_traits, traits=synthetic_traits(model, X, ~test))
 

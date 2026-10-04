@@ -20,5 +20,4 @@ def test_pipeline_parses():
             'sim_genotypes', 'sim_gwas', 'sim_evaluate', 'sim_roc', 'sim_plot_traits',
             'sim_plot_gwas', 'simulation_gwas_all', 'sorghum_gwas_all',
             'sorghum_genotype_pcs', 'sorghum_baseline',
-            'sorghum_noise_scan_train', 'sorghum_noise_scan',
-            'sorghum_noise_scan_all'} <= rules
+            'sorghum_choose_noise', 'sim_choose_noise'} <= rules
