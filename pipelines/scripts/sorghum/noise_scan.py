@@ -3,7 +3,8 @@
 Each --level gives a noise level (the standard deviation of the normal noise, as a fraction of the
 root mean variance of the wavelengths) and the traits file of H2-opt trained at that level with the
 plants of --test-folds held out (train_h2opt.py). Writes an .npz (levels; train and test:
-levels x traits), a figure of the held-out heritability per trait against the noise level, and
+levels x traits), a figure of the held-out heritability per trait against the noise level (level
+0, no noise, as a dashed line), and
 prints both tables.
 
     python pipelines/scripts/sorghum/noise_scan.py --test-folds 0 1 \\
@@ -45,9 +46,15 @@ def main():
         for level, row in zip(levels, table, strict=True):
             print(f'  {level:<8g}', np.round(row, 3))
 
+    # Positive levels on a log axis; the level 0 (no noise), if scanned, as a dashed line.
     fig, ax = plt.subplots(figsize=(4.5, 3.2))
+    positive = levels > 0
     for t in range(test.shape[1]):
-        ax.plot(levels, test[:, t], 'o-', label=f'trait {t + 1}')
+        line, = ax.plot(levels[positive], test[positive, t], 'o-', label=f'trait {t + 1}')
+        if not positive.all():
+            ax.axhline(test[~positive, t][0], color=line.get_color(), ls='--', lw=1)
+    if not positive.all():
+        ax.plot([], [], 'k--', lw=1, label='no noise')
     ax.set_xscale('log')
     ax.set_xlabel('noise SD / feature SD')
     ax.set_ylabel('held-out heritability')

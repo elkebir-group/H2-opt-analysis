@@ -27,7 +27,7 @@ sorghum:
   # standard deviation as a fraction of the root mean variance of the wavelengths.
   noise_scan:
     test_folds: [0, 1]
-    levels: [0.003, 0.01, 0.03, 0.1, 0.3, 1.0]
+    levels: [0, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0]
     traits: 3
     steps: 10000
     device: cuda
