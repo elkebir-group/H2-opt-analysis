@@ -26,6 +26,10 @@ sorghum:
     traits: 5
     steps: 200
     device: cpu
+  # Baselines fitted once per fold (baseline.py) and evaluated against every source;
+  # traits must be at least the traits of every source.
+  baselines:
+    traits: 10
   # GEMMA LMM of the per-line trait means.
   gwas:
     traits: 5

@@ -7,12 +7,15 @@
 #   lbfgs   - linear H2-opt trained to convergence with L-BFGS
 
 from h2opt_analysis import sorghum
+from h2opt_analysis.methods import BASELINES
 
 SORGHUM = config["sorghum"]
 SORGHUM_OUT = OUT_ROOT / "sorghum"
 SORGHUM_SCRIPTS = PIPELINE_DIR / "scripts" / "sorghum"
 SORGHUM_FOLDS = SORGHUM["folds"]
 SORGHUM_SOURCES = ["paper", "rmsprop", "lbfgs"]
+assert all(SORGHUM[s]["traits"] <= SORGHUM["baselines"]["traits"] for s in SORGHUM_SOURCES), \
+    "sorghum.baselines.traits must cover the traits of every source"
 
 wildcard_constraints:
     fold=r"\d+",
@@ -24,6 +27,18 @@ def sorghum_traits(source, fold):
     if source == "paper":
         return str(sorghum.paper_traits(fold))
     return str(SORGHUM_OUT / f"h2opt_{source}" / f"fold{fold}.npz")
+
+
+def sorghum_baseline(baseline, fold):
+    """Traits file of one fold for one baseline."""
+    return str(SORGHUM_OUT / baseline / f"fold{fold}.npz")
+
+
+def sorghum_method_args(source):
+    """'--method slug file0 ... file9' for the H2-opt source and every baseline."""
+    files = {f"h2opt_{source}": [sorghum_traits(source, f) for f in SORGHUM_FOLDS]}
+    files.update({b: [sorghum_baseline(b, f) for f in SORGHUM_FOLDS] for b in BASELINES})
+    return " ".join(f"--method {m} " + " ".join(fs) for m, fs in files.items())
 
 
 # Traits and their heritability only. The GWAS is a separate target, sorghum_gwas_all, run only
@@ -79,9 +94,25 @@ rule sorghum_train_lbfgs:
         " --device {params.device} > {log} 2>&1"
 
 
+rule sorghum_baseline:
+    output:
+        str(SORGHUM_OUT / "{baseline}" / "fold{fold}.npz"),
+    log:
+        str(SORGHUM_OUT / "{baseline}" / "fold{fold}.log"),
+    wildcard_constraints:
+        baseline="|".join(BASELINES),
+    params:
+        traits=SORGHUM["baselines"]["traits"],
+    threads: 2
+    shell:
+        "python -u {SORGHUM_SCRIPTS}/baseline.py --fold {wildcards.fold}"
+        " --method {wildcards.baseline} --out {output} --traits {params.traits} > {log} 2>&1"
+
+
 rule sorghum_heritability:
     input:
-        lambda wc: [sorghum_traits(wc.source, fold) for fold in SORGHUM_FOLDS],
+        h2opt=lambda wc: [sorghum_traits(wc.source, fold) for fold in SORGHUM_FOLDS],
+        baselines=[sorghum_baseline(b, f) for b in BASELINES for f in SORGHUM_FOLDS],
     output:
         str(SORGHUM_OUT / "heritability_{source}.npz"),
     log:
@@ -89,11 +120,11 @@ rule sorghum_heritability:
     params:
         traits=lambda wc: SORGHUM[wc.source]["traits"],
         folds=" ".join(str(f) for f in SORGHUM_FOLDS),
-    threads: 4
+        methods=lambda wc: sorghum_method_args(wc.source),
+    threads: 1
     shell:
-        "python -u {SORGHUM_SCRIPTS}/evaluate_heritability.py --source {wildcards.source}"
-        " --folds {params.folds} --h2opt-traits {input} --out {output} --traits {params.traits}"
-        " > {log} 2>&1"
+        "python -u {SORGHUM_SCRIPTS}/evaluate_heritability.py --folds {params.folds}"
+        " {params.methods} --out {output} --traits {params.traits} > {log} 2>&1"
 
 
 rule sorghum_plot_heritability:

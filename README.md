@@ -69,14 +69,15 @@ GPU training jobs share the GPU, 8 at a time (`--gpu-jobs N`).
 All outputs are under `data/derived/sorghum/`. A trait source is one way to get
 the H2-opt traits of a genotype fold: `paper` (the predictions behind the paper),
 `rmsprop` (retrained with the paper's settings) or `lbfgs` (linear H2-opt
-trained to convergence with L-BFGS, with the ridge and the number of steps tuned
-on inner validation genotypes).
+trained to convergence with L-BFGS, with one ridge chosen by 5-fold
+cross-validation over the training genotypes).
 
 | Rule | Output | Content |
 |---|---|---|
 | `sorghum_train_rmsprop` | `h2opt_rmsprop/fold{k}.{npz,pt}` | H2-opt with the paper's settings, fold k |
 | `sorghum_train_lbfgs` | `h2opt_lbfgs/fold{k}.npz` | L-BFGS H2-opt, fold k |
-| `sorghum_heritability` | `heritability_{source}.npz` | train and test heritability of H2-opt, PCA, genetic PCA, LDA, PCH and the most heritable features |
+| `sorghum_baseline` | `{pca,genetic_pca,lda,pch,max_features}/fold{k}.npz` | baselines fitted on the training genotypes of fold k, once for all sources |
+| `sorghum_heritability` | `heritability_{source}.npz` | train and test heritability of the source's H2-opt traits and the baselines' |
 | `sorghum_plot_heritability` | `figures/top_trait_heritability_{source}.{pdf,png}` | boxplots of the top trait over the folds |
 | `sorghum_gwas` | `gwas/{source}_fold{k}.npz` | GEMMA LMM of the per-line trait means (intercept + 5 genotype PCs) |
 
