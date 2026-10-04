@@ -16,7 +16,8 @@ sorghum:
     traits: 10
   # H2-opt retrained (train_h2opt.py), trained with Adam (h2opt.train's default optimizer),
   # with normal input noise whose level is chosen once for all folds by held-out heritability
-  # (choose_noise.py, h2opt.selection.select_noise_level) with the same steps.
+  # (choose_noise.py, h2opt.selection.select_noise_level: 5 group folds, one-standard-error
+  # rule) with the same steps.
   h2opt:
     traits: 10
     steps: 10000

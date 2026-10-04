@@ -1,6 +1,7 @@
 """Shared plotting helpers: method colors and grouped boxplots."""
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 from .methods import LABELS
 
@@ -48,13 +49,15 @@ def save_trait_boxplots(path, n_traits, slugs, values, ylabel, width=5):
 
 def plot_noise_scores(levels, scores, level, path):
     """Held-out heritability of trait 1 per noise level (h2opt.selection.select_noise_level):
-    one line per validation split and their mean, the chosen level marked. Saves path (.pdf) and
-    a .png next to it."""
+    one line per validation split and their mean with its standard error over the splits, the
+    chosen level marked. Saves path (.pdf) and a .png next to it."""
     fig, ax = plt.subplots(figsize=(4.5, 3.2))
     x = range(len(levels))
     for split, row in enumerate(scores):
         ax.plot(x, row, 'o-', color='0.6', lw=1, ms=3, label='split' if split == 0 else None)
-    ax.plot(x, scores.mean(axis=0), 'o-', color='tab:blue', label='mean')
+    se = scores.std(axis=0, ddof=1) / np.sqrt(len(scores))
+    ax.errorbar(x, scores.mean(axis=0), se, fmt='o-', color='tab:blue', capsize=2,
+                label='mean ± SE')
     ax.axvline(list(levels).index(level), color='k', ls='--', lw=1, label='chosen')
     ax.set_xticks(x, [f'{lev:g}' for lev in levels])
     ax.set_xlabel('noise SD / feature SD')
