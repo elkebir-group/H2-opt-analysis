@@ -100,11 +100,14 @@ rule sim_train_lbfgs:
     params:
         traits=SIM["traits"],
         steps=SIM["lbfgs"]["steps"],
+        device=SIM["lbfgs"]["device"],
     threads: 2
+    resources:
+        gpu=lambda wc: 1 if SIM["lbfgs"]["device"] == "cuda" else 0,
     shell:
         "python -u {SIM_SCRIPTS}/train_h2opt_lbfgs.py --spectra {input} --out {output}"
         " --traits {params.traits} --steps {params.steps} --seed {wildcards.instance}"
-        " > {log} 2>&1"
+        " --device {params.device} > {log} 2>&1"
 
 
 rule sim_baseline:

@@ -7,7 +7,7 @@ equivalent input-noise standard deviation (noise_sd), and the cross-validation s
 ridge.
 
     python pipelines/scripts/sorghum/train_h2opt_lbfgs.py --fold 0 --out fold0.npz \\
-        --traits 5 --steps 200 --seed 0
+        --traits 5 --steps 200 --seed 0 --device cpu
 """
 
 import argparse
@@ -23,21 +23,26 @@ def main():
     parser.add_argument('--fold', type=int, required=True)
     parser.add_argument('--out', required=True)
     parser.add_argument('--traits', type=int, required=True)
-    parser.add_argument('--steps', type=int, required=True, help='L-BFGS steps per trait')
+    parser.add_argument('--steps', type=int, required=True,
+                        help='maximum L-BFGS steps per trait')
     parser.add_argument('--seed', type=int, required=True)
+    parser.add_argument('--device', required=True, help='torch device, e.g. cpu or cuda')
     args = parser.parse_args()
 
     X, genotypes, environment = sorghum.load()
     is_train = sorghum.folds(genotypes) != args.fold
     ridge, scores, fold_scores = LinearH2opt.tune(X[is_train], genotypes[is_train],
                                                   environment[is_train], n_traits=args.traits,
-                                                  n_iter=args.steps, seed=args.seed)
+                                                  n_iter=args.steps, seed=args.seed,
+                                                  device=args.device)
 
-    model = LinearH2opt(args.traits, ridge=ridge, n_iter=args.steps, seed=args.seed)
+    model = LinearH2opt(args.traits, ridge=ridge, n_iter=args.steps, seed=args.seed,
+                        device=args.device)
     model.fit(X[is_train], genotypes[is_train], environment[is_train])
     traits = model.transform(X)
     print(f'fold {args.fold}: ridge {ridge:g} (noise sd {model.noise_sd_:.3g}), mean validation '
-          f'heritability {scores.max():.3f}; per ridge {np.round(scores, 3)}', flush=True)
+          f'heritability {scores.max():.3f}; per ridge {np.round(scores, 3)}; steps per trait '
+          f'{model.n_steps_}', flush=True)
     np.savez(args.out, traits=traits, ridge=ridge, noise_sd=model.noise_sd_,
              ridges=selection.RIDGES, scores=scores, fold_scores=fold_scores)
 

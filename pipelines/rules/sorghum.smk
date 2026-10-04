@@ -69,11 +69,14 @@ rule sorghum_train_lbfgs:
     params:
         traits=SORGHUM["lbfgs"]["traits"],
         steps=SORGHUM["lbfgs"]["steps"],
+        device=SORGHUM["lbfgs"]["device"],
     threads: 2
+    resources:
+        gpu=lambda wc: 1 if SORGHUM["lbfgs"]["device"] == "cuda" else 0,
     shell:
         "python -u {SORGHUM_SCRIPTS}/train_h2opt_lbfgs.py --fold {wildcards.fold} --out {output}"
         " --traits {params.traits} --steps {params.steps} --seed {wildcards.fold}"
-        " > {log} 2>&1"
+        " --device {params.device} > {log} 2>&1"
 
 
 rule sorghum_heritability:
