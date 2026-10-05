@@ -68,11 +68,11 @@ GPU training jobs share the GPU, 8 at a time (`--gpu-jobs N`).
 
 All outputs are under `data/derived/sorghum/`. A trait source is one way to get
 the H2-opt traits of a genotype fold: `paper` (the predictions behind the paper)
-or `h2opt` (retrained here with Adam, with the noise level of each fold and trait chosen by held-out heritability).
+or `h2opt` (retrained here with Adam, with the noise level of each fold, one for all traits, chosen by held-out heritability).
 
 | Rule | Output | Content |
 |---|---|---|
-| `sorghum_choose_noise` | `h2opt/noise.npz`, `h2opt/noise_traits.npz`, `figures/noise.{pdf,png}` | the H2-opt noise level of each fold and trait, chosen on the fold's training plants by the best mean held-out heritability over 5 group folds (`h2opt.selection.select_noise_levels`, all folds in one batch); `noise_traits.npz` keeps the trained validation traits, to examine other selection rules without training again |
+| `sorghum_choose_noise` | `h2opt/noise.npz`, `h2opt/noise_traits.npz`, `figures/noise.{pdf,png}` | the H2-opt noise level of each fold (one for all traits), chosen on the fold's training plants by the best held-out heritability averaged over the traits and 5 group folds (`h2opt.selection.select_noise_level`, all folds in one batch); `noise_traits.npz` keeps the trained validation traits, to examine other selection rules without training again |
 | `sorghum_train_h2opt` | `h2opt/fold{k}.{npz,pt}` | H2-opt with the chosen noise, all folds in one job |
 | `sorghum_baseline` | `{pca,genetic_pca,lda,pch,max_features}/fold{k}.npz` | baselines fitted on the training genotypes of fold k, once for all sources |
 | `sorghum_heritability` | `heritability_{source}.npz` | train and test heritability of the source's H2-opt traits and the baselines' |

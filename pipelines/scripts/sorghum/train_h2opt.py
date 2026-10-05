@@ -1,11 +1,11 @@
 """Train linear H2-opt on sorghum for the paper's genotype folds, all folds at once.
 
 One linear model per trait and fold, and normal input noise with the standard deviation that
-choose_noise.py chose for that fold and trait. No clipping of the traits in the loss, so the loss
-is the heritability that the evaluation scores (the paper clipped at 2). Trained with
-h2opt.train's default optimizer (Adam), all folds together by h2opt.train_models. Writes, per
-fold, the model (.pt) and the traits of all plants, uncorrelated on the training plants (.npz,
-array 'traits').
+choose_noise.py chose for that fold (one for all traits). No clipping of the traits in the
+loss, so the loss is the heritability that the evaluation scores (the paper clipped at 2).
+Trained with h2opt.train's default optimizer (Adam), all folds together by h2opt.train_models.
+Writes, per fold, the model (.pt) and the traits of all plants, uncorrelated on the training
+plants (.npz, array 'traits').
 
     python pipelines/scripts/sorghum/train_h2opt.py --folds 0 1 --noise noise.npz \\
         --out-traits fold0.npz fold1.npz --out-models fold0.pt fold1.pt --steps 10000 \\
@@ -40,7 +40,7 @@ def main():
     fold_of = sorghum.folds(genotypes)
     with np.load(args.noise) as f:
         noise_folds, noise_sd = list(f['folds']), f['noise_sd']
-    noise_sd = noise_sd[[noise_folds.index(fold) for fold in args.folds], :args.traits]
+    noise_sd = noise_sd[[noise_folds.index(fold) for fold in args.folds], None]
 
     models = [TraitModels(args.traits, LinearModel, X.shape[1]) for _ in args.folds]
     train_test = np.array([(fold_of == fold).astype(int) for fold in args.folds])

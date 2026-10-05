@@ -48,32 +48,31 @@ def save_trait_boxplots(path, n_traits, slugs, values, ylabel, width=5):
 
 
 def plot_noise_choices(levels, chosen, scores, path):
-    """Noise levels chosen by h2opt.selection.select_noise_levels in several subsets (folds).
+    """Noise levels chosen by h2opt.selection.select_noise_level in several subsets (folds).
 
-    chosen: (folds, traits) levels; scores: (folds, traits, splits, levels). Left: the mean
-    held-out heritability of trait 1 over the splits per level, one line per fold, its chosen
-    level marked. Right: the chosen level of each trait, one dot per fold. Saves path (.pdf) and
-    a .png next to it."""
-    levels = list(levels)
-    index = np.vectorize(levels.index)(chosen)
-    fig, (left, right) = plt.subplots(1, 2, figsize=(9, 3.2))
-    x = np.arange(len(levels))
-    for fold, mean in enumerate(scores[:, 0].mean(axis=1)):
-        left.plot(x, mean, '-', color='0.6', lw=1)
-        left.plot(index[fold, 0], mean[index[fold, 0]], 'o', color='tab:blue', ms=4)
-    left.set_xticks(x, [f'{lev:g}' for lev in levels])
-    left.set_xlabel('noise SD / feature SD')
-    left.set_ylabel('held-out heritability, trait 1')
-    left.set_title('mean over splits; dot: chosen', fontsize=9)
-    n_folds, n_traits = chosen.shape
-    jitter = np.linspace(-0.25, 0.25, n_folds)
-    for trait in range(n_traits):
-        right.plot(trait + 1 + jitter, index[:, trait], 'o', color='tab:blue', ms=3)
-    right.set_xticks(range(1, n_traits + 1))
-    right.set_yticks(x, [f'{lev:g}' for lev in levels])
-    right.set_xlabel('trait')
-    right.set_ylabel('chosen noise SD / feature SD')
-    right.set_title('one dot per fold', fontsize=9)
+    chosen: (folds,) levels; scores: (folds, traits, splits, levels). Left: the held-out
+    heritability averaged over the traits and splits per level, one line per fold, its chosen
+    level marked. Right: the held-out heritability of each trait averaged over the folds and
+    splits per level. Saves path (.pdf) and a .png next to it."""
+    levels = np.asarray(levels)
+    fig, (left, right) = plt.subplots(1, 2, figsize=(9, 3.2), sharex=True)
+    for fold, mean in enumerate(scores.mean(axis=(1, 2))):
+        left.plot(levels, mean, '-', color='0.6', lw=1)
+        a = int(np.argmin(np.abs(levels - chosen[fold])))
+        left.plot(levels[a], mean[a], 'o', color='tab:blue', ms=4)
+    left.set_ylabel('held-out heritability, mean of traits')
+    left.set_title('one line per fold; dot: chosen', fontsize=9)
+    n_traits = scores.shape[1]
+    colors = plt.cm.viridis(np.linspace(0, 0.9, n_traits))
+    for t in range(n_traits):
+        right.plot(levels, scores[:, t].mean(axis=(0, 1)), '-', color=colors[t], lw=1,
+                   label=f'{t + 1}')
+    right.set_ylabel('held-out heritability')
+    right.set_title('mean over folds', fontsize=9)
+    right.legend(title='trait', frameon=False, fontsize=6, title_fontsize=7, ncol=2)
+    for ax in (left, right):
+        ax.set_xscale('log')
+        ax.set_xlabel('noise SD / feature SD')
     fig.tight_layout()
     fig.savefig(path)
     fig.savefig(str(path).removesuffix('.pdf') + '.png', dpi=200)
