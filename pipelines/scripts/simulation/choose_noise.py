@@ -29,7 +29,7 @@ def main():
         X, names = f['X'][is_train], f['names'][is_train]
     level, scores = select_noise_level(lambda: TraitModels(1, LinearModel, X.shape[1]), X,
                                        names, None, seed=args.seed, n_iter=args.steps,
-                                       clip=None, device=args.device)
+                                       device=args.device)
     noise_sd = level * noise_scale(X)
     np.savez(args.out, levels=NOISE_LEVELS, scores=scores, level=level, noise_sd=noise_sd)
     print('held-out heritability of trait 1 (rows: splits)')

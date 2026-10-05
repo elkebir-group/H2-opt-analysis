@@ -41,7 +41,7 @@ def main():
     model = TraitModels(args.traits, LinearModel, X.shape[1])
     train(model, X, genotypes, environment, (~is_train).astype(int), model_file=args.out_model,
           n_traits=args.traits, n_iter=args.steps, noise_level=noise_sd, noise='normal',
-          clip=None, device=args.device)
+          device=args.device)
     np.savez(args.out_traits, traits=synthetic_traits(model, X, is_train))
 
 
