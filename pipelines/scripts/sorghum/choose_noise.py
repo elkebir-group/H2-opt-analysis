@@ -1,43 +1,49 @@
-"""Choose the noise level of sorghum H2-opt by held-out heritability (h2opt.selection).
+"""Choose the noise level of each sorghum H2-opt trait in each genotype fold (h2opt.selection).
 
-One level for all genotype folds: h2opt.selection.select_noise_level on all plants, with the
-linear model and the training settings of train_h2opt.py. Writes an .npz (levels; scores:
-splits x levels; level, the chosen level; noise_sd, its standard deviation) read by
-train_h2opt.py, and a figure of the held-out heritability against the level.
+h2opt.selection.select_noise_levels on the training plants of each fold (all folds in one
+batch), with the linear model and the training settings of train_h2opt.py: for each trait in
+order, 5 validation splits of the training genotypes and the one-standard-error rule. The test
+plants of a fold never take part in its choice. Writes an .npz (folds; levels; chosen: folds x
+traits; noise_sd: the standard deviation of the chosen noise, folds x traits; scores: folds x
+traits x splits x levels) read by train_h2opt.py, and a figure of the choices.
 
-    python pipelines/scripts/sorghum/choose_noise.py --out noise.npz --figure noise.pdf \\
-        --steps 10000 --device cuda
+    python pipelines/scripts/sorghum/choose_noise.py --folds 0 1 2 --out noise.npz \\
+        --figure noise.pdf --traits 10 --steps 10000 --device cuda
 """
 
 import argparse
 
 import numpy as np
-from h2opt import LinearModel, TraitModels
-from h2opt.selection import NOISE_LEVELS, noise_scale, select_noise_level
+from h2opt import LinearModel
+from h2opt.selection import NOISE_LEVELS, noise_scale, select_noise_levels
 
 from h2opt_analysis import sorghum
-from h2opt_analysis.figures import plot_noise_scores
+from h2opt_analysis.figures import plot_noise_choices
 
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--folds', type=int, nargs='+', required=True)
     parser.add_argument('--out', required=True)
     parser.add_argument('--figure', required=True)
+    parser.add_argument('--traits', type=int, required=True)
     parser.add_argument('--steps', type=int, required=True, help='steps per training run')
     parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
     args = parser.parse_args()
 
     X, genotypes, environment = sorghum.load()
-    level, scores = select_noise_level(lambda: TraitModels(1, LinearModel, X.shape[1]), X,
-                                       genotypes, environment, n_iter=args.steps,
-                                       device=args.device)
-    noise_sd = level * noise_scale(X)
-    np.savez(args.out, levels=NOISE_LEVELS, scores=scores, level=level, noise_sd=noise_sd)
-    print('held-out heritability of trait 1 (rows: splits)')
-    for a, lev in enumerate(NOISE_LEVELS):
-        print(f'  {lev:<6g}', np.round(scores[:, a], 3), f'mean {scores[:, a].mean():.3f}')
-    print(f'chosen level {level}, noise SD {noise_sd:.3g}')
-    plot_noise_scores(NOISE_LEVELS, scores, level, args.figure)
+    fold_of = sorghum.folds(genotypes)
+    is_train = np.array([fold_of != fold for fold in args.folds])
+    chosen, scores = select_noise_levels(lambda: LinearModel(X.shape[1]), X, genotypes,
+                                         environment, args.traits, subsets=is_train,
+                                         n_iter=args.steps, device=args.device)
+    noise_sd = chosen * np.array([[noise_scale(X[rows])] for rows in is_train])
+    np.savez(args.out, folds=args.folds, levels=NOISE_LEVELS, chosen=chosen, noise_sd=noise_sd,
+             scores=scores)
+    print('chosen noise level (rows: folds, columns: traits)')
+    for fold, row in zip(args.folds, chosen, strict=True):
+        print(f'  fold {fold}:', ' '.join(f'{lev:<5g}' for lev in row))
+    plot_noise_choices(NOISE_LEVELS, chosen, scores, args.figure)
 
 
 if __name__ == '__main__':

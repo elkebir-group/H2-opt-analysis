@@ -68,12 +68,12 @@ GPU training jobs share the GPU, 8 at a time (`--gpu-jobs N`).
 
 All outputs are under `data/derived/sorghum/`. A trait source is one way to get
 the H2-opt traits of a genotype fold: `paper` (the predictions behind the paper)
-or `h2opt` (retrained here with Adam, with the noise level chosen by held-out heritability).
+or `h2opt` (retrained here with Adam, with the noise level of each fold and trait chosen by held-out heritability).
 
 | Rule | Output | Content |
 |---|---|---|
-| `sorghum_choose_noise` | `h2opt/noise.npz`, `figures/noise.{pdf,png}` | the H2-opt noise level, chosen once for all folds by held-out heritability of trait 1 over 5 group folds, one-standard-error rule (`h2opt.selection.select_noise_level`) |
-| `sorghum_train_h2opt` | `h2opt/fold{k}.{npz,pt}` | H2-opt with the chosen noise, fold k |
+| `sorghum_choose_noise` | `h2opt/noise.npz`, `figures/noise.{pdf,png}` | the H2-opt noise level of each fold and trait, chosen on the fold's training plants by held-out heritability over 5 group folds, one-standard-error rule (`h2opt.selection.select_noise_levels`, all folds in one batch) |
+| `sorghum_train_h2opt` | `h2opt/fold{k}.{npz,pt}` | H2-opt with the chosen noise, all folds in one job |
 | `sorghum_baseline` | `{pca,genetic_pca,lda,pch,max_features}/fold{k}.npz` | baselines fitted on the training genotypes of fold k, once for all sources |
 | `sorghum_heritability` | `heritability_{source}.npz` | train and test heritability of the source's H2-opt traits and the baselines' |
 | `sorghum_plot_heritability` | `figures/top_trait_heritability_{source}.{pdf,png}` | boxplots of the top trait over the folds |
@@ -90,9 +90,10 @@ the lines) and everything after are rebuilt here. All outputs are under `data/de
 | Rule | Output | Content |
 |---|---|---|
 | `sim_encode` | `instance{i}/{spectra,truth}.npz` | simulated spectra, test plants, line of each plant, true traits |
-| `sim_choose_noise` | `instance{i}/h2opt_noise.npz` | the H2-opt noise level of the instance, chosen on its training lines (same rule) |
-| `sim_train_h2opt` | `instance{i}/h2opt.{npz,pt}` | H2-opt with the chosen noise (GPU) |
-| `sim_baseline` | `instance{i}/{pca,genetic_pca,lda,pch,max_features}.npz` | baselines fitted on the training lines |
+| `sim_train_h2opt` | `instance{i}/h2opt.{npz,pt}` | H2-opt with the fixed noise SD of the config, the paper's 0.02 (GPU) |
+| `sim_noise_sweep` | `instance{i}/h2opt_noise_sweep.npz` | H2-opt at every level of `h2opt.selection.NOISE_LEVELS`, all levels in one job |
+| `sim_plot_noise_sweep` | `noise_sweep.npz`, `figures/noise_sweep.{pdf,png}` | \|r\| of traits 1-3 with the true traits against the noise level |
+| `sim_baseline` | `instance{i}/{pca,genetic_pca,lda,pch,max_features}.npz` | baselines fitted on the training lines (PCH's ridge chosen by `PCH.tune`) |
 | `sim_genotypes` | `instance{i}/genotypes.{bed,bim,fam}`, `genotype_pcs.npy` | genotypes without the instance's QTNs, and their PCs |
 | `sim_gwas` | `instance{i}/gwas/{method}.npz` | GEMMA LMM of the line means of traits 1-3 (intercept + 5 PCs) |
 | `sim_evaluate` | `evaluation.npz` | correlation with the true traits, train/test heritability |

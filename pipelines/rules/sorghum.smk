@@ -1,5 +1,5 @@
-# Sorghum hyperspectral analyses: the H2-opt noise level, H2-opt per genotype
-# fold, heritability of H2-opt and the baselines, and GWAS of the per-line
+# Sorghum hyperspectral analyses: the H2-opt noise level per genotype fold and
+# trait, H2-opt per fold, heritability of H2-opt and the baselines, and GWAS of the per-line
 # trait means.
 #
 # A trait source is one way to get the H2-opt traits of a fold:
@@ -65,36 +65,40 @@ rule sorghum_choose_noise:
     log:
         str(SORGHUM_OUT / "h2opt" / "noise.log"),
     params:
-        steps=SORGHUM["h2opt"]["steps"],
-        device=SORGHUM["h2opt"]["device"],
-    threads: 1
-    resources:
-        gpu=lambda wc: 1 if SORGHUM["h2opt"]["device"] == "cuda" else 0,
-    shell:
-        "python -u {SORGHUM_SCRIPTS}/choose_noise.py --out {output.noise} --figure {output.pdf}"
-        " --steps {params.steps} --device {params.device} > {log} 2>&1"
-
-
-rule sorghum_train_h2opt:
-    input:
-        noise=str(SORGHUM_OUT / "h2opt" / "noise.npz"),
-    output:
-        traits=str(SORGHUM_OUT / "h2opt" / "fold{fold}.npz"),
-        model=str(SORGHUM_OUT / "h2opt" / "fold{fold}.pt"),
-    log:
-        str(SORGHUM_OUT / "h2opt" / "fold{fold}.log"),
-    params:
+        folds=" ".join(str(f) for f in SORGHUM_FOLDS),
         traits=SORGHUM["h2opt"]["traits"],
         steps=SORGHUM["h2opt"]["steps"],
         device=SORGHUM["h2opt"]["device"],
     threads: 1
     resources:
-        # Small GPU jobs are limited by Python overhead, so several share one GPU.
         gpu=lambda wc: 1 if SORGHUM["h2opt"]["device"] == "cuda" else 0,
     shell:
-        "python -u {SORGHUM_SCRIPTS}/train_h2opt.py --fold {wildcards.fold} --noise {input.noise}"
-        " --out-traits {output.traits} --out-model {output.model}"
-        " --traits {params.traits} --steps {params.steps} --seed {wildcards.fold}"
+        "python -u {SORGHUM_SCRIPTS}/choose_noise.py --folds {params.folds} --out {output.noise}"
+        " --figure {output.pdf} --traits {params.traits} --steps {params.steps}"
+        " --device {params.device} > {log} 2>&1"
+
+
+# All folds train in one job (h2opt.train_models), which is much faster than one job per fold.
+rule sorghum_train_h2opt:
+    input:
+        noise=str(SORGHUM_OUT / "h2opt" / "noise.npz"),
+    output:
+        traits=[str(SORGHUM_OUT / "h2opt" / f"fold{f}.npz") for f in SORGHUM_FOLDS],
+        models=[str(SORGHUM_OUT / "h2opt" / f"fold{f}.pt") for f in SORGHUM_FOLDS],
+    log:
+        str(SORGHUM_OUT / "h2opt" / "train.log"),
+    params:
+        folds=" ".join(str(f) for f in SORGHUM_FOLDS),
+        traits=SORGHUM["h2opt"]["traits"],
+        steps=SORGHUM["h2opt"]["steps"],
+        device=SORGHUM["h2opt"]["device"],
+    threads: 1
+    resources:
+        gpu=lambda wc: 1 if SORGHUM["h2opt"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {SORGHUM_SCRIPTS}/train_h2opt.py --folds {params.folds} --noise {input.noise}"
+        " --out-traits {output.traits} --out-models {output.models}"
+        " --traits {params.traits} --steps {params.steps} --seed 0"
         " --device {params.device} > {log} 2>&1"
 
 

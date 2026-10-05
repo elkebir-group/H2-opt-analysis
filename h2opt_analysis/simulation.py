@@ -28,6 +28,13 @@ N_LATENT = 5
 PAPER_AUTOENCODER = data('plant', 'models', 'autoencode_2.pt')  # pickled model of the paper code
 
 
+def correlations(truth, Y):
+    """Pearson correlation of each column of truth with each column of Y, (k_truth, k_Y)."""
+    a = (truth - truth.mean(0)) / truth.std(0)
+    b = (Y - Y.mean(0)) / Y.std(0)
+    return a.T @ b / len(a)
+
+
 def folder(instance):
     """Raw simplePHENOTYPES output of an instance."""
     return data('plant', 'simulations', 'simPhen', 'seperate100SNP', str(instance))

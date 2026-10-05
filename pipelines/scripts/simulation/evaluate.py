@@ -21,13 +21,6 @@ from h2opt_analysis import simulation
 from h2opt_analysis.methods import LABELS
 
 
-def correlations(truth, Y):
-    """Pearson correlation of each column of truth with each column of Y, (k_truth, k_Y)."""
-    a = (truth - truth.mean(0)) / truth.std(0)
-    b = (Y - Y.mean(0)) / Y.std(0)
-    return a.T @ b / len(a)
-
-
 def span_correlations(truth, Y):
     """Correlation of each true trait with its least-squares fit on the columns of Y."""
     design = np.column_stack([np.ones(len(Y)), Y])
@@ -67,7 +60,7 @@ def main():
                 cor = np.zeros((len(methods), n_inst, n_true, k))
                 herit = np.zeros((len(methods), n_inst, 2, k))
                 span = np.zeros((len(methods), n_inst, n_true))
-            cor[m, i] = correlations(truth, Y)
+            cor[m, i] = simulation.correlations(truth, Y)
             span[m, i] = span_correlations(truth, Y[:, :n_true])
             herit[m, i] = [anova_heritability(Y[rows], names[rows], environment[rows])
                            for rows in (~test, test)]

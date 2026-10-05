@@ -14,11 +14,11 @@ sorghum:
   # The predictions behind the paper (raw data): the traits per fold.
   paper:
     traits: 10
-  # H2-opt retrained (train_h2opt.py), trained with Adam (h2opt.train's default optimizer), no
-  # clipping,
-  # with normal input noise whose level is chosen once for all folds by held-out heritability
-  # (choose_noise.py, h2opt.selection.select_noise_level: 5 group folds, one-standard-error
-  # rule) with the same steps.
+  # H2-opt retrained (train_h2opt.py, all folds in one job), trained with Adam (h2opt.train's
+  # default optimizer), no clipping, with normal input noise whose level is chosen per fold and
+  # trait by held-out heritability on the fold's training plants (choose_noise.py,
+  # h2opt.selection.select_noise_levels: 5 group folds, one-standard-error rule) with the same
+  # steps.
   h2opt:
     traits: 10
     steps: 10000
@@ -39,9 +39,11 @@ simulation:
   # Methods compared with the true traits (slugs of h2opt_analysis.methods.LABELS).
   methods: [h2opt, pca, genetic_pca, lda, pch, max_features]
   traits: 5
-  # H2-opt trained with Adam, no clipping, and normal input noise whose level is chosen per
-  # instance on its training plants (choose_noise.py) with the same steps.
+  # H2-opt trained with Adam, no clipping, and normal input noise of a fixed standard deviation
+  # (the paper's 0.02, about 1.3 x the root mean variance of the spectra). noise_sweep.py
+  # retrains it at every level of h2opt.selection.NOISE_LEVELS for the sensitivity figure.
   h2opt:
+    noise_sd: 0.02
     steps: 10000
     device: cuda
   # GEMMA LMM of the per-line means of traits 1-3, for the truth and every method.

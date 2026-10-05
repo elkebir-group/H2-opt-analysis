@@ -42,6 +42,7 @@ rule simulation_all:
     input:
         str(SIM_OUT / "evaluation.npz"),
         str(SIM_OUT / "figures" / "heritability.pdf"),
+        str(SIM_OUT / "figures" / "noise_sweep.pdf"),
 
 
 rule simulation_gwas_all:
@@ -68,34 +69,36 @@ rule sim_encode:
         " --reference {input.reference} --out-dirs {params.out_dirs} > {log} 2>&1"
 
 
-rule sim_choose_noise:
+rule sim_train_h2opt:
     input:
         sim_file("{instance}", "spectra.npz"),
     output:
-        sim_file("{instance}", "h2opt_noise.npz"),
+        traits=sim_file("{instance}", "h2opt.npz"),
+        model=sim_file("{instance}", "h2opt.pt"),
     log:
-        sim_file("{instance}", "h2opt_noise.log"),
+        sim_file("{instance}", "h2opt.log"),
     params:
+        noise_sd=SIM["h2opt"]["noise_sd"],
+        traits=SIM["traits"],
         steps=SIM["h2opt"]["steps"],
         device=SIM["h2opt"]["device"],
     threads: 1
     resources:
         gpu=lambda wc: 1 if SIM["h2opt"]["device"] == "cuda" else 0,
     shell:
-        "python -u {SIM_SCRIPTS}/choose_noise.py --spectra {input} --out {output}"
+        "python -u {SIM_SCRIPTS}/train_h2opt.py --spectra {input} --noise-sd {params.noise_sd}"
+        " --out-traits {output.traits} --out-model {output.model} --traits {params.traits}"
         " --steps {params.steps} --seed {wildcards.instance} --device {params.device}"
         " > {log} 2>&1"
 
 
-rule sim_train_h2opt:
+rule sim_noise_sweep:
     input:
-        spectra=sim_file("{instance}", "spectra.npz"),
-        noise=sim_file("{instance}", "h2opt_noise.npz"),
+        sim_file("{instance}", "spectra.npz"),
     output:
-        traits=sim_file("{instance}", "h2opt.npz"),
-        model=sim_file("{instance}", "h2opt.pt"),
+        sim_file("{instance}", "h2opt_noise_sweep.npz"),
     log:
-        sim_file("{instance}", "h2opt.log"),
+        sim_file("{instance}", "h2opt_noise_sweep.log"),
     params:
         traits=SIM["traits"],
         steps=SIM["h2opt"]["steps"],
@@ -104,10 +107,30 @@ rule sim_train_h2opt:
     resources:
         gpu=lambda wc: 1 if SIM["h2opt"]["device"] == "cuda" else 0,
     shell:
-        "python -u {SIM_SCRIPTS}/train_h2opt.py --spectra {input.spectra} --noise {input.noise}"
-        " --out-traits {output.traits} --out-model {output.model} --traits {params.traits}"
-        " --steps {params.steps} --seed {wildcards.instance} --device {params.device}"
-        " > {log} 2>&1"
+        "python -u {SIM_SCRIPTS}/noise_sweep.py --spectra {input} --out {output}"
+        " --traits {params.traits} --steps {params.steps} --seed {wildcards.instance}"
+        " --device {params.device} > {log} 2>&1"
+
+
+rule sim_plot_noise_sweep:
+    input:
+        sweep=sim_files("h2opt_noise_sweep.npz"),
+        truth=sim_files("truth.npz"),
+        spectra=sim_files("spectra.npz"),
+        h2opt=sim_files("h2opt.npz"),
+    output:
+        npz=str(SIM_OUT / "noise_sweep.npz"),
+        pdf=str(SIM_OUT / "figures" / "noise_sweep.pdf"),
+        png=str(SIM_OUT / "figures" / "noise_sweep.png"),
+    log:
+        str(SIM_OUT / "noise_sweep.log"),
+    params:
+        noise_sd=SIM["h2opt"]["noise_sd"],
+    threads: 1
+    shell:
+        "python -u {SIM_SCRIPTS}/plot_noise_sweep.py --sweep {input.sweep} --truth {input.truth}"
+        " --spectra {input.spectra} --h2opt {input.h2opt} --noise-sd {params.noise_sd}"
+        " --out {output.npz} --figure {output.pdf} > {log} 2>&1"
 
 
 rule sim_baseline:
