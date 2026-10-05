@@ -20,13 +20,19 @@ BASELINES = {'pca': baselines.PCA, 'genetic_pca': baselines.GeneticPCA, 'lda': b
 
 
 def fit_baseline(slug, X, groups, environment, rows, n_traits):
-    """Traits of a baseline fitted on the selected rows, for all rows.
+    """Traits of a baseline fitted on the selected rows, for all rows, and its tuning.
 
-    PCH's ridge is chosen on the selected rows by cross-validated heritability (PCH.tune).
+    PCH's ridge is chosen on the selected rows by cross-validated heritability (PCH.tune); its
+    tuning is a dict of arrays (ridge, ridges, ridge_scores, ridge_fold_scores). Other baselines
+    have no tuning (empty dict).
     """
+    tuning = {}
     if slug == 'pch':
-        ridge, _, _ = baselines.PCH.tune(X[rows], groups[rows], environment[rows], n_traits)
+        ridge, scores, fold_scores = baselines.PCH.tune(X[rows], groups[rows], environment[rows],
+                                                        n_traits)
         baseline = baselines.PCH(n_traits, ridge=ridge)
+        tuning = dict(ridge=ridge, ridges=baselines.RIDGES, ridge_scores=scores,
+                      ridge_fold_scores=fold_scores)
     else:
         baseline = BASELINES[slug](n_traits)
-    return baseline.fit(X[rows], groups[rows], environment[rows]).transform(X)
+    return baseline.fit(X[rows], groups[rows], environment[rows]).transform(X), tuning

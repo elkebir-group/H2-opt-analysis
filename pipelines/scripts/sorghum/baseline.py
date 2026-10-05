@@ -2,7 +2,8 @@
 
 Baselines: pca, genetic_pca, lda, pch (ridge tuned on the training plants) and max_features
 (h2opt_analysis.methods.BASELINES). Traits are centered and uncorrelated on the training plants.
-Writes an .npz with array 'traits'.
+Writes an .npz with array 'traits' and, for pch, its ridge tuning
+(h2opt_analysis.methods.fit_baseline).
 
     python pipelines/scripts/sorghum/baseline.py --fold 0 --method pch --out fold0.npz --traits 10
 """
@@ -25,8 +26,8 @@ def main():
 
     X, genotypes, environment = sorghum.load()
     is_train = sorghum.folds(genotypes) != args.fold
-    traits = fit_baseline(args.method, X, genotypes, environment, is_train, args.traits)
-    np.savez(args.out, traits=traits)
+    traits, tuning = fit_baseline(args.method, X, genotypes, environment, is_train, args.traits)
+    np.savez(args.out, traits=traits, **tuning)
 
 
 if __name__ == '__main__':

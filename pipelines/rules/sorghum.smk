@@ -60,6 +60,7 @@ rule sorghum_gwas_all:
 rule sorghum_choose_noise:
     output:
         noise=str(SORGHUM_OUT / "h2opt" / "noise.npz"),
+        traits=str(SORGHUM_OUT / "h2opt" / "noise_traits.npz"),
         pdf=str(SORGHUM_OUT / "figures" / "noise.pdf"),
         png=str(SORGHUM_OUT / "figures" / "noise.png"),
     log:
@@ -74,7 +75,7 @@ rule sorghum_choose_noise:
         gpu=lambda wc: 1 if SORGHUM["h2opt"]["device"] == "cuda" else 0,
     shell:
         "python -u {SORGHUM_SCRIPTS}/choose_noise.py --folds {params.folds} --out {output.noise}"
-        " --figure {output.pdf} --traits {params.traits} --steps {params.steps}"
+        " --out-traits {output.traits} --figure {output.pdf} --traits {params.traits} --steps {params.steps}"
         " --device {params.device} > {log} 2>&1"
 
 

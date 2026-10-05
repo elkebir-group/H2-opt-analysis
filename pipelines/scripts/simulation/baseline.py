@@ -2,7 +2,8 @@
 
 Baselines: pca, genetic_pca, lda, pch (ridge tuned on inner validation lines) and max_features
 (h2opt_analysis.methods.BASELINES). Traits are centered and uncorrelated on the training plants.
-Writes an .npz with array 'traits'.
+Writes an .npz with array 'traits' and, for pch, its ridge tuning
+(h2opt_analysis.methods.fit_baseline).
 
     python pipelines/scripts/simulation/baseline.py --spectra spectra.npz --method pch \\
         --out pch.npz --traits 5
@@ -26,8 +27,8 @@ def main():
     with np.load(args.spectra) as f:
         X, names, test = f['X'], f['names'], f['test']
     environment = np.zeros((len(names), 0))
-    traits = fit_baseline(args.method, X, names, environment, ~test, args.traits)
-    np.savez(args.out, traits=traits)
+    traits, tuning = fit_baseline(args.method, X, names, environment, ~test, args.traits)
+    np.savez(args.out, traits=traits, **tuning)
 
 
 if __name__ == '__main__':
