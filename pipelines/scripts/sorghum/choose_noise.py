@@ -30,7 +30,7 @@ def main():
     X, genotypes, environment = sorghum.load()
     level, scores = select_noise_level(lambda: TraitModels(1, LinearModel, X.shape[1]), X,
                                        genotypes, environment, n_iter=args.steps,
-                                       device=args.device)
+                                       clip=None, device=args.device)
     noise_sd = level * noise_scale(X)
     np.savez(args.out, levels=NOISE_LEVELS, scores=scores, level=level, noise_sd=noise_sd)
     print('held-out heritability of trait 1 (rows: splits)')

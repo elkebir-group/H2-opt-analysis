@@ -14,7 +14,8 @@ sorghum:
   # The predictions behind the paper (raw data): the traits per fold.
   paper:
     traits: 10
-  # H2-opt retrained (train_h2opt.py), trained with Adam (h2opt.train's default optimizer),
+  # H2-opt retrained (train_h2opt.py), trained with Adam (h2opt.train's default optimizer), no
+  # clipping,
   # with normal input noise whose level is chosen once for all folds by held-out heritability
   # (choose_noise.py, h2opt.selection.select_noise_level: 5 group folds, one-standard-error
   # rule) with the same steps.
