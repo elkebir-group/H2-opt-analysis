@@ -100,6 +100,26 @@ the lines) and everything after are rebuilt here. All outputs are under `data/de
 | `sim_roc` | `roc.npz` | AUC and ROC curves of causal 100 kb bins |
 | `sim_plot` | `figures/` | Fig. 3 and Fig. S2 panels |
 
+### Miscanthus
+
+Multispectral drone images of two populations of half-sib families, Central and South Japan
+(`h2opt_analysis/miscanthus.py`): 14 dates, 6 channels (crop surface model, blue, green, red, red
+edge, near infrared), 63 x 63 pixels per plant. Each date is analyzed alone. The clone checks,
+'unknown' seed lots and empty plots are left out; the folds are the paper's 5 plant folds. The
+heritability is Henderson's Method III (`h2opt.Henderson3`: families, plots within families, rep
+and field column fixed), broad-sense on the plant scale (the paper's narrow-sense value is 4 x it,
+capped at 1). The config lists the populations. All outputs are under
+`data/derived/miscanthus/{population}/`.
+
+| Rule | Output | Content |
+|---|---|---|
+| `misc_images` | `images.npy` | the images as uncompressed float32, read one date at a time |
+| `misc_choose_noise` | `h2opt/noise.npz`, `h2opt/noise_traits.npz`, `figures/noise.{pdf,png}` | the H2-opt noise level of each fold, one for all dates (`h2opt.selection.select_noise_level` on 5 splits of the training plants); `noise_traits.npz` keeps the validation traits (GPU) |
+| `misc_train_h2opt` | `h2opt/date{d}.{npz,pt}` | the H2-opt CNN (`h2opt.ImageConvModel`) of one date, all folds in one job (GPU) |
+| `misc_baseline` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | baselines of every date in one fold; PCH maximizes Henderson3, one ridge for all dates (`PCH.tune`) |
+| `misc_heritability` | `heritability.npz` | train and test Henderson3 of every method, date and fold |
+| `misc_plot_heritability` | `figures/heritability.{pdf,png}` | test heritability per date, H2-opt against the baselines |
+
 Each script under `pipelines/scripts/` also runs by hand; its docstring gives
 the arguments.
 

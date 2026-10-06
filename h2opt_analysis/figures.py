@@ -47,29 +47,32 @@ def save_trait_boxplots(path, n_traits, slugs, values, ylabel, width=5):
     plt.close(fig)
 
 
-def plot_noise_choices(levels, chosen, scores, path):
+def plot_noise_choices(levels, chosen, scores, path, series='trait', series_labels=None):
     """Noise levels chosen by h2opt.selection.select_noise_level in several subsets (folds).
 
-    chosen: (folds,) levels; scores: (folds, traits, splits, levels). Left: the held-out
-    heritability averaged over the traits and splits per level, one line per fold, its chosen
-    level marked. Right: the held-out heritability of each trait averaged over the folds and
-    splits per level. Saves path (.pdf) and a .png next to it."""
+    chosen: (folds,) levels; scores: (folds, series, splits, levels), the series being traits or
+    measurement sets (e.g. dates; series names them, series_labels gives their labels, default
+    1, 2, ...). Left: the held-out heritability averaged over the series and splits per level, one
+    line per fold, its chosen level marked. Right: the held-out heritability of each series
+    averaged over the folds and splits per level. Saves path (.pdf) and a .png next to it."""
     levels = np.asarray(levels)
     fig, (left, right) = plt.subplots(1, 2, figsize=(9, 3.2), sharex=True)
     for fold, mean in enumerate(scores.mean(axis=(1, 2))):
         left.plot(levels, mean, '-', color='0.6', lw=1)
         a = int(np.argmin(np.abs(levels - chosen[fold])))
         left.plot(levels[a], mean[a], 'o', color='tab:blue', ms=4)
-    left.set_ylabel('held-out heritability, mean of traits')
+    left.set_ylabel(f'held-out heritability, mean of {series}s')
     left.set_title('one line per fold; dot: chosen', fontsize=9)
-    n_traits = scores.shape[1]
-    colors = plt.cm.viridis(np.linspace(0, 0.9, n_traits))
-    for t in range(n_traits):
+    n_series = scores.shape[1]
+    labels = series_labels if series_labels is not None else range(1, n_series + 1)
+    colors = plt.cm.viridis(np.linspace(0, 0.9, n_series))
+    for t, label in zip(range(n_series), labels, strict=True):
         right.plot(levels, scores[:, t].mean(axis=(0, 1)), '-', color=colors[t], lw=1,
-                   label=f'{t + 1}')
+                   label=f'{label}')
     right.set_ylabel('held-out heritability')
     right.set_title('mean over folds', fontsize=9)
-    right.legend(title='trait', frameon=False, fontsize=6, title_fontsize=7, ncol=2)
+    right.legend(title=series, frameon=False, fontsize=6, title_fontsize=7,
+                 ncol=2 if n_series > 12 else 1, loc='center left', bbox_to_anchor=(1, 0.5))
     for ax in (left, right):
         ax.set_xscale('log')
         ax.set_xlabel('noise SD / feature SD')

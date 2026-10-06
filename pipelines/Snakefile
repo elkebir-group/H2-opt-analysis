@@ -24,6 +24,7 @@ os.environ["H2OPT_DATA"] = str(RAW_ROOT if RAW_ROOT.is_absolute() else REPO_ROOT
 
 include: "rules/sorghum.smk"
 include: "rules/simulation.smk"
+include: "rules/miscanthus.smk"
 
 
 rule all:
@@ -31,3 +32,4 @@ rule all:
     input:
         rules.sorghum_all.input,
         rules.simulation_all.input,
+        rules.miscanthus_all.input,
