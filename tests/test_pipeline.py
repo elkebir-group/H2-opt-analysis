@@ -21,5 +21,5 @@ def test_pipeline_parses():
             'sim_plot_gwas', 'simulation_gwas_all', 'sorghum_gwas_all',
             'sorghum_genotype_pcs', 'sorghum_baseline',
             'sorghum_choose_noise', 'sim_noise_sweep', 'sim_plot_noise_sweep', 'miscanthus_all',
-            'misc_images', 'misc_choose_noise', 'misc_train_h2opt', 'misc_baseline',
-            'misc_heritability', 'misc_plot_heritability'} <= rules
+            'misc_images', 'misc_score_noise', 'misc_choose_noise', 'misc_train_h2opt',
+            'misc_baseline', 'misc_heritability', 'misc_plot_heritability'} <= rules

@@ -5,7 +5,7 @@ Also the genotype labels, field sets, folds and the PLINK set of the sequenced l
 
 import numpy as np
 from h2opt import load_npz
-from h2opt.selection import per_group
+from h2opt.folds import per_group
 
 from .paths import data
 

@@ -3,9 +3,9 @@
 h2opt.selection.select_noise_level on the training plants of each fold (all folds in one batch),
 with the linear model and the training settings of train_h2opt.py: 5 validation splits of the
 training genotypes; the level whose traits have the best held-out heritability averaged over the
-traits and splits, as PCH.tune chooses its ridge. The test plants of a fold never take part in its
-choice. Writes an .npz (folds; levels; chosen: one level per fold; noise_sd: the standard
-deviation of the chosen noise per fold; scores: folds x traits x splits x levels) read by
+traits and splits. The test plants of a fold never take part in its choice. Writes an .npz
+(folds; levels; chosen: one level per fold; noise_sd: the standard deviation of the chosen noise
+per fold; scores: folds x traits x splits x levels) read by
 train_h2opt.py; an .npz of the trained validation traits (traits: folds x traits x splits x
 levels x plants, before decorrelation), to examine other selection rules without training again;
 and a figure of the choices.

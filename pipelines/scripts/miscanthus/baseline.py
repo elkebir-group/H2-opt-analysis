@@ -3,9 +3,10 @@
 Each baseline is fitted to all pixels of one date on the fold's training plants
 (h2opt_analysis.methods.BASELINES). PCH maximizes Henderson3 heritability (families, plots within
 families, rep and field column fixed); its ridge is one for all dates, chosen on the training
-plants by held-out Henderson3 heritability over 5 splits of the plants (PCH.tune), the mean over
-the dates. The other baselines are as for sorghum. Writes an .npz with 'traits' (dates x plants x
-traits, uncorrelated on the training plants) and, for pch, its tuning.
+plants by held-out Henderson3 heritability over 5 splits of the plants (PCH.tune over
+miscanthus.PCH_RIDGES), the mean over the dates. The other baselines are as for sorghum. Writes
+an .npz with 'traits' (dates x plants x traits, uncorrelated on the training plants) and, for pch,
+its tuning and ridge_traits (ridges x dates x plants x traits), the traits at every ridge.
 
     python pipelines/scripts/miscanthus/baseline.py --population central --images images.npy \\
         --method pch --fold 0 --traits 1 --out fold0.npz
@@ -14,7 +15,7 @@ traits, uncorrelated on the training plants) and, for pch, its tuning.
 import argparse
 
 import numpy as np
-from h2opt.baselines import PCH, RIDGES
+from h2opt.baselines import PCH
 
 from h2opt_analysis import miscanthus
 from h2opt_analysis.methods import BASELINES
@@ -44,13 +45,18 @@ def main():
         images = [pixels(d) for d in dates]
         ridge, scores, fold_scores = PCH.tune(
             [x[rows] for x in images], families[rows], environment[rows], args.traits,
-            subgroups=plots[rows], estimator='henderson3', split_units=np.arange(rows.sum()))
+            subgroups=plots[rows], estimator='henderson3', split_units=np.arange(rows.sum()),
+            ridges=miscanthus.PCH_RIDGES)
         print(f'ridge {ridge:g}; mean held-out heritability per ridge:',
               ' '.join(f'{s:.3f}' for s in scores), flush=True)
-        traits = [PCH(args.traits, ridge, 'henderson3').fit(
-            x[rows], families[rows], environment[rows], plots[rows]).transform(x) for x in images]
-        tuning = dict(ridge=ridge, ridges=RIDGES, ridge_scores=scores,
-                      ridge_fold_scores=fold_scores)
+        # PCH at every ridge (one decomposition per date), to compare any ridge without fitting
+        # again; the traits are those of the chosen ridge
+        ridge_traits = np.stack([[pch.transform(x) for pch in PCH.fit_ridges(
+            x[rows], families[rows], environment[rows], plots[rows], args.traits,
+            miscanthus.PCH_RIDGES, 'henderson3')] for x in images], axis=1)
+        traits = ridge_traits[miscanthus.PCH_RIDGES.index(ridge)]
+        tuning = dict(ridge=ridge, ridges=miscanthus.PCH_RIDGES, ridge_scores=scores,
+                      ridge_fold_scores=fold_scores, ridge_traits=ridge_traits)
     else:
         traits = []
         for d in dates:

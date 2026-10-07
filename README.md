@@ -1,11 +1,11 @@
 # H2-opt-analysis
 
 This repository holds the code that reproduces the analyses and figures of the
-[H2-opt](https://github.com/elkebir-group/H2-opt) paper: sorghum, Miscanthus,
-metabolomics and simulations. There are three parts:
+[H2-opt](https://github.com/elkebir-group/H2-opt) paper: sorghum, Miscanthus and
+simulations (the Arabidopsis metabolomics analysis is not ported yet). There are three parts:
 
 - **`h2opt_analysis/`**: the dataset-specific library. Data loading and folds
-  (`sorghum.py`, `simulation.py`), the methods and their baseline fits
+  (`sorghum.py`, `miscanthus.py`, `simulation.py`), the methods and their baseline fits
   (`methods.py`), GEMMA GWAS and per-line phenotypes (`gwas.py`), permuted-genotype
   nulls (`nulls.py`) and shared figure helpers (`figures.py`).
 - **`pipelines/`**: a Snakemake pipeline that runs every analysis from the raw
@@ -98,7 +98,8 @@ the lines) and everything after are rebuilt here. All outputs are under `data/de
 | `sim_gwas` | `instance{i}/gwas/{method}.npz` | GEMMA LMM of the line means of traits 1-3 (intercept + 5 PCs) |
 | `sim_evaluate` | `evaluation.npz` | correlation with the true traits, train/test heritability |
 | `sim_roc` | `roc.npz` | AUC and ROC curves of causal 100 kb bins |
-| `sim_plot` | `figures/` | Fig. 3 and Fig. S2 panels |
+| `sim_plot_traits` | `figures/{heritability,correlation}.pdf` | test heritability and \|r\| with the true traits per method (Fig. 3 and Fig. S2 panels) |
+| `sim_plot_gwas` | `figures/{auc,roc_trait1-3}.pdf`, `figures/gwas_{method}_instance{i}.png` | AUC, ROC curves, and Manhattan and QQ plots of one example (Fig. 3 and Fig. S2 panels) |
 
 ### Miscanthus
 
@@ -114,9 +115,10 @@ capped at 1). The config lists the populations. All outputs are under
 | Rule | Output | Content |
 |---|---|---|
 | `misc_images` | `images.npy` | the images as uncompressed float32, read one date at a time |
-| `misc_choose_noise` | `h2opt/noise.npz`, `h2opt/noise_traits.npz`, `figures/noise.{pdf,png}` | the H2-opt noise level of each fold, one for all dates (`h2opt.selection.select_noise_level` on 5 splits of the training plants); `noise_traits.npz` keeps the validation traits (GPU) |
+| `misc_score_noise` | `h2opt/noise/level{s}.npz` | held-out Henderson3 of the H2-opt CNN at one noise level, every fold and date (`h2opt.selection.select_noise_level` on 5 splits of the training plants), and the validation traits; one job per level, so a new level trains only itself (GPU) |
+| `misc_choose_noise` | `h2opt/noise.npz`, `figures/noise.{pdf,png}` | the noise level of each fold, one for all dates: the best mean score over all levels (`h2opt.selection.best_level`) |
 | `misc_train_h2opt` | `h2opt/date{d}.{npz,pt}` | the H2-opt CNN (`h2opt.ImageConvModel`) of one date, all folds in one job (GPU) |
-| `misc_baseline` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | baselines of every date in one fold; PCH maximizes Henderson3, one ridge for all dates (`PCH.tune`) |
+| `misc_baseline` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | baselines of every date in one fold; PCH maximizes Henderson3, one ridge for all dates (`PCH.tune` over `miscanthus.PCH_RIDGES`) |
 | `misc_heritability` | `heritability.npz` | train and test Henderson3 of every method, date and fold |
 | `misc_plot_heritability` | `figures/heritability.{pdf,png}` | test heritability per date, H2-opt against the baselines |
 

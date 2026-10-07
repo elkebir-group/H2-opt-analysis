@@ -1,4 +1,4 @@
-# Miscanthus multispectral drone images, one date at a time: the H2-opt noise level per family
+# Miscanthus multispectral drone images, one date at a time: the H2-opt noise level per plant
 # fold (one level for all dates), the H2-opt CNN per date, the baselines per date, and the
 # heritability of their traits by Henderson's Method III.
 
@@ -42,29 +42,46 @@ rule miscanthus_all:
                population=MISC_POPULATIONS),
 
 
+def misc_noise_scores(wildcards):
+    return [str(MISC_OUT / wildcards.population / "h2opt" / "noise" / f"level{level}.npz")
+            for level in H2OPT["levels"]]
+
+
 # The CNN jobs take the whole GPU (gpu: the total of run.sh --gpu-jobs): a few models at once
-# already fill its memory.
-rule misc_choose_noise:
+# already fill its memory. One job per noise level: a level added to the config trains only that
+# level.
+rule misc_score_noise:
     input:
         misc_images,
     output:
-        noise=str(MISC_OUT / "{population}" / "h2opt" / "noise.npz"),
-        traits=str(MISC_OUT / "{population}" / "h2opt" / "noise_traits.npz"),
-        pdf=str(MISC_OUT / "{population}" / "figures" / "noise.pdf"),
-        png=str(MISC_OUT / "{population}" / "figures" / "noise.png"),
+        str(MISC_OUT / "{population}" / "h2opt" / "noise" / "level{level}.npz"),
     log:
-        str(MISC_OUT / "{population}" / "h2opt" / "noise.log"),
-    params:
-        levels=" ".join(str(level) for level in H2OPT["levels"]),
+        str(MISC_OUT / "{population}" / "h2opt" / "noise" / "level{level}.log"),
+    wildcard_constraints:
+        level=r"[0-9.e+-]+",
     threads: 2
     resources:
         gpu=H2OPT["gpu"],
     shell:
-        "python -u {MISC_SCRIPTS}/choose_noise.py --population {wildcards.population}"
-        " --images {input} --out {output.noise} --out-traits {output.traits}"
-        " --figure {output.pdf} --steps {H2OPT[steps]} --levels {params.levels}"
+        "python -u {MISC_SCRIPTS}/score_noise.py --population {wildcards.population}"
+        " --images {input} --level {wildcards.level} --out {output} --steps {H2OPT[steps]}"
         " --splits {H2OPT[splits]} --max-copies {H2OPT[max_copies]} --device {H2OPT[device]}"
         " > {log} 2>&1"
+
+
+rule misc_choose_noise:
+    input:
+        misc_noise_scores,
+    output:
+        noise=str(MISC_OUT / "{population}" / "h2opt" / "noise.npz"),
+        pdf=str(MISC_OUT / "{population}" / "figures" / "noise.pdf"),
+        png=str(MISC_OUT / "{population}" / "figures" / "noise.png"),
+    log:
+        str(MISC_OUT / "{population}" / "h2opt" / "noise.log"),
+    threads: 1
+    shell:
+        "python -u {MISC_SCRIPTS}/choose_noise.py --scores {input} --out {output.noise}"
+        " --figure {output.pdf} > {log} 2>&1"
 
 
 rule misc_train_h2opt:

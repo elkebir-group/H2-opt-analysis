@@ -16,7 +16,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from h2opt import AutoEncoder, encode_latent, latent_scale
-from h2opt.selection import per_group
+from h2opt.folds import per_group
 
 from .paths import data
 

@@ -82,7 +82,7 @@ def main():
         ax.plot(fixed_x, np.median(fixed_cor[:, t]), '*', color='tab:red', ms=9,
                 label=f'pipeline, noise SD {args.noise_sd:g}')
         ax.set_xticks(x, [f'{lev:g}' for lev in levels], fontsize=8)
-        ax.set_xlabel('noise SD / feature SD')
+        ax.set_xlabel('noise level (noise SD / noise_scale)')
         ax.set_title(f'trait {t + 1}', fontsize=10)
     axes[0].set_ylabel('|r| with the true trait')
     axes[0].legend(frameon=False, fontsize=7, loc='lower left')

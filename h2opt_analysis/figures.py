@@ -75,7 +75,7 @@ def plot_noise_choices(levels, chosen, scores, path, series='trait', series_labe
                  ncol=2 if n_series > 12 else 1, loc='center left', bbox_to_anchor=(1, 0.5))
     for ax in (left, right):
         ax.set_xscale('log')
-        ax.set_xlabel('noise SD / feature SD')
+        ax.set_xlabel('noise level (noise SD / noise_scale)')
     fig.tight_layout()
     fig.savefig(path)
     fig.savefig(str(path).removesuffix('.pdf') + '.png', dpi=200)
