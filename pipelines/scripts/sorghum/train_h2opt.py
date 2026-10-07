@@ -45,7 +45,7 @@ def main():
     models = [TraitModels(args.traits, LinearModel, X.shape[1]) for _ in args.folds]
     train_test = np.array([(fold_of == fold).astype(int) for fold in args.folds])
     train_models(models, X, genotypes, environment, train_test, model_files=args.out_models,
-                 n_traits=args.traits, n_iter=args.steps, noise_levels=noise_sd, noise='normal',
+                 n_traits=args.traits, n_iter=args.steps, noise_sd=noise_sd,
                  device=args.device)
     for model, rows, path in zip(models, train_test, args.out_traits, strict=True):
         np.savez(path, traits=synthetic_traits(model, X, rows == 0))

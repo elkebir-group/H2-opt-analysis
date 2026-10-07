@@ -36,8 +36,8 @@ def main():
     start = TraitModels(args.traits, LinearModel, X.shape[1])
     models = [copy.deepcopy(start) for _ in NOISE_LEVELS]
     train_models(models, X, names, None, np.tile(test.astype(int), (len(models), 1)),
-                 n_traits=args.traits, n_iter=args.steps, noise_levels=noise_sd[:, None],
-                 noise='normal', device=args.device)
+                 n_traits=args.traits, n_iter=args.steps, noise_sd=noise_sd[:, None],
+                 device=args.device)
     traits = np.array([synthetic_traits(model, X, ~test) for model in models])
     np.savez(args.out, levels=NOISE_LEVELS, noise_sd=noise_sd, traits=traits)
 

@@ -1,11 +1,12 @@
 # H2-opt-analysis
 
 This repository holds the code that reproduces the analyses and figures of the
-[H2-opt](https://github.com/elkebir-group/H2-opt) paper: sorghum, Miscanthus and
-simulations (the Arabidopsis metabolomics analysis is not ported yet). There are three parts:
+[H2-opt](https://github.com/elkebir-group/H2-opt) paper: sorghum, Miscanthus, Arabidopsis
+metabolomics and simulations (the Arabidopsis pathway enrichment and GWAS are not ported yet).
+There are three parts:
 
 - **`h2opt_analysis/`**: the dataset-specific library. Data loading and folds
-  (`sorghum.py`, `miscanthus.py`, `simulation.py`), the methods and their baseline fits
+  (`sorghum.py`, `miscanthus.py`, `arabidopsis.py`, `simulation.py`), the methods and their baseline fits
   (`methods.py`), GEMMA GWAS and per-line phenotypes (`gwas.py`), permuted-genotype
   nulls (`nulls.py`) and shared figure helpers (`figures.py`).
 - **`pipelines/`**: a Snakemake pipeline that runs every analysis from the raw
@@ -121,6 +122,28 @@ capped at 1). The config lists the populations. All outputs are under
 | `misc_baseline` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | baselines of every date in one fold; PCH maximizes Henderson3, one ridge for all dates (`PCH.tune` over `miscanthus.PCH_RIDGES`) |
 | `misc_heritability` | `heritability.npz` | train and test Henderson3 of every method, date and fold |
 | `misc_plot_heritability` | `figures/heritability.{pdf,png}` | test heritability per date, H2-opt against the baselines |
+
+### Arabidopsis
+
+LC-MS metabolomics of 280 accessions, 263 in 0d and 277 in 6d, all genotyped
+(`h2opt_analysis/arabidopsis.py`): MS1 and MS/MS binned by integer m/z (0-1499) and 30 s of
+retention time (0-20 min), 120,000 features over their largest
+value, as in the paper. The two treatments, normal growth (0d) and 6 days of darkness (6d), are
+analyzed on their own; each accession has one sample per year (Col-0: nine), and the year is the
+environment.
+The nine labels 6909-1 to 6909-9 are pooled as one accession (Col-0, 6909 in the PLINK set): their
+metabolite profiles show no heritability among them. The folds are 5 random folds of accessions
+(seed 0). The heritability is ANOVA among accessions (`h2opt.anova_heritability`). All outputs are
+under `data/derived/arabidopsis/{treatment}/`.
+
+| Rule | Output | Content |
+|---|---|---|
+| `arabi_features` | `../features.npy` | the features of all samples as float32 |
+| `arabi_choose_noise` | `h2opt/noise.npz`, `h2opt/noise_traits.npz`, `figures/noise.{pdf,png}` | the noise level of each fold, one for all traits (`h2opt.selection.select_noise_level` on 5 splits of the training accessions), and the validation traits (GPU) |
+| `arabi_train_h2opt` | `h2opt/fold{k}.{npz,pt}` | linear H2-opt, all folds in one job (GPU) |
+| `arabi_baseline` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | the baselines of one fold; PCH's ridge by `PCH.tune` |
+| `arabi_heritability` | `heritability.npz` | train and test heritability of every method, fold and trait |
+| `arabi_plot_heritability` | `figures/heritability_{test,train}.pdf` | heritability per trait, H2-opt against the baselines (Fig. arabiResult b and its train counterpart) |
 
 Each script under `pipelines/scripts/` also runs by hand; its docstring gives
 the arguments.

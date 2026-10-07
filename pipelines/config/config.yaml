@@ -80,3 +80,23 @@ miscanthus:
     max_copies: 6  # about 1.1 GB of GPU memory per model
     gpu: 8         # all of run.sh's default --gpu-jobs: the job takes the whole GPU
     device: cuda
+
+arabidopsis:
+  # Treatments, each analyzed on its own (h2opt_analysis.arabidopsis.TREATMENTS); folds of
+  # accessions (h2opt_analysis.arabidopsis.folds, seed 0).
+  treatments: [0d, 6d]
+  folds: [0, 1, 2, 3, 4]
+  # Traits of H2-opt and the baselines. LDA (unregularized PCH) is left out: with 120,000
+  # features and fewer samples it fits the training samples exactly.
+  traits: 10
+  baselines: [pca, genetic_pca, pch, max_features]
+  # H2-opt: h2opt.LinearModel with ANOVA heritability, Adam, normal input noise, no clipping and no
+  # L1 penalty. The level is one per fold for all traits, chosen by choose_noise.py on 5
+  # validation splits of the training accessions from h2opt.selection.NOISE_LEVELS. steps is
+  # where doubling it changes the train heritability of traits 1-3 by at most about 0.01 (fold 0,
+  # levels 0.01, 0.1 and 1, both treatments: 16k -> 32k steps changes it by at most 0.001; at
+  # levels 0.01 and 0.1 the train heritability is 1.000 from about 8k steps).
+  h2opt:
+    traits: 10
+    steps: 16000
+    device: cuda

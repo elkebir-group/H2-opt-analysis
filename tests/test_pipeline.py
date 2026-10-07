@@ -22,4 +22,6 @@ def test_pipeline_parses():
             'sorghum_genotype_pcs', 'sorghum_baseline',
             'sorghum_choose_noise', 'sim_noise_sweep', 'sim_plot_noise_sweep', 'miscanthus_all',
             'misc_images', 'misc_score_noise', 'misc_choose_noise', 'misc_train_h2opt',
-            'misc_baseline', 'misc_heritability', 'misc_plot_heritability'} <= rules
+            'misc_baseline', 'misc_heritability', 'misc_plot_heritability', 'arabidopsis_all',
+            'arabi_features', 'arabi_choose_noise', 'arabi_train_h2opt', 'arabi_baseline',
+            'arabi_heritability', 'arabi_plot_heritability'} <= rules

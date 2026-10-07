@@ -18,7 +18,7 @@ import argparse
 
 import numpy as np
 from h2opt import LinearModel
-from h2opt.selection import NOISE_LEVELS, noise_scale, select_noise_level
+from h2opt.selection import NOISE_LEVELS, best_level, select_noise_level
 
 from h2opt_analysis import sorghum
 from h2opt_analysis.figures import plot_noise_choices
@@ -38,10 +38,10 @@ def main():
     X, genotypes, environment = sorghum.load()
     fold_of = sorghum.folds(genotypes)
     is_train = np.array([fold_of != fold for fold in args.folds])
-    chosen, scores, traits = select_noise_level(lambda: LinearModel(X.shape[1]), X, genotypes,
-                                                environment, args.traits, subsets=is_train,
-                                                n_iter=args.steps, device=args.device)
-    noise_sd = chosen * np.array([noise_scale(X[rows]) for rows in is_train])
+    noise_sd, scores, traits = select_noise_level(lambda: LinearModel(X.shape[1]), X, genotypes,
+                                                  environment, args.traits, subsets=is_train,
+                                                  n_iter=args.steps, device=args.device)
+    chosen = np.array([best_level(NOISE_LEVELS, score) for score in scores])
     np.savez(args.out, folds=args.folds, levels=NOISE_LEVELS, chosen=chosen, noise_sd=noise_sd,
              scores=scores)
     np.savez(args.out_traits, folds=args.folds, levels=NOISE_LEVELS, traits=traits)

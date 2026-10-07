@@ -36,8 +36,8 @@ def main():
 
     model = TraitModels(args.traits, LinearModel, X.shape[1])
     train(model, X, names, None, test.astype(int), model_file=args.out_model,
-          n_traits=args.traits, n_iter=args.steps, noise_level=args.noise_sd,
-          noise='normal', device=args.device)
+          n_traits=args.traits, n_iter=args.steps, noise_sd=args.noise_sd,
+          device=args.device)
     np.savez(args.out_traits, traits=synthetic_traits(model, X, ~test))
 
 

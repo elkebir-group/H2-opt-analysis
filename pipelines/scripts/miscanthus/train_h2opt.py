@@ -42,7 +42,7 @@ def main():
     models = [TraitModels(1, ImageConvModel, images.shape[1], images.shape[2:]) for _ in folds]
     train_test = np.array([(design.fold == fold).astype(int) for fold in folds])
     train_models(models, images, design.families, design.environment, train_test, n_traits=1,
-                 n_iter=args.steps, noise_levels=noise_sd[:, None], noise='normal',
+                 n_iter=args.steps, noise_sd=noise_sd[:, None],
                  device=args.device, subgroups=design.plots, estimator='henderson3',
                  max_copies=args.max_copies)
     traits = np.stack([synthetic_traits(model, images, rows == 0)
