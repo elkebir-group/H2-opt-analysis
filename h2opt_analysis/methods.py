@@ -20,15 +20,19 @@ BASELINES = {'pca': baselines.PCA, 'genetic_pca': baselines.GeneticPCA, 'lda': b
              'pch': baselines.PCH, 'max_features': baselines.MaxHeritabilityFeatures}
 
 
-def fit_baseline(slug, X, groups, environment, rows, n_traits):
+def fit_baseline(slug, X, groups, environment, rows, n_traits, ridge=None):
     """Traits of a baseline fitted on the selected rows, for all rows, and its tuning.
 
-    PCH's ridge is chosen on the selected rows by cross-validated heritability (PCH.tune); its
-    tuning is a dict of arrays (ridge, ridges, ridge_scores, ridge_fold_scores). Other baselines
-    have no tuning (empty dict).
+    PCH uses the given ridge (tuning: dict(ridge=ridge)); with ridge None, it is chosen on the
+    selected rows by cross-validated heritability (PCH.tune; tuning: a dict of arrays ridge,
+    ridges, ridge_scores, ridge_fold_scores). Other baselines take no ridge and have no tuning
+    (empty dict).
     """
     tuning = {}
-    if slug == 'pch':
+    if slug == 'pch' and ridge is not None:
+        baseline = baselines.PCH(n_traits, ridge=ridge)
+        tuning = dict(ridge=ridge)
+    elif slug == 'pch':
         ridge, scores, fold_scores = baselines.PCH.tune(X[rows], groups[rows], environment[rows],
                                                         n_traits)
         baseline = baselines.PCH(n_traits, ridge=ridge)

@@ -166,10 +166,12 @@ rule sim_train_baselines:
         sim_file("{instance}", "{baseline}.log"),
     params:
         traits=SIM["traits"],
+        noise_sd=SIM["h2opt"]["noise_sd"],
     threads: 2
     shell:
         "python -u {SIM_SCRIPTS}/baseline.py --spectra {input} --method {wildcards.baseline}"
-        " --out {output} --traits {params.traits} > {log} 2>&1"
+        " --out {output} --traits {params.traits}"
+        " --noise-sd {params.noise_sd} > {log} 2>&1"
 
 
 rule sim_prepare_gwas_genotypes:
