@@ -1,14 +1,14 @@
 """Henderson3 heritability of the Miscanthus traits of every method, date and fold.
 
-For each method, the traits of every date and fold (H2-opt: one file per date, folds x plants x
-traits; baselines: one file per fold, dates x plants x traits) are scored by Henderson3
-(families, plots within families, rep and field column fixed) on the fold's training and test
-plants. The values are broad-sense on the plant scale; the paper's narrow-sense heritability of
-half-sib families is 4 x the value (capped at 1). Writes an .npz (methods; dates; train and test:
-methods x dates x folds x traits) and prints the mean narrow-sense test heritability of trait 1.
+For each method, the traits of every date and fold (hybrid H2-opt: one file per date, folds x plants
+x traits; baselines: one file per fold, dates x plants x traits) are scored by Henderson3 (families,
+plots within families, rep and field column fixed) on the fold's training and test plants. The
+values are broad-sense on the plant scale; the paper's narrow-sense heritability of half-sib
+families is 4 x the value (capped at 1). Writes an .npz (methods; dates; train and test: methods x
+dates x folds x traits) and prints the mean narrow-sense test heritability of trait 1.
 
     python pipelines/scripts/miscanthus/evaluate_heritability.py --population central \\
-        --by-date h2opt date0.npz ... date13.npz --by-fold pch fold0.npz ... fold4.npz \\
+        --by-date h2opt_hybrid date0.npz ... date13.npz --by-fold pch fold0.npz ... fold4.npz \\
         --traits 1 --out heritability.npz
 """
 

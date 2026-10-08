@@ -120,7 +120,6 @@ rule sim_choose_hybrid_cnn_level:
     log:
         sim_file("{instance}", "cnn_level.log"),
     params:
-        levels=" ".join(str(level) for level in SIM["hybrid"]["cnn_levels"]),
         linear_steps=SIM["hybrid"]["linear_steps"],
         steps=SIM["hybrid"]["steps"],
         device=SIM["hybrid"]["device"],
@@ -129,7 +128,7 @@ rule sim_choose_hybrid_cnn_level:
         gpu=lambda wc: 1 if SIM["hybrid"]["device"] == "cuda" else 0,
     shell:
         "python -u {SIM_SCRIPTS}/choose_cnn_level.py --spectra {input.spectra}"
-        " --noise {input.noise} --levels {params.levels} --out {output}"
+        " --noise {input.noise} --out {output}"
         " --linear-steps {params.linear_steps} --steps {params.steps}"
         " --seed {wildcards.instance} --device {params.device} > {log} 2>&1"
 

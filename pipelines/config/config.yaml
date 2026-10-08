@@ -53,10 +53,9 @@ simulation:
   # h2opt.train_linear_conv_models: linear H2-opt for linear_steps per trait, then the hybrid for
   # steps per trait. The linear branch keeps the noise of linear H2-opt; the CNN level (input
   # noise, times h2opt.selection.noise_scale of the training spectra) is chosen per instance from
-  # cnn_levels (choose_cnn_level.py: the highest level within one SE of the best held-out
-  # heritability of trait 1; a high level keeps the hybrid at the linear trait).
+  # h2opt.selection.NOISE_LEVELS (choose_cnn_level.py: the highest level within one SE of the
+  # best held-out heritability of trait 1; a high level keeps the hybrid at the linear trait).
   hybrid:
-    cnn_levels: [0.316228, 1.0, 3.16228, 10.0]
     linear_steps: 10000
     steps: 1000
     device: cuda
@@ -74,23 +73,6 @@ miscanthus:
   # Trait 1 of every date, for H2-opt and the baselines.
   traits: 1
   baselines: [pca, genetic_pca, pch, max_features]
-  # H2-opt: h2opt.ImageConvModel with Henderson3 heritability, Adam, normal input noise. The
-  # level (a fraction of h2opt.selection.noise_scale of each date's images) is one per fold for
-  # all dates, chosen by choose_noise.py on 5 validation splits of the training plants from
-  # every other level of h2opt.selection.NOISE_LEVELS between 0.01 and 10 (3.16 and 10 added
-  # after 1, the largest level then, won in 3 of 5 folds of each population). Each level is one
-  # score_noise.py job, so a new level trains only itself. Steps
-  # are fixed, with no early stopping (decision of 2026-10-01): on 06/08, fold 0, at level 0.085
-  # the training heritability keeps rising with steps and the test heritability falls (1k steps:
-  # train 0.82, test 0.20; 4k: 1.11, 0.09; 16k: 1.30, 0.09), so the step count is not chosen by
-  # convergence.
-  h2opt:
-    steps: 1000
-    levels: [0.01, 0.0316228, 0.1, 0.316228, 1.0, 3.16228, 10.0]
-    splits: 5
-    max_copies: 6  # about 1.1 GB of GPU memory per model
-    gpu: 8         # all of run.sh's default --gpu-jobs: the job takes the whole GPU
-    device: cuda
 
 arabidopsis:
   # Treatments, each analyzed on its own (h2opt_analysis.arabidopsis.TREATMENTS); folds of

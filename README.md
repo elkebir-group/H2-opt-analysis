@@ -119,12 +119,9 @@ capped at 1). The config lists the populations. All outputs are under
 | Rule | Output | Content |
 |---|---|---|
 | `misc_prepare_images` | `images.npy` | the images as uncompressed float32, read one date at a time |
-| `misc_score_cnn_h2opt_noise` | `h2opt/noise/level{s}.npz` | held-out Henderson3 of the H2-opt CNN at one noise level, every fold and date (`h2opt.selection.select_noise_level` on 5 splits of the training plants), and the validation traits; one job per level, so a new level trains only itself (device from the config) |
-| `misc_choose_cnn_h2opt_noise` | `h2opt/noise.npz`, `figures/noise.{pdf,png}` | the noise level of each fold, one for all dates: the best mean score over all levels (`h2opt.selection.best_level`) |
-| `misc_train_cnn_h2opt` | `h2opt/date{d}.{npz,pt}` | the H2-opt CNN (`h2opt.ImageConvModel`) of one date, all folds in one job (device from the config) |
-| `misc_train_baselines` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | baselines of every date in one fold; PCH maximizes Henderson3, one ridge for all dates (`PCH.tune` over `miscanthus.PCH_RIDGES`) |
-| `misc_score_heritability` | `heritability.npz` | train and test Henderson3 of every method, date and fold |
-| `misc_plot_heritability` | `figures/heritability.{pdf,png}` | test heritability per date, H2-opt against the baselines |
+| `misc_train_baselines` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | baselines of every date in one fold; PCH maximizes Henderson3, one ridge for all dates (`PCH.tune` over `h2opt.baselines.RIDGES`) |
+| `misc_score_heritability` | `heritability.npz` | train and test Henderson3 of every method, date and fold; the hybrid H2-opt traits (`h2opt_hybrid/date{d}.npz`) are imported from a scratch run of the earlier hybrid design until a rule trains them |
+| `misc_plot_heritability` | `figures/heritability.{pdf,png}` | test heritability per date, hybrid H2-opt against the baselines |
 
 ### Arabidopsis
 

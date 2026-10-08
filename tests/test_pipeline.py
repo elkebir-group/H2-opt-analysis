@@ -23,8 +23,7 @@ def test_pipeline_parses():
             'simulation_gwas_all', 'sorghum_gwas_all', 'sorghum_prepare_genotype_pcs',
             'sorghum_train_baselines', 'sorghum_choose_linear_h2opt_noise',
             'sim_sweep_linear_h2opt_noise', 'sim_plot_linear_h2opt_noise_sweep', 'miscanthus_all',
-            'misc_prepare_images', 'misc_score_cnn_h2opt_noise', 'misc_choose_cnn_h2opt_noise',
-            'misc_train_cnn_h2opt', 'misc_train_baselines', 'misc_score_heritability',
+            'misc_prepare_images', 'misc_train_baselines', 'misc_score_heritability',
             'misc_plot_heritability', 'arabidopsis_all', 'arabi_prepare_features',
             'arabi_choose_linear_h2opt_noise', 'arabi_train_linear_h2opt',
             'arabi_train_baselines', 'arabi_score_heritability', 'arabi_plot_heritability'} <= rules
