@@ -6,7 +6,9 @@ sequenced sorghum lines, 2 replicates per line (n = 1,672). The simplePHENOTYPES
 raw data of this simulation (the SNP sampling and the QTN effects were not seeded, so they cannot
 be regenerated). Here the traits are encoded into spectra: together with 2 random latent traits
 they fill the 5 latent dimensions of an autoencoder trained on the sorghum spectra, in a random
-order, and are decoded.
+order, and are decoded with the decoder linearized at the latent means (h2opt.encode_latent). The
+paper decoded with the full tanh decoder; its products and squares of the traits are heritable and
+appeared as extra synthetic traits.
 """
 
 import pickle
@@ -100,8 +102,8 @@ def encode_instances(truths, autoencoder, reference, seed=0):
     truths: list of (n, 3) true traits. reference: real spectra whose encodings set the mean and
     scale of each latent dimension (h2opt.latent_scale). Each trait is standardized; the n x 5
     latent matrix is N(0, 1) with the traits placed in a random permutation of the dimensions, and
-    is decoded by h2opt.encode_latent. Returns a list of (spectra (n, m), dimensions (3,)), where
-    dimensions[t] is the latent dimension that holds trait t.
+    is decoded by h2opt.encode_latent (linearized decoder). Returns a list of (spectra (n, m),
+    dimensions (3,)), where dimensions[t] is the latent dimension that holds trait t.
     """
     scale = latent_scale(autoencoder, reference)
     rng = np.random.RandomState(seed)
