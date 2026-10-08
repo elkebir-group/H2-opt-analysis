@@ -75,7 +75,7 @@ or `h2opt` (retrained here with Adam, with the noise level of each fold, one for
 |---|---|---|
 | `sorghum_choose_linear_h2opt_noise` | `h2opt/noise.npz`, `h2opt/noise_traits.npz`, `figures/noise.{pdf,png}` | the H2-opt noise level of each fold (one for all traits), chosen on the fold's training plants by the best held-out heritability of the first trait averaged over 5 group folds (`h2opt.selection.select_noise_level`, all folds in one batch); `noise_traits.npz` keeps the trained validation traits, to examine other selection rules without training again |
 | `sorghum_train_linear_h2opt` | `h2opt/fold{k}.{npz,pt}` | H2-opt with the chosen noise, all folds in one job |
-| `sorghum_train_baselines` | `{pca,genetic_pca,lda,pch,max_features}/fold{k}.npz` | baselines fitted on the training genotypes of fold k, once for all sources |
+| `sorghum_train_baselines` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | baselines fitted on the training genotypes of fold k, once for all sources |
 | `sorghum_score_heritability` | `heritability_{source}.npz` | train and test heritability of the source's H2-opt traits and the baselines' |
 | `sorghum_plot_heritability` | `figures/top_trait_heritability_{source}.{pdf,png}` | boxplots of the top trait over the folds |
 | `sorghum_run_gwas` | `gwas/{source}_fold{k}.npz` | GEMMA LMM of the per-line trait means (intercept + 5 genotype PCs) |
@@ -90,12 +90,14 @@ the lines) and everything after are rebuilt here. All outputs are under `data/de
 
 | Rule | Output | Content |
 |---|---|---|
-| `sim_simulate_spectra` | `instance{i}/{spectra,truth}.npz` | simulated spectra, test plants, line of each plant, true traits |
-| `sim_train_linear_h2opt` | `instance{i}/h2opt.{npz,pt}` | H2-opt with the fixed noise SD of the config, the paper's 0.02 (device from the config) |
-| `sim_train_hybrid_h2opt` | `instance{i}/h2opt_hybrid.{npz,pt}` | H2-opt with the linear + CNN model (`h2opt.LinearConvModel`, 1D `ConvModel`), warm started from linear H2-opt, same noise SD (device from the config) |
+| `sim_simulate_spectra` | `instance{i}/{spectra,truth}.npz` | simulated spectra (linearized decoder plus the residual of a random real spectrum), test plants, line of each plant, true traits |
+| `sim_choose_linear_h2opt_noise` | `instance{i}/noise.npz` | the noise level of H2-opt, chosen on the training lines by the held-out heritability of trait 1 (`h2opt.selection.select_noise_level`) |
+| `sim_train_linear_h2opt` | `instance{i}/h2opt.{npz,pt}` | H2-opt with the chosen noise (device from the config) |
+| `sim_choose_hybrid_cnn_level` | `instance{i}/cnn_level.npz` | the CNN noise level of the hybrid: the highest level within one SE of the best held-out heritability of trait 1 (`h2opt.selection.score_linear_conv_levels`, `highest_level_within_one_se`) |
+| `sim_train_hybrid_h2opt` | `instance{i}/h2opt_hybrid.{npz,pt}` | H2-opt with the linear + CNN model (`h2opt.LinearConvModel`, 1D `ConvModel`), warm started from linear H2-opt, at the chosen noise and CNN level (device from the config) |
 | `sim_sweep_linear_h2opt_noise` | `instance{i}/h2opt_noise_sweep.npz` | H2-opt at every level of `h2opt.selection.NOISE_LEVELS`, all levels in one job |
 | `sim_plot_linear_h2opt_noise_sweep` | `noise_sweep.npz`, `figures/noise_sweep.{pdf,png}` | \|r\| of traits 1-3 with the true traits against the noise level |
-| `sim_train_baselines` | `instance{i}/{pca,genetic_pca,lda,pch,max_features}.npz` | baselines fitted on the training lines (PCH's ridge chosen by `PCH.tune`) |
+| `sim_train_baselines` | `instance{i}/{pca,genetic_pca,pch,max_features}.npz` | baselines fitted on the training lines (PCH at the ridge that matches H2-opt's chosen noise: the level squared) |
 | `sim_prepare_gwas_genotypes` | `instance{i}/genotypes.{bed,bim,fam}`, `genotype_pcs.npy` | genotypes without the instance's QTNs, and their PCs |
 | `sim_run_gwas` | `instance{i}/gwas/{method}.npz` | GEMMA LMM of the line means of traits 1-3 (intercept + 5 PCs) |
 | `sim_score_traits` | `evaluation.npz` | correlation with the true traits, train/test heritability |

@@ -71,14 +71,14 @@ rule sim_simulate_spectra:
 
 rule sim_train_linear_h2opt:
     input:
-        sim_file("{instance}", "spectra.npz"),
+        spectra=sim_file("{instance}", "spectra.npz"),
+        noise=sim_file("{instance}", "noise.npz"),
     output:
         traits=sim_file("{instance}", "h2opt.npz"),
         model=sim_file("{instance}", "h2opt.pt"),
     log:
         sim_file("{instance}", "h2opt.log"),
     params:
-        noise_sd=SIM["h2opt"]["noise_sd"],
         traits=SIM["traits"],
         steps=SIM["h2opt"]["steps"],
         device=SIM["h2opt"]["device"],
@@ -86,24 +86,41 @@ rule sim_train_linear_h2opt:
     resources:
         gpu=lambda wc: 1 if SIM["h2opt"]["device"] == "cuda" else 0,
     shell:
-        "python -u {SIM_SCRIPTS}/train_h2opt.py --spectra {input} --noise-sd {params.noise_sd}"
+        "python -u {SIM_SCRIPTS}/train_h2opt.py --spectra {input.spectra} --noise {input.noise}"
         " --out-traits {output.traits} --out-model {output.model} --traits {params.traits}"
         " --steps {params.steps} --seed {wildcards.instance} --device {params.device}"
         " > {log} 2>&1"
 
 
-rule sim_train_hybrid_h2opt:
+rule sim_choose_linear_h2opt_noise:
     input:
         sim_file("{instance}", "spectra.npz"),
     output:
-        traits=sim_file("{instance}", "h2opt_hybrid.npz"),
-        model=sim_file("{instance}", "h2opt_hybrid.pt"),
+        sim_file("{instance}", "noise.npz"),
     log:
-        sim_file("{instance}", "h2opt_hybrid.log"),
+        sim_file("{instance}", "noise.log"),
     params:
-        noise_sd=SIM["h2opt"]["noise_sd"],
-        traits=SIM["traits"],
-        cnn_level=SIM["hybrid"]["cnn_level"],
+        steps=SIM["h2opt"]["steps"],
+        device=SIM["h2opt"]["device"],
+    threads: 1
+    resources:
+        gpu=lambda wc: 1 if SIM["h2opt"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {SIM_SCRIPTS}/choose_noise.py --spectra {input} --out {output}"
+        " --steps {params.steps} --seed {wildcards.instance} --device {params.device}"
+        " > {log} 2>&1"
+
+
+rule sim_choose_hybrid_cnn_level:
+    input:
+        spectra=sim_file("{instance}", "spectra.npz"),
+        noise=sim_file("{instance}", "noise.npz"),
+    output:
+        sim_file("{instance}", "cnn_level.npz"),
+    log:
+        sim_file("{instance}", "cnn_level.log"),
+    params:
+        levels=" ".join(str(level) for level in SIM["hybrid"]["cnn_levels"]),
         linear_steps=SIM["hybrid"]["linear_steps"],
         steps=SIM["hybrid"]["steps"],
         device=SIM["hybrid"]["device"],
@@ -111,8 +128,33 @@ rule sim_train_hybrid_h2opt:
     resources:
         gpu=lambda wc: 1 if SIM["hybrid"]["device"] == "cuda" else 0,
     shell:
-        "python -u {SIM_SCRIPTS}/train_hybrid.py --spectra {input} --noise-sd {params.noise_sd}"
-        " --cnn-level {params.cnn_level}"
+        "python -u {SIM_SCRIPTS}/choose_cnn_level.py --spectra {input.spectra}"
+        " --noise {input.noise} --levels {params.levels} --out {output}"
+        " --linear-steps {params.linear_steps} --steps {params.steps}"
+        " --seed {wildcards.instance} --device {params.device} > {log} 2>&1"
+
+
+rule sim_train_hybrid_h2opt:
+    input:
+        spectra=sim_file("{instance}", "spectra.npz"),
+        noise=sim_file("{instance}", "noise.npz"),
+        cnn_level=sim_file("{instance}", "cnn_level.npz"),
+    output:
+        traits=sim_file("{instance}", "h2opt_hybrid.npz"),
+        model=sim_file("{instance}", "h2opt_hybrid.pt"),
+    log:
+        sim_file("{instance}", "h2opt_hybrid.log"),
+    params:
+        traits=SIM["traits"],
+        linear_steps=SIM["hybrid"]["linear_steps"],
+        steps=SIM["hybrid"]["steps"],
+        device=SIM["hybrid"]["device"],
+    threads: 1
+    resources:
+        gpu=lambda wc: 1 if SIM["hybrid"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {SIM_SCRIPTS}/train_hybrid.py --spectra {input.spectra} --noise {input.noise}"
+        " --cnn-level {input.cnn_level}"
         " --out-traits {output.traits} --out-model {output.model} --traits {params.traits}"
         " --linear-steps {params.linear_steps} --steps {params.steps}"
         " --seed {wildcards.instance} --device {params.device} > {log} 2>&1"
@@ -144,36 +186,43 @@ rule sim_plot_linear_h2opt_noise_sweep:
         truth=sim_files("truth.npz"),
         spectra=sim_files("spectra.npz"),
         h2opt=sim_files("h2opt.npz"),
+        noise=sim_files("noise.npz"),
     output:
         npz=str(SIM_OUT / "noise_sweep.npz"),
         pdf=str(SIM_OUT / "figures" / "noise_sweep.pdf"),
         png=str(SIM_OUT / "figures" / "noise_sweep.png"),
     log:
         str(SIM_OUT / "noise_sweep.log"),
-    params:
-        noise_sd=SIM["h2opt"]["noise_sd"],
     threads: 1
     shell:
         "python -u {SIM_SCRIPTS}/plot_noise_sweep.py --sweep {input.sweep} --truth {input.truth}"
-        " --spectra {input.spectra} --h2opt {input.h2opt} --noise-sd {params.noise_sd}"
+        " --spectra {input.spectra} --h2opt {input.h2opt} --noise {input.noise}"
         " --out {output.npz} --figure {output.pdf} > {log} 2>&1"
+
+
+def sim_baseline_inputs(wildcards):
+    """The spectra, and for PCH the chosen noise of H2-opt, which sets its ridge."""
+    files = {"spectra": sim_file(wildcards.instance, "spectra.npz")}
+    if wildcards.baseline == "pch":
+        files["noise"] = sim_file(wildcards.instance, "noise.npz")
+    return files
 
 
 rule sim_train_baselines:
     input:
-        sim_file("{instance}", "spectra.npz"),
+        unpack(sim_baseline_inputs),
     output:
         sim_file("{instance}", "{baseline}.npz"),
     log:
         sim_file("{instance}", "{baseline}.log"),
     params:
         traits=SIM["traits"],
-        noise_sd=SIM["h2opt"]["noise_sd"],
+        noise=lambda wc, input: f"--noise {input.noise}" if wc.baseline == "pch" else "",
     threads: 2
     shell:
-        "python -u {SIM_SCRIPTS}/baseline.py --spectra {input} --method {wildcards.baseline}"
-        " --out {output} --traits {params.traits}"
-        " --noise-sd {params.noise_sd} > {log} 2>&1"
+        "python -u {SIM_SCRIPTS}/baseline.py --spectra {input.spectra}"
+        " --method {wildcards.baseline} --out {output} --traits {params.traits}"
+        " {params.noise} > {log} 2>&1"
 
 
 rule sim_prepare_gwas_genotypes:

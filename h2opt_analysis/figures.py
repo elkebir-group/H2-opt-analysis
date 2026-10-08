@@ -8,7 +8,7 @@ from .methods import LABELS
 COLORS = {'truth': 'tab:red', 'h2opt_paper': 'tab:blue', 'h2opt': 'tab:blue',
           'h2opt_hybrid': 'tab:cyan',
           'pca': 'tab:orange', 'genetic_pca': 'tab:purple',
-          'lda': 'tab:brown', 'pch': 'tab:pink', 'max_features': 'tab:green'}
+          'pch': 'tab:pink', 'max_features': 'tab:green'}
 
 
 def grouped_boxplot(ax, groups, slugs, values):

@@ -11,13 +11,12 @@ LABELS = {
     'h2opt_hybrid': 'H2-opt hybrid',
     'pca': 'PCA',
     'genetic_pca': 'genetic PCA',
-    'lda': 'LDA',
     'pch': 'PCH',
     'max_features': 'single trait',
 }
 
-BASELINES = {'pca': baselines.PCA, 'genetic_pca': baselines.GeneticPCA, 'lda': baselines.LDA,
-             'pch': baselines.PCH, 'max_features': baselines.MaxHeritabilityFeatures}
+BASELINES = {'pca': baselines.PCA, 'genetic_pca': baselines.GeneticPCA, 'pch': baselines.PCH,
+             'max_features': baselines.MaxHeritabilityFeatures}
 
 
 def fit_baseline(slug, X, groups, environment, rows, n_traits, ridge=None):

@@ -8,7 +8,9 @@ be regenerated). Here the traits are encoded into spectra: together with 2 rando
 they fill the 5 latent dimensions of an autoencoder trained on the sorghum spectra, in a random
 order, and are decoded with the decoder linearized at the latent means (h2opt.encode_latent). The
 paper decoded with the full tanh decoder; its products and squares of the traits are heritable and
-appeared as extra synthetic traits.
+appeared as extra synthetic traits. Each plant also gets the autoencoder residual of a random real
+sorghum spectrum (h2opt.reconstruction_residuals), the real variation that the 5 latent dimensions
+miss (0.7% of the real spectra's variance), which is not heritable in the simulation.
 """
 
 import pickle
@@ -17,7 +19,7 @@ import types
 import numpy as np
 import torch
 import torch.nn as nn
-from h2opt import AutoEncoder, encode_latent, latent_scale
+from h2opt import AutoEncoder, encode_latent, latent_scale, reconstruction_residuals
 from h2opt.folds import per_group
 
 from .paths import data
@@ -102,11 +104,15 @@ def encode_instances(truths, autoencoder, reference, seed=0):
     truths: list of (n, 3) true traits. reference: real spectra whose encodings set the mean and
     scale of each latent dimension (h2opt.latent_scale). Each trait is standardized; the n x 5
     latent matrix is N(0, 1) with the traits placed in a random permutation of the dimensions, and
-    is decoded by h2opt.encode_latent (linearized decoder). Returns a list of (spectra (n, m),
+    is decoded by h2opt.encode_latent (linearized decoder), plus the residual of a random
+    spectrum of reference (h2opt.reconstruction_residuals), drawn by a second random stream (seed
+    + 1) so that the latents are those of the paper. Returns a list of (spectra (n, m),
     dimensions (3,)), where dimensions[t] is the latent dimension that holds trait t.
     """
     scale = latent_scale(autoencoder, reference)
+    residuals = reconstruction_residuals(autoencoder, reference)
     rng = np.random.RandomState(seed)
+    residual_rng = np.random.RandomState(seed + 1)
     out = []
     for Y in truths:
         Y = Y - Y.mean(axis=0)
@@ -114,7 +120,7 @@ def encode_instances(truths, autoencoder, reference, seed=0):
         latent = rng.normal(size=len(Y) * N_LATENT).reshape((len(Y), N_LATENT))
         dimensions = rng.permutation(N_LATENT)[:Y.shape[1]]
         latent[:, dimensions] = Y
-        out.append((encode_latent(latent, autoencoder, scale), dimensions))
+        out.append((encode_latent(latent, autoencoder, scale, residuals, residual_rng), dimensions))
     return out
 
 

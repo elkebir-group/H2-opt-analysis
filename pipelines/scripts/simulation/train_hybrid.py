@@ -2,15 +2,15 @@
 
 h2opt.train_linear_conv_models: linear H2-opt (one linear model per trait), then
 h2opt.LinearConvModel, the linear map plus h2opt.ConvModel over wavelength, warm started from each
-linear trait. The linear stage and the linear branch use normal noise of one fixed standard
-deviation (the config's simulation.h2opt.noise_sd, the noise of linear H2-opt); the CNN branch
-gets normal input noise of standard deviation cnn_level x h2opt.selection.noise_scale of the
-training spectra. No clipping, Adam (h2opt.train's default). Writes the model (.pt) and
-the traits of all plants, uncorrelated on the training plants (.npz, array 'traits').
+linear trait. The linear stage and the linear branch use normal noise of the standard deviation
+of linear H2-opt (choose_noise.py); the CNN branch gets normal input noise of standard deviation
+the level of choose_cnn_level.py x h2opt.selection.noise_scale of the training spectra. No
+clipping, Adam (h2opt.train's default). Writes the model (.pt) and the traits of all plants,
+uncorrelated on the training plants (.npz, array 'traits').
 
-    python pipelines/scripts/simulation/train_hybrid.py --spectra spectra.npz --noise-sd 0.02 \\
-        --cnn-level 3.16228 --out-traits h2opt_hybrid.npz --out-model h2opt_hybrid.pt --traits 5 \\
-        --linear-steps 10000 --steps 1000 --seed 0 --device cuda
+    python pipelines/scripts/simulation/train_hybrid.py --spectra spectra.npz --noise noise.npz \\
+        --cnn-level cnn_level.npz --out-traits h2opt_hybrid.npz --out-model h2opt_hybrid.pt \\
+        --traits 5 --linear-steps 10000 --steps 1000 --seed 0 --device cuda
 """
 
 import argparse
@@ -25,10 +25,8 @@ from h2opt.selection import noise_scale
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--spectra', required=True)
-    parser.add_argument('--noise-sd', type=float, required=True,
-                        help='noise SD of linear H2-opt and of the linear branch')
-    parser.add_argument('--cnn-level', type=float, required=True,
-                        help='noise level of the CNN branch, a multiple of noise_scale')
+    parser.add_argument('--noise', required=True, help='choose_noise.py output')
+    parser.add_argument('--cnn-level', required=True, help='choose_cnn_level.py output')
     parser.add_argument('--out-traits', required=True)
     parser.add_argument('--out-model', required=True)
     parser.add_argument('--traits', type=int, required=True)
@@ -42,10 +40,14 @@ def main():
     torch.manual_seed(args.seed)
     with np.load(args.spectra) as f:
         X, names, test = f['X'], f['names'], f['test']
+    with np.load(args.noise) as f:
+        noise_sd = float(f['noise_sd'])
+    with np.load(args.cnn_level) as f:
+        cnn_level = float(f['chosen'])
 
     model, = train_linear_conv_models(
         functools.partial(ConvModel, X.shape[1]), X, names, None, test.astype(int)[None],
-        args.noise_sd, args.cnn_level * noise_scale(X[~test]), n_traits=args.traits,
+        noise_sd, cnn_level * noise_scale(X[~test]), n_traits=args.traits,
         n_linear_iter=args.linear_steps, n_iter=args.steps, device=args.device)
     torch.save(model, args.out_model)
     np.savez(args.out_traits, traits=synthetic_traits(model, X, ~test))

@@ -16,7 +16,8 @@ def test_pipeline_parses():
     rules = set(result.stdout.split())
     assert {'all', 'sorghum_all', 'sorghum_train_linear_h2opt', 'sorghum_score_heritability',
             'sorghum_plot_heritability', 'sorghum_run_gwas', 'simulation_all',
-            'sim_simulate_spectra', 'sim_train_linear_h2opt', 'sim_train_hybrid_h2opt',
+            'sim_simulate_spectra', 'sim_choose_linear_h2opt_noise', 'sim_train_linear_h2opt',
+            'sim_choose_hybrid_cnn_level', 'sim_train_hybrid_h2opt',
             'sim_train_baselines', 'sim_prepare_gwas_genotypes', 'sim_run_gwas',
             'sim_score_traits', 'sim_score_gwas', 'sim_plot_traits', 'sim_plot_gwas',
             'simulation_gwas_all', 'sorghum_gwas_all', 'sorghum_prepare_genotype_pcs',

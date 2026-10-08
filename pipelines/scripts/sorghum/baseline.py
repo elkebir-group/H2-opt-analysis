@@ -1,6 +1,6 @@
 """Fit one baseline on the training plants of a sorghum genotype fold; traits for all plants.
 
-Baselines: pca, genetic_pca, lda, pch (ridge tuned on the training plants) and max_features
+Baselines: pca, genetic_pca, pch (ridge tuned on the training plants) and max_features
 (h2opt_analysis.methods.BASELINES). Traits are centered and uncorrelated on the training plants.
 Writes an .npz with array 'traits' and, for pch, its ridge tuning
 (h2opt_analysis.methods.fit_baseline).

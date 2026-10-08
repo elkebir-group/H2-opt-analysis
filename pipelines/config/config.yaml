@@ -39,22 +39,24 @@ sorghum:
 simulation:
   instances: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
   # Methods compared with the true traits (slugs of h2opt_analysis.methods.LABELS).
-  methods: [h2opt, h2opt_hybrid, pca, genetic_pca, lda, pch, max_features]
+  methods: [h2opt, h2opt_hybrid, pca, genetic_pca, pch, max_features]
   traits: 5
-  # H2-opt trained with Adam, no clipping, and normal input noise of a fixed standard deviation
-  # (the paper's 0.02, about 1.3 x the root mean variance of the spectra). noise_sweep.py
-  # retrains it at every level of h2opt.selection.NOISE_LEVELS for the sensitivity figure.
+  # H2-opt trained with Adam, no clipping, and normal input noise whose level is chosen per
+  # instance on the training plants (choose_noise.py: h2opt.selection.select_noise_level, the
+  # best held-out heritability of trait 1 over 5 splits of the lines, with the same steps). PCH
+  # uses the matching ridge (the chosen level squared). noise_sweep.py retrains H2-opt at every
+  # level of h2opt.selection.NOISE_LEVELS for the sensitivity figure.
   h2opt:
-    noise_sd: 0.02
     steps: 10000
     device: cuda
   # The CNN/linear hybrid (h2opt.LinearConvModel with h2opt.ConvModel over wavelength), trained by
   # h2opt.train_linear_conv_models: linear H2-opt for linear_steps per trait, then the hybrid for
-  # steps per trait. The linear branch keeps the noise of linear H2-opt (h2opt.noise_sd); the CNN
-  # branch has input noise of relative level cnn_level (times h2opt.selection.noise_scale of the
-  # training spectra), the CNN level of the Miscanthus hybrid.
+  # steps per trait. The linear branch keeps the noise of linear H2-opt; the CNN level (input
+  # noise, times h2opt.selection.noise_scale of the training spectra) is chosen per instance from
+  # cnn_levels (choose_cnn_level.py: the highest level within one SE of the best held-out
+  # heritability of trait 1; a high level keeps the hybrid at the linear trait).
   hybrid:
-    cnn_level: 3.16228
+    cnn_levels: [0.316228, 1.0, 3.16228, 10.0]
     linear_steps: 10000
     steps: 1000
     device: cuda
@@ -69,8 +71,7 @@ simulation:
 miscanthus:
   # Populations analyzed (h2opt_analysis.miscanthus.POPULATIONS).
   populations: [central, south]
-  # Trait 1 of every date, for H2-opt and the baselines. LDA (unregularized PCH) is left out:
-  # with 23,814 pixels per date and fewer plants it fits the training plants exactly.
+  # Trait 1 of every date, for H2-opt and the baselines.
   traits: 1
   baselines: [pca, genetic_pca, pch, max_features]
   # H2-opt: h2opt.ImageConvModel with Henderson3 heritability, Adam, normal input noise. The
@@ -96,8 +97,7 @@ arabidopsis:
   # accessions (h2opt_analysis.arabidopsis.folds, seed 0).
   treatments: [0d, 6d]
   folds: [0, 1, 2, 3, 4]
-  # Traits of H2-opt and the baselines. LDA (unregularized PCH) is left out: with 120,000
-  # features and fewer samples it fits the training samples exactly.
+  # Traits of H2-opt and the baselines.
   traits: 10
   baselines: [pca, genetic_pca, pch, max_features]
   # H2-opt: h2opt.LinearModel with ANOVA heritability, Adam, normal input noise, no clipping and no

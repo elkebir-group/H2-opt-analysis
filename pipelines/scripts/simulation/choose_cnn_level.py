@@ -1,0 +1,58 @@
+"""Choose the noise level of the CNN branch of the hybrid H2-opt on one simulation instance.
+
+h2opt.selection.score_linear_conv_levels on the training plants: 5 validation splits of the
+training lines; for each split and CNN level, the first trait of linear H2-opt (the noise SD of
+choose_noise.py, linear_steps steps), then the CNN branch (h2opt.ConvModel over wavelength, steps
+steps) with input noise of standard deviation level x noise_scale of the training spectra. The
+chosen level is the highest level whose held-out heritability of trait 1 is within one standard
+error of the best (h2opt.selection.highest_level_within_one_se): a high level keeps the hybrid at
+the linear trait, so the CNN must clearly raise the held-out heritability to get a low level.
+Writes an .npz (levels; chosen; scores: splits x levels) read by train_hybrid.py.
+
+    python pipelines/scripts/simulation/choose_cnn_level.py --spectra spectra.npz \\
+        --noise noise.npz --levels 0.316228 1 3.16228 10 --out cnn_level.npz \\
+        --linear-steps 10000 --steps 1000 --seed 0 --device cuda
+"""
+
+import argparse
+import functools
+
+import numpy as np
+from h2opt import ConvModel
+from h2opt.selection import highest_level_within_one_se, score_linear_conv_levels
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--spectra', required=True)
+    parser.add_argument('--noise', required=True, help='choose_noise.py output')
+    parser.add_argument('--levels', type=float, nargs='+', required=True)
+    parser.add_argument('--out', required=True)
+    parser.add_argument('--linear-steps', type=int, required=True,
+                        help='steps of the linear stage')
+    parser.add_argument('--steps', type=int, required=True, help='steps of the CNN branch')
+    parser.add_argument('--seed', type=int, required=True)
+    parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
+    args = parser.parse_args()
+
+    with np.load(args.spectra) as f:
+        X, names, test = f['X'], f['names'], f['test']
+    with np.load(args.noise) as f:
+        noise_sd = float(f['noise_sd'])
+    levels = sorted(args.levels)
+    scores, _ = score_linear_conv_levels(
+        functools.partial(ConvModel, X.shape[1]), X, names, None, noise_sd, levels,
+        subsets=(~test)[None], seed=args.seed, n_linear_iter=args.linear_steps,
+        n_iter=args.steps, device=args.device)
+    chosen = highest_level_within_one_se(levels, scores[0])
+    np.savez(args.out, levels=levels, chosen=chosen, scores=scores[0])
+    mean = scores[0].mean(axis=0)
+    se = scores[0].std(axis=0, ddof=1) / np.sqrt(len(scores[0]))
+    print(f'chosen CNN level {chosen:g}; held-out heritability of trait 1 per level '
+          '(mean over splits, SE):')
+    for level, m, s in zip(levels, mean, se, strict=True):
+        print(f'  {level:<9.3g} {m:.4f} ({s:.4f})')
+
+
+if __name__ == '__main__':
+    main()
