@@ -73,7 +73,7 @@ or `h2opt` (retrained here with Adam, with the noise level of each fold, one for
 
 | Rule | Output | Content |
 |---|---|---|
-| `sorghum_choose_linear_h2opt_noise` | `h2opt/noise.npz`, `h2opt/noise_traits.npz`, `figures/noise.{pdf,png}` | the H2-opt noise level of each fold (one for all traits), chosen on the fold's training plants by the best held-out heritability averaged over the traits and 5 group folds (`h2opt.selection.select_noise_level`, all folds in one batch); `noise_traits.npz` keeps the trained validation traits, to examine other selection rules without training again |
+| `sorghum_choose_linear_h2opt_noise` | `h2opt/noise.npz`, `h2opt/noise_traits.npz`, `figures/noise.{pdf,png}` | the H2-opt noise level of each fold (one for all traits), chosen on the fold's training plants by the best held-out heritability of the first trait averaged over 5 group folds (`h2opt.selection.select_noise_level`, all folds in one batch); `noise_traits.npz` keeps the trained validation traits, to examine other selection rules without training again |
 | `sorghum_train_linear_h2opt` | `h2opt/fold{k}.{npz,pt}` | H2-opt with the chosen noise, all folds in one job |
 | `sorghum_train_baselines` | `{pca,genetic_pca,lda,pch,max_features}/fold{k}.npz` | baselines fitted on the training genotypes of fold k, once for all sources |
 | `sorghum_score_heritability` | `heritability_{source}.npz` | train and test heritability of the source's H2-opt traits and the baselines' |

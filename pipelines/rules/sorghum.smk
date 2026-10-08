@@ -67,7 +67,6 @@ rule sorghum_choose_linear_h2opt_noise:
         str(SORGHUM_OUT / "h2opt" / "noise.log"),
     params:
         folds=" ".join(str(f) for f in SORGHUM_FOLDS),
-        traits=SORGHUM["h2opt"]["traits"],
         steps=SORGHUM["h2opt"]["steps"],
         device=SORGHUM["h2opt"]["device"],
     threads: 1
@@ -75,7 +74,7 @@ rule sorghum_choose_linear_h2opt_noise:
         gpu=lambda wc: 1 if SORGHUM["h2opt"]["device"] == "cuda" else 0,
     shell:
         "python -u {SORGHUM_SCRIPTS}/choose_noise.py --folds {params.folds} --out {output.noise}"
-        " --out-traits {output.traits} --figure {output.pdf} --traits {params.traits} --steps {params.steps}"
+        " --out-traits {output.traits} --figure {output.pdf} --steps {params.steps}"
         " --device {params.device} > {log} 2>&1"
 
 

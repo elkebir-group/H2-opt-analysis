@@ -17,8 +17,8 @@ sorghum:
   # H2-opt retrained (train_h2opt.py, all folds in one job), trained with Adam (h2opt.train's
   # default optimizer), no clipping, with normal input noise whose level is chosen per fold, one for
   # all traits, by held-out heritability on the fold's training plants (choose_noise.py,
-  # h2opt.selection.select_noise_level: 5 group folds, best mean score over the traits, as
-  # PCH.tune) with the same steps. The raw spectra are badly conditioned and gradient training converges slowly: steps
+  # h2opt.selection.select_noise_level: 5 group folds, best mean held-out heritability of the first
+  # trait) with the same steps. The raw spectra are badly conditioned and gradient training converges slowly: steps
   # is where doubling it changes the train heritability of traits 1-3 by at most about 0.01
   # (fold 0, noise level 0.01: 160k -> 320k steps changes it by 0.002, 0.007, 0.010).
   h2opt:

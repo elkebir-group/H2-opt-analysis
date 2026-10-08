@@ -6,9 +6,9 @@ plants), the CNN h2opt.ImageConvModel trained with Henderson3 heritability (fami
 families, rep and field column fixed) and normal noise, scored by Henderson3 on the held-out
 plants. One run per level, so that the grid can be extended without training the other levels
 again; choose_noise.py chooses the level from the scores of all levels. Writes an .npz with level;
-scores, folds x dates x 1 x splits; scale, folds x dates, h2opt.selection.noise_scale of each
+scores, folds x dates x splits; scale, folds x dates, h2opt.selection.noise_scale of each
 date's images on the training plants (the noise standard deviation is level x scale); and the
-trained validation traits, folds x dates x 1 x splits x plants, to examine other rules without
+trained validation traits, folds x dates x splits x plants, to examine other rules without
 training again.
 
     python pipelines/scripts/miscanthus/score_noise.py --population central --images images.npy \\
@@ -42,7 +42,7 @@ def main():
     is_train = np.array([design.fold != f for f in range(miscanthus.N_FOLDS)])
     _, scores, traits = select_noise_level(
         lambda: ImageConvModel(images[0].shape[1], images[0].shape[2:]), images, design.families,
-        design.environment, 1, subsets=is_train, levels=[args.level], n_splits=args.splits,
+        design.environment, subsets=is_train, levels=[args.level], n_splits=args.splits,
         subgroups=design.plots, estimator='henderson3', split_units=np.arange(len(design.fold)),
         n_iter=args.steps, device=args.device, max_copies=args.max_copies)
     scale = np.array([[noise_scale(x[rows].reshape((rows.sum(), -1))) for x in images]
@@ -50,7 +50,7 @@ def main():
     np.savez(args.out, level=args.level, scores=scores[..., 0], scale=scale,
              traits=traits[..., 0, :])
     print(f'level {args.level:g}; held-out heritability per fold (mean over dates and splits):',
-          ' '.join(f'{s:.3f}' for s in scores.mean(axis=(1, 2, 3, 4))))
+          ' '.join(f'{s:.3f}' for s in scores.mean(axis=(1, 2, 3))))
 
 
 if __name__ == '__main__':

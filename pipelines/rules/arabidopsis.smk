@@ -59,7 +59,7 @@ rule arabi_choose_linear_h2opt_noise:
     shell:
         "python -u {ARABI_SCRIPTS}/choose_noise.py --features {input}"
         " --treatment {wildcards.treatment} --folds {params.folds} --out {output.noise}"
-        " --out-traits {output.traits} --figure {output.pdf} --traits {ARABI[h2opt][traits]}"
+        " --out-traits {output.traits} --figure {output.pdf}"
         " --steps {ARABI[h2opt][steps]} --device {ARABI[h2opt][device]} > {log} 2>&1"
 
 
