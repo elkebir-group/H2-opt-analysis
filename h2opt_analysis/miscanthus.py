@@ -63,6 +63,20 @@ def design(population):
                                  environment=environment[keep], fold=fold[keep])
 
 
+def clip_artifacts(images):
+    """Each channel clipped to [q1 - 2 (q99 - q1), q99 + 2 (q99 - q1)], with q1 and q99 its 1% and
+    99% quantiles over the plants and pixels.
+
+    images: (n, channels, height, width). The crop surface model has reconstruction errors:
+    patches of heights of 10 m or more, or down to -50 m (e.g. South 06/18, 07/10, 10/05). After
+    scaling they are 10 to 20 times the largest regular value, and the CNN extrapolates on them.
+    The fence keeps every reflectance value but one (South 10/05) and clips 9,222 crop surface
+    model pixels in Central and 24,987 in South, of all dates."""
+    images = np.asarray(images, dtype=np.float32)
+    low, high = np.quantile(images, [0.01, 0.99], axis=(0, 2, 3), keepdims=True)
+    return np.clip(images, low - 2 * (high - low), high + 2 * (high - low))
+
+
 def scale_images(images):
     """Each channel divided by 3 x its mean absolute value over the plants and pixels.
 
@@ -74,10 +88,10 @@ def scale_images(images):
 
 
 def load_date(images_path, keep, date):
-    """Scaled images (n, 6, 63, 63) float32 of the kept plants (keep, from design) on one date
-    (index into DATES).
+    """Clipped (clip_artifacts) and scaled (scale_images) images (n, 6, 63, 63) float32 of the kept
+    plants (keep, from design) on one date (index into DATES).
 
     images_path: the float32 (3900, 14, 6, 63, 63) .npy written by the pipeline from
     image_archive(population)."""
     images = np.load(images_path, mmap_mode='r')
-    return scale_images(images[keep, date])
+    return scale_images(clip_artifacts(images[keep, date]))
