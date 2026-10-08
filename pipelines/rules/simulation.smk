@@ -103,6 +103,7 @@ rule sim_train_hybrid_h2opt:
     params:
         noise_sd=SIM["h2opt"]["noise_sd"],
         traits=SIM["traits"],
+        cnn_level=SIM["hybrid"]["cnn_level"],
         linear_steps=SIM["hybrid"]["linear_steps"],
         steps=SIM["hybrid"]["steps"],
         device=SIM["hybrid"]["device"],
@@ -111,6 +112,7 @@ rule sim_train_hybrid_h2opt:
         gpu=lambda wc: 1 if SIM["hybrid"]["device"] == "cuda" else 0,
     shell:
         "python -u {SIM_SCRIPTS}/train_hybrid.py --spectra {input} --noise-sd {params.noise_sd}"
+        " --cnn-level {params.cnn_level}"
         " --out-traits {output.traits} --out-model {output.model} --traits {params.traits}"
         " --linear-steps {params.linear_steps} --steps {params.steps}"
         " --seed {wildcards.instance} --device {params.device} > {log} 2>&1"

@@ -50,9 +50,11 @@ simulation:
     device: cuda
   # The CNN/linear hybrid (h2opt.LinearConvModel with h2opt.ConvModel over wavelength), trained by
   # h2opt.train_linear_conv_models: linear H2-opt for linear_steps per trait, then the hybrid for
-  # steps per trait (h2opt's defaults). Both branches use h2opt.noise_sd, so the linear branch
-  # gets no extra noise.
+  # steps per trait. The linear branch keeps the noise of linear H2-opt (h2opt.noise_sd); the CNN
+  # branch has input noise of relative level cnn_level (times h2opt.selection.noise_scale of the
+  # training spectra), the CNN level of the Miscanthus hybrid.
   hybrid:
+    cnn_level: 3.16228
     linear_steps: 10000
     steps: 1000
     device: cuda
