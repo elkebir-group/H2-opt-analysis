@@ -2,11 +2,11 @@
 
 Each baseline is fitted to all pixels of one date on the fold's training plants
 (h2opt_analysis.methods.BASELINES). PCH maximizes Henderson3 heritability (families, plots within
-families, rep and field column fixed); its ridge is one for all dates, chosen on the training
-plants by held-out Henderson3 heritability over 5 splits of the plants (PCH.tune over
-miscanthus.PCH_RIDGES), the mean over the dates. The other baselines are as for sorghum. Writes
-an .npz with 'traits' (dates x plants x traits, uncorrelated on the training plants) and, for pch,
-its tuning and ridge_traits (ridges x dates x plants x traits), the traits at every ridge.
+families, rep and field column fixed); its ridge is one for all dates, chosen on the training plants
+by held-out Henderson3 heritability of the first trait over 5 splits of the plants (PCH.tune over
+miscanthus.PCH_RIDGES), the mean over the dates. The other baselines are as for sorghum. Writes an
+.npz with 'traits' (dates x plants x traits, uncorrelated on the training plants) and, for pch, its
+tuning and ridge_traits (ridges x dates x plants x traits), the traits at every ridge.
 
     python pipelines/scripts/miscanthus/baseline.py --population central --images images.npy \\
         --method pch --fold 0 --traits 1 --out fold0.npz
@@ -44,8 +44,8 @@ def main():
     if args.method == 'pch':
         images = [pixels(d) for d in dates]
         ridge, scores, fold_scores = PCH.tune(
-            [x[rows] for x in images], families[rows], environment[rows], args.traits,
-            subgroups=plots[rows], estimator='henderson3', split_units=np.arange(rows.sum()),
+            [x[rows] for x in images], families[rows], environment[rows], subgroups=plots[rows],
+            estimator='henderson3', split_units=np.arange(rows.sum()),
             ridges=miscanthus.PCH_RIDGES)
         print(f'ridge {ridge:g}; mean held-out heritability per ridge:',
               ' '.join(f'{s:.3f}' for s in scores), flush=True)

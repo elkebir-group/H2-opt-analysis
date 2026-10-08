@@ -200,29 +200,19 @@ rule sim_plot_linear_h2opt_noise_sweep:
         " --out {output.npz} --figure {output.pdf} > {log} 2>&1"
 
 
-def sim_baseline_inputs(wildcards):
-    """The spectra, and for PCH the chosen noise of H2-opt, which sets its ridge."""
-    files = {"spectra": sim_file(wildcards.instance, "spectra.npz")}
-    if wildcards.baseline == "pch":
-        files["noise"] = sim_file(wildcards.instance, "noise.npz")
-    return files
-
-
 rule sim_train_baselines:
     input:
-        unpack(sim_baseline_inputs),
+        sim_file("{instance}", "spectra.npz"),
     output:
         sim_file("{instance}", "{baseline}.npz"),
     log:
         sim_file("{instance}", "{baseline}.log"),
     params:
         traits=SIM["traits"],
-        noise=lambda wc, input: f"--noise {input.noise}" if wc.baseline == "pch" else "",
     threads: 2
     shell:
-        "python -u {SIM_SCRIPTS}/baseline.py --spectra {input.spectra}"
-        " --method {wildcards.baseline} --out {output} --traits {params.traits}"
-        " {params.noise} > {log} 2>&1"
+        "python -u {SIM_SCRIPTS}/baseline.py --spectra {input}"
+        " --method {wildcards.baseline} --out {output} --traits {params.traits} > {log} 2>&1"
 
 
 rule sim_prepare_gwas_genotypes:

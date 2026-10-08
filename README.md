@@ -97,7 +97,7 @@ the lines) and everything after are rebuilt here. All outputs are under `data/de
 | `sim_train_hybrid_h2opt` | `instance{i}/h2opt_hybrid.{npz,pt}` | H2-opt with the linear + CNN model (`h2opt.LinearConvModel`, 1D `ConvModel`), warm started from linear H2-opt, at the chosen noise and CNN level (device from the config) |
 | `sim_sweep_linear_h2opt_noise` | `instance{i}/h2opt_noise_sweep.npz` | H2-opt at every level of `h2opt.selection.NOISE_LEVELS`, all levels in one job |
 | `sim_plot_linear_h2opt_noise_sweep` | `noise_sweep.npz`, `figures/noise_sweep.{pdf,png}` | \|r\| of traits 1-3 with the true traits against the noise level |
-| `sim_train_baselines` | `instance{i}/{pca,genetic_pca,pch,max_features}.npz` | baselines fitted on the training lines (PCH at the ridge that matches H2-opt's chosen noise: the level squared) |
+| `sim_train_baselines` | `instance{i}/{pca,genetic_pca,pch,max_features}.npz` | baselines fitted on the training lines (PCH's ridge chosen by `PCH.tune`, the procedure and rule of H2-opt's noise level) |
 | `sim_prepare_gwas_genotypes` | `instance{i}/genotypes.{bed,bim,fam}`, `genotype_pcs.npy` | genotypes without the instance's QTNs, and their PCs |
 | `sim_run_gwas` | `instance{i}/gwas/{method}.npz` | GEMMA LMM of the line means of traits 1-3 (intercept + 5 PCs) |
 | `sim_score_traits` | `evaluation.npz` | correlation with the true traits, train/test heritability |
