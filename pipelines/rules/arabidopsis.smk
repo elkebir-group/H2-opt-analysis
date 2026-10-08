@@ -31,7 +31,7 @@ rule arabidopsis_all:
                treatment=ARABI["treatments"]),
 
 
-rule arabi_features:
+rule arabi_prepare_features:
     output:
         ARABI_FEATURES,
     log:
@@ -41,7 +41,7 @@ rule arabi_features:
         "python -u {ARABI_SCRIPTS}/features.py --out {output} > {log} 2>&1"
 
 
-rule arabi_choose_noise:
+rule arabi_choose_linear_h2opt_noise:
     input:
         ARABI_FEATURES,
     output:
@@ -64,7 +64,7 @@ rule arabi_choose_noise:
 
 
 # All folds train in one job (h2opt.train_models).
-rule arabi_train_h2opt:
+rule arabi_train_linear_h2opt:
     input:
         features=ARABI_FEATURES,
         noise=str(ARABI_OUT / "{treatment}" / "h2opt" / "noise.npz"),
@@ -86,7 +86,7 @@ rule arabi_train_h2opt:
         " --device {ARABI[h2opt][device]} > {log} 2>&1"
 
 
-rule arabi_baseline:
+rule arabi_train_baselines:
     input:
         ARABI_FEATURES,
     output:
@@ -103,7 +103,7 @@ rule arabi_baseline:
         " --method {wildcards.baseline} --out {output} --traits {ARABI[traits]} > {log} 2>&1"
 
 
-rule arabi_heritability:
+rule arabi_score_heritability:
     input:
         lambda wc: [arabi_traits(wc.treatment, m, f)
                     for m in ["h2opt"] + ARABI["baselines"] for f in ARABI_FOLDS],

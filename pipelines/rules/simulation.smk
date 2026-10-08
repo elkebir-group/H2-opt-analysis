@@ -51,7 +51,7 @@ rule simulation_gwas_all:
         str(SIM_OUT / "figures" / "auc.pdf"),
 
 
-rule sim_encode:
+rule sim_simulate_spectra:
     input:
         autoencoder=str(simulation.PAPER_AUTOENCODER),
         reference=str(sorghum.SPECTRA),
@@ -69,7 +69,7 @@ rule sim_encode:
         " --reference {input.reference} --out-dirs {params.out_dirs} > {log} 2>&1"
 
 
-rule sim_train_h2opt:
+rule sim_train_linear_h2opt:
     input:
         sim_file("{instance}", "spectra.npz"),
     output:
@@ -92,7 +92,31 @@ rule sim_train_h2opt:
         " > {log} 2>&1"
 
 
-rule sim_noise_sweep:
+rule sim_train_hybrid_h2opt:
+    input:
+        sim_file("{instance}", "spectra.npz"),
+    output:
+        traits=sim_file("{instance}", "h2opt_hybrid.npz"),
+        model=sim_file("{instance}", "h2opt_hybrid.pt"),
+    log:
+        sim_file("{instance}", "h2opt_hybrid.log"),
+    params:
+        noise_sd=SIM["h2opt"]["noise_sd"],
+        traits=SIM["traits"],
+        linear_steps=SIM["hybrid"]["linear_steps"],
+        steps=SIM["hybrid"]["steps"],
+        device=SIM["hybrid"]["device"],
+    threads: 1
+    resources:
+        gpu=lambda wc: 1 if SIM["hybrid"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {SIM_SCRIPTS}/train_hybrid.py --spectra {input} --noise-sd {params.noise_sd}"
+        " --out-traits {output.traits} --out-model {output.model} --traits {params.traits}"
+        " --linear-steps {params.linear_steps} --steps {params.steps}"
+        " --seed {wildcards.instance} --device {params.device} > {log} 2>&1"
+
+
+rule sim_sweep_linear_h2opt_noise:
     input:
         sim_file("{instance}", "spectra.npz"),
     output:
@@ -112,7 +136,7 @@ rule sim_noise_sweep:
         " --device {params.device} > {log} 2>&1"
 
 
-rule sim_plot_noise_sweep:
+rule sim_plot_linear_h2opt_noise_sweep:
     input:
         sweep=sim_files("h2opt_noise_sweep.npz"),
         truth=sim_files("truth.npz"),
@@ -133,7 +157,7 @@ rule sim_plot_noise_sweep:
         " --out {output.npz} --figure {output.pdf} > {log} 2>&1"
 
 
-rule sim_baseline:
+rule sim_train_baselines:
     input:
         sim_file("{instance}", "spectra.npz"),
     output:
@@ -148,7 +172,7 @@ rule sim_baseline:
         " --out {output} --traits {params.traits} > {log} 2>&1"
 
 
-rule sim_genotypes:
+rule sim_prepare_gwas_genotypes:
     input:
         multiext(str(sorghum.GENOTYPES), ".bed", ".bim", ".fam"),
     output:
@@ -165,7 +189,7 @@ rule sim_genotypes:
         " --out-prefix {params.prefix} --out-pcs {output.pcs} --pcs {params.pcs} > {log} 2>&1"
 
 
-rule sim_gwas:
+rule sim_run_gwas:
     input:
         spectra=sim_file("{instance}", "spectra.npz"),
         traits=sim_file("{instance}", "{method}.npz"),
@@ -187,7 +211,7 @@ rule sim_gwas:
         " --jobs {params.jobs} --threads {params.threads} > {log} 2>&1"
 
 
-rule sim_evaluate:
+rule sim_score_traits:
     input:
         spectra=sim_files("spectra.npz"),
         truth=sim_files("truth.npz"),
@@ -204,7 +228,7 @@ rule sim_evaluate:
         " {params.methods} --out {output} > {log} 2>&1"
 
 
-rule sim_roc:
+rule sim_score_gwas:
     input:
         [sim_files(f"gwas/{m}.npz") for m in SIM_GWAS_METHODS],
     output:

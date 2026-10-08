@@ -73,12 +73,12 @@ or `h2opt` (retrained here with Adam, with the noise level of each fold, one for
 
 | Rule | Output | Content |
 |---|---|---|
-| `sorghum_choose_noise` | `h2opt/noise.npz`, `h2opt/noise_traits.npz`, `figures/noise.{pdf,png}` | the H2-opt noise level of each fold (one for all traits), chosen on the fold's training plants by the best held-out heritability averaged over the traits and 5 group folds (`h2opt.selection.select_noise_level`, all folds in one batch); `noise_traits.npz` keeps the trained validation traits, to examine other selection rules without training again |
-| `sorghum_train_h2opt` | `h2opt/fold{k}.{npz,pt}` | H2-opt with the chosen noise, all folds in one job |
-| `sorghum_baseline` | `{pca,genetic_pca,lda,pch,max_features}/fold{k}.npz` | baselines fitted on the training genotypes of fold k, once for all sources |
-| `sorghum_heritability` | `heritability_{source}.npz` | train and test heritability of the source's H2-opt traits and the baselines' |
+| `sorghum_choose_linear_h2opt_noise` | `h2opt/noise.npz`, `h2opt/noise_traits.npz`, `figures/noise.{pdf,png}` | the H2-opt noise level of each fold (one for all traits), chosen on the fold's training plants by the best held-out heritability averaged over the traits and 5 group folds (`h2opt.selection.select_noise_level`, all folds in one batch); `noise_traits.npz` keeps the trained validation traits, to examine other selection rules without training again |
+| `sorghum_train_linear_h2opt` | `h2opt/fold{k}.{npz,pt}` | H2-opt with the chosen noise, all folds in one job |
+| `sorghum_train_baselines` | `{pca,genetic_pca,lda,pch,max_features}/fold{k}.npz` | baselines fitted on the training genotypes of fold k, once for all sources |
+| `sorghum_score_heritability` | `heritability_{source}.npz` | train and test heritability of the source's H2-opt traits and the baselines' |
 | `sorghum_plot_heritability` | `figures/top_trait_heritability_{source}.{pdf,png}` | boxplots of the top trait over the folds |
-| `sorghum_gwas` | `gwas/{source}_fold{k}.npz` | GEMMA LMM of the per-line trait means (intercept + 5 genotype PCs) |
+| `sorghum_run_gwas` | `gwas/{source}_fold{k}.npz` | GEMMA LMM of the per-line trait means (intercept + 5 genotype PCs) |
 
 ### Simulation
 
@@ -90,15 +90,16 @@ the lines) and everything after are rebuilt here. All outputs are under `data/de
 
 | Rule | Output | Content |
 |---|---|---|
-| `sim_encode` | `instance{i}/{spectra,truth}.npz` | simulated spectra, test plants, line of each plant, true traits |
-| `sim_train_h2opt` | `instance{i}/h2opt.{npz,pt}` | H2-opt with the fixed noise SD of the config, the paper's 0.02 (GPU) |
-| `sim_noise_sweep` | `instance{i}/h2opt_noise_sweep.npz` | H2-opt at every level of `h2opt.selection.NOISE_LEVELS`, all levels in one job |
-| `sim_plot_noise_sweep` | `noise_sweep.npz`, `figures/noise_sweep.{pdf,png}` | \|r\| of traits 1-3 with the true traits against the noise level |
-| `sim_baseline` | `instance{i}/{pca,genetic_pca,lda,pch,max_features}.npz` | baselines fitted on the training lines (PCH's ridge chosen by `PCH.tune`) |
-| `sim_genotypes` | `instance{i}/genotypes.{bed,bim,fam}`, `genotype_pcs.npy` | genotypes without the instance's QTNs, and their PCs |
-| `sim_gwas` | `instance{i}/gwas/{method}.npz` | GEMMA LMM of the line means of traits 1-3 (intercept + 5 PCs) |
-| `sim_evaluate` | `evaluation.npz` | correlation with the true traits, train/test heritability |
-| `sim_roc` | `roc.npz` | AUC and ROC curves of causal 100 kb bins |
+| `sim_simulate_spectra` | `instance{i}/{spectra,truth}.npz` | simulated spectra, test plants, line of each plant, true traits |
+| `sim_train_linear_h2opt` | `instance{i}/h2opt.{npz,pt}` | H2-opt with the fixed noise SD of the config, the paper's 0.02 (device from the config) |
+| `sim_train_hybrid_h2opt` | `instance{i}/h2opt_hybrid.{npz,pt}` | H2-opt with the linear + CNN model (`h2opt.LinearConvModel`, 1D `ConvModel`), warm started from linear H2-opt, same noise SD (device from the config) |
+| `sim_sweep_linear_h2opt_noise` | `instance{i}/h2opt_noise_sweep.npz` | H2-opt at every level of `h2opt.selection.NOISE_LEVELS`, all levels in one job |
+| `sim_plot_linear_h2opt_noise_sweep` | `noise_sweep.npz`, `figures/noise_sweep.{pdf,png}` | \|r\| of traits 1-3 with the true traits against the noise level |
+| `sim_train_baselines` | `instance{i}/{pca,genetic_pca,lda,pch,max_features}.npz` | baselines fitted on the training lines (PCH's ridge chosen by `PCH.tune`) |
+| `sim_prepare_gwas_genotypes` | `instance{i}/genotypes.{bed,bim,fam}`, `genotype_pcs.npy` | genotypes without the instance's QTNs, and their PCs |
+| `sim_run_gwas` | `instance{i}/gwas/{method}.npz` | GEMMA LMM of the line means of traits 1-3 (intercept + 5 PCs) |
+| `sim_score_traits` | `evaluation.npz` | correlation with the true traits, train/test heritability |
+| `sim_score_gwas` | `roc.npz` | AUC and ROC curves of causal 100 kb bins |
 | `sim_plot_traits` | `figures/{heritability,correlation}.pdf` | test heritability and \|r\| with the true traits per method (Fig. 3 and Fig. S2 panels) |
 | `sim_plot_gwas` | `figures/{auc,roc_trait1-3}.pdf`, `figures/gwas_{method}_instance{i}.png` | AUC, ROC curves, and Manhattan and QQ plots of one example (Fig. 3 and Fig. S2 panels) |
 
@@ -115,12 +116,12 @@ capped at 1). The config lists the populations. All outputs are under
 
 | Rule | Output | Content |
 |---|---|---|
-| `misc_images` | `images.npy` | the images as uncompressed float32, read one date at a time |
-| `misc_score_noise` | `h2opt/noise/level{s}.npz` | held-out Henderson3 of the H2-opt CNN at one noise level, every fold and date (`h2opt.selection.select_noise_level` on 5 splits of the training plants), and the validation traits; one job per level, so a new level trains only itself (GPU) |
-| `misc_choose_noise` | `h2opt/noise.npz`, `figures/noise.{pdf,png}` | the noise level of each fold, one for all dates: the best mean score over all levels (`h2opt.selection.best_level`) |
-| `misc_train_h2opt` | `h2opt/date{d}.{npz,pt}` | the H2-opt CNN (`h2opt.ImageConvModel`) of one date, all folds in one job (GPU) |
-| `misc_baseline` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | baselines of every date in one fold; PCH maximizes Henderson3, one ridge for all dates (`PCH.tune` over `miscanthus.PCH_RIDGES`) |
-| `misc_heritability` | `heritability.npz` | train and test Henderson3 of every method, date and fold |
+| `misc_prepare_images` | `images.npy` | the images as uncompressed float32, read one date at a time |
+| `misc_score_cnn_h2opt_noise` | `h2opt/noise/level{s}.npz` | held-out Henderson3 of the H2-opt CNN at one noise level, every fold and date (`h2opt.selection.select_noise_level` on 5 splits of the training plants), and the validation traits; one job per level, so a new level trains only itself (device from the config) |
+| `misc_choose_cnn_h2opt_noise` | `h2opt/noise.npz`, `figures/noise.{pdf,png}` | the noise level of each fold, one for all dates: the best mean score over all levels (`h2opt.selection.best_level`) |
+| `misc_train_cnn_h2opt` | `h2opt/date{d}.{npz,pt}` | the H2-opt CNN (`h2opt.ImageConvModel`) of one date, all folds in one job (device from the config) |
+| `misc_train_baselines` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | baselines of every date in one fold; PCH maximizes Henderson3, one ridge for all dates (`PCH.tune` over `miscanthus.PCH_RIDGES`) |
+| `misc_score_heritability` | `heritability.npz` | train and test Henderson3 of every method, date and fold |
 | `misc_plot_heritability` | `figures/heritability.{pdf,png}` | test heritability per date, H2-opt against the baselines |
 
 ### Arabidopsis
@@ -138,11 +139,11 @@ under `data/derived/arabidopsis/{treatment}/`.
 
 | Rule | Output | Content |
 |---|---|---|
-| `arabi_features` | `../features.npy` | the features of all samples as float32 |
-| `arabi_choose_noise` | `h2opt/noise.npz`, `h2opt/noise_traits.npz`, `figures/noise.{pdf,png}` | the noise level of each fold, one for all traits (`h2opt.selection.select_noise_level` on 5 splits of the training accessions), and the validation traits (GPU) |
-| `arabi_train_h2opt` | `h2opt/fold{k}.{npz,pt}` | linear H2-opt, all folds in one job (GPU) |
-| `arabi_baseline` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | the baselines of one fold; PCH's ridge by `PCH.tune` |
-| `arabi_heritability` | `heritability.npz` | train and test heritability of every method, fold and trait |
+| `arabi_prepare_features` | `../features.npy` | the features of all samples as float32 |
+| `arabi_choose_linear_h2opt_noise` | `h2opt/noise.npz`, `h2opt/noise_traits.npz`, `figures/noise.{pdf,png}` | the noise level of each fold, one for all traits (`h2opt.selection.select_noise_level` on 5 splits of the training accessions), and the validation traits (device from the config) |
+| `arabi_train_linear_h2opt` | `h2opt/fold{k}.{npz,pt}` | linear H2-opt, all folds in one job (device from the config) |
+| `arabi_train_baselines` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | the baselines of one fold; PCH's ridge by `PCH.tune` |
+| `arabi_score_heritability` | `heritability.npz` | train and test heritability of every method, fold and trait |
 | `arabi_plot_heritability` | `figures/heritability_{test,train}.pdf` | heritability per trait, H2-opt against the baselines (Fig. arabiResult b and its train counterpart) |
 
 Each script under `pipelines/scripts/` also runs by hand; its docstring gives

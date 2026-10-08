@@ -8,6 +8,7 @@ LABELS = {
     'truth': 'ground truth',
     'h2opt_paper': 'H2-opt (paper)',
     'h2opt': 'H2-opt',
+    'h2opt_hybrid': 'H2-opt hybrid',
     'pca': 'PCA',
     'genetic_pca': 'genetic PCA',
     'lda': 'LDA',

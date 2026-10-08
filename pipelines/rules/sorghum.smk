@@ -57,7 +57,7 @@ rule sorghum_gwas_all:
                source=["paper", "h2opt"], fold=SORGHUM_FOLDS),
 
 
-rule sorghum_choose_noise:
+rule sorghum_choose_linear_h2opt_noise:
     output:
         noise=str(SORGHUM_OUT / "h2opt" / "noise.npz"),
         traits=str(SORGHUM_OUT / "h2opt" / "noise_traits.npz"),
@@ -80,7 +80,7 @@ rule sorghum_choose_noise:
 
 
 # All folds train in one job (h2opt.train_models), which is much faster than one job per fold.
-rule sorghum_train_h2opt:
+rule sorghum_train_linear_h2opt:
     input:
         noise=str(SORGHUM_OUT / "h2opt" / "noise.npz"),
     output:
@@ -103,7 +103,7 @@ rule sorghum_train_h2opt:
         " --device {params.device} > {log} 2>&1"
 
 
-rule sorghum_baseline:
+rule sorghum_train_baselines:
     output:
         str(SORGHUM_OUT / "{baseline}" / "fold{fold}.npz"),
     log:
@@ -118,7 +118,7 @@ rule sorghum_baseline:
         " --method {wildcards.baseline} --out {output} --traits {params.traits} > {log} 2>&1"
 
 
-rule sorghum_heritability:
+rule sorghum_score_heritability:
     input:
         h2opt=lambda wc: [sorghum_traits(wc.source, fold) for fold in SORGHUM_FOLDS],
         baselines=[sorghum_baseline(b, f) for b in BASELINES for f in SORGHUM_FOLDS],
@@ -150,7 +150,7 @@ rule sorghum_plot_heritability:
         " --out {output.pdf} > {log} 2>&1"
 
 
-rule sorghum_genotype_pcs:
+rule sorghum_prepare_genotype_pcs:
     input:
         multiext(str(sorghum.GENOTYPES), ".bed", ".bim", ".fam"),
     output:
@@ -165,7 +165,7 @@ rule sorghum_genotype_pcs:
         " > {log} 2>&1"
 
 
-rule sorghum_gwas:
+rule sorghum_run_gwas:
     input:
         traits=lambda wc: sorghum_traits(wc.source, wc.fold),
         pcs=str(SORGHUM_OUT / "genotype_pcs.npy"),

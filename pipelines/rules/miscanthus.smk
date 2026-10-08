@@ -12,7 +12,7 @@ wildcard_constraints:
     population="|".join(miscanthus.POPULATIONS),
 
 
-rule misc_images:
+rule misc_prepare_images:
     output:
         str(MISC_OUT / "{population}" / "images.npy"),
     log:
@@ -50,7 +50,7 @@ def misc_noise_scores(wildcards):
 # The CNN jobs take the whole GPU (gpu: the total of run.sh --gpu-jobs): a few models at once
 # already fill its memory. One job per noise level: a level added to the config trains only that
 # level.
-rule misc_score_noise:
+rule misc_score_cnn_h2opt_noise:
     input:
         misc_images,
     output:
@@ -69,7 +69,7 @@ rule misc_score_noise:
         " > {log} 2>&1"
 
 
-rule misc_choose_noise:
+rule misc_choose_cnn_h2opt_noise:
     input:
         misc_noise_scores,
     output:
@@ -84,7 +84,7 @@ rule misc_choose_noise:
         " --figure {output.pdf} > {log} 2>&1"
 
 
-rule misc_train_h2opt:
+rule misc_train_cnn_h2opt:
     input:
         images=misc_images,
         noise=str(MISC_OUT / "{population}" / "h2opt" / "noise.npz"),
@@ -105,7 +105,7 @@ rule misc_train_h2opt:
         " --seed 0 --max-copies {H2OPT[max_copies]} --device {H2OPT[device]} > {log} 2>&1"
 
 
-rule misc_baseline:
+rule misc_train_baselines:
     input:
         misc_images,
     output:
@@ -132,7 +132,7 @@ def misc_method_args(wildcards):
     return args
 
 
-rule misc_heritability:
+rule misc_score_heritability:
     input:
         h2opt=lambda wc: [str(MISC_OUT / wc.population / "h2opt" / f"date{d}.npz")
                           for d in MISC_DATES],
