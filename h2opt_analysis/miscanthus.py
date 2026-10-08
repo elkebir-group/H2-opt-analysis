@@ -17,10 +17,6 @@ POPULATIONS = ('central', 'south')
 DATES = ('05/06', '05/22', '06/08', '06/18', '07/02', '07/10', '07/24', '08/08', '08/18',
          '09/04', '09/19', '10/05', '11/06', '11/28')
 N_FOLDS = 5
-# Ridges of PCH: as h2opt.baselines.RIDGES, the squares of noise levels, here 0.001 to 100 (RIDGES
-# stop at level 10, ridge 100). With 23,814 pixels per date, PCH chose ridge 100, the largest of
-# RIDGES, in 3 of the 5 South folds.
-PCH_RIDGES = tuple(float(s) ** 2 for s in np.logspace(-3, 2, 21))
 INPUTS = data('miscPlant', 'inputs')
 _TABLES = {'central': 'Miscanthus_C.tsv', 'south': 'Miscanthus_S.tsv'}
 _IMAGES = {'central': 'all.npz', 'south': 'south_all.npz'}
