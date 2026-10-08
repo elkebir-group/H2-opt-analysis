@@ -124,8 +124,10 @@ rule sim_choose_hybrid_cnn_level:
         steps=SIM["hybrid"]["steps"],
         device=SIM["hybrid"]["device"],
     threads: 1
+    # All levels and splits train at once (105 models, about 4 GB of GPU memory): half of
+    # run.sh's default --gpu-jobs, so at most two jobs share the GPU.
     resources:
-        gpu=lambda wc: 1 if SIM["hybrid"]["device"] == "cuda" else 0,
+        gpu=lambda wc: 4 if SIM["hybrid"]["device"] == "cuda" else 0,
     shell:
         "python -u {SIM_SCRIPTS}/choose_cnn_level.py --spectra {input.spectra}"
         " --noise {input.noise} --out {output}"
