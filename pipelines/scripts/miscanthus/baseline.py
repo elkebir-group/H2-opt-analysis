@@ -16,6 +16,7 @@ import argparse
 
 import numpy as np
 from h2opt.baselines import PCH, RIDGES
+from h2opt.selection import best_level
 
 from h2opt_analysis import miscanthus
 from h2opt_analysis.methods import BASELINES
@@ -42,17 +43,25 @@ def main():
 
     tuning = {}
     if args.method == 'pch':
-        images = [pixels(d) for d in dates]
-        ridge, scores, fold_scores = PCH.tune(
-            [x[rows] for x in images], families[rows], environment[rows], subgroups=plots[rows],
-            estimator='henderson3', split_units=np.arange(rows.sum()))
+        # One date in memory at a time. PCH.tune scores each date on its own and averages the
+        # scores over the dates, so tuning date by date and averaging gives the same ridge.
+        date_scores, ridge_traits = [], []
+        for d in dates:
+            x = pixels(d)
+            date_scores.append(PCH.tune(
+                x[rows], families[rows], environment[rows], subgroups=plots[rows],
+                estimator='henderson3', split_units=np.arange(rows.sum()))[2])
+            # PCH at every ridge (one decomposition per date), to compare any ridge without
+            # fitting again; the traits are those of the chosen ridge
+            ridge_traits.append([pch.transform(x) for pch in PCH.fit_ridges(
+                x[rows], families[rows], environment[rows], plots[rows], args.traits, RIDGES,
+                'henderson3')])
+            del x
+        fold_scores = np.stack(date_scores).mean(axis=0)
+        ridge, scores = best_level(RIDGES, fold_scores), fold_scores.mean(axis=0)
         print(f'ridge {ridge:g}; mean held-out heritability per ridge:',
               ' '.join(f'{s:.3f}' for s in scores), flush=True)
-        # PCH at every ridge (one decomposition per date), to compare any ridge without fitting
-        # again; the traits are those of the chosen ridge
-        ridge_traits = np.stack([[pch.transform(x) for pch in PCH.fit_ridges(
-            x[rows], families[rows], environment[rows], plots[rows], args.traits,
-            RIDGES, 'henderson3')] for x in images], axis=1)
+        ridge_traits = np.stack(ridge_traits, axis=1)
         traits = ridge_traits[RIDGES.index(ridge)]
         tuning = dict(ridge=ridge, ridges=RIDGES, ridge_scores=scores,
                       ridge_fold_scores=fold_scores, ridge_traits=ridge_traits)
