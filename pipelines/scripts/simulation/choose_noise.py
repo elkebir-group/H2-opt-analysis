@@ -2,8 +2,9 @@
 
 h2opt.selection.select_noise_level on the training plants: 5 validation splits of the training
 lines, every level of h2opt.selection.NOISE_LEVELS, the first trait trained with the steps of
-train_h2opt.py; the level whose first trait has the best held-out heritability averaged over the
-splits. The test plants never take part in the choice. Writes an .npz (levels; chosen; noise_sd:
+train_h2opt.py; the highest level whose held-out heritability of the first trait is within one
+standard error of the best (h2opt.selection.highest_level_within_one_se). The test plants never
+take part in the choice. Writes an .npz (levels; chosen; noise_sd:
 the chosen level times noise_scale of the training spectra; scores: splits x levels) read by
 train_h2opt.py, choose_cnn_level.py, train_hybrid.py, baseline.py and plot_noise_sweep.py.
 
@@ -15,7 +16,7 @@ import argparse
 
 import numpy as np
 from h2opt import LinearModel
-from h2opt.selection import NOISE_LEVELS, best_level, select_noise_level
+from h2opt.selection import NOISE_LEVELS, highest_level_within_one_se, select_noise_level
 
 
 def main():
@@ -32,7 +33,7 @@ def main():
     noise_sd, scores, _ = select_noise_level(lambda: LinearModel(X.shape[1]), X, names, None,
                                              subsets=(~test)[None], seed=args.seed,
                                              n_iter=args.steps, device=args.device)
-    chosen = best_level(NOISE_LEVELS, scores[0])
+    chosen = highest_level_within_one_se(NOISE_LEVELS, scores[0])
     np.savez(args.out, levels=NOISE_LEVELS, chosen=chosen, noise_sd=noise_sd[0],
              scores=scores[0])
     print(f'chosen level {chosen:g} (noise SD {noise_sd[0]:.4g}); held-out heritability of '

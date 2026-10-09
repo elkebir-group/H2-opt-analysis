@@ -16,7 +16,7 @@ import argparse
 
 import numpy as np
 from h2opt.baselines import PCH, RIDGES
-from h2opt.selection import best_level
+from h2opt.selection import highest_level_within_one_se
 
 from h2opt_analysis import miscanthus
 from h2opt_analysis.methods import BASELINES
@@ -58,7 +58,8 @@ def main():
                 'henderson3')])
             del x
         fold_scores = np.stack(date_scores).mean(axis=0)
-        ridge, scores = best_level(RIDGES, fold_scores), fold_scores.mean(axis=0)
+        ridge = highest_level_within_one_se(RIDGES, fold_scores)
+        scores = fold_scores.mean(axis=0)
         print(f'ridge {ridge:g}; mean held-out heritability per ridge:',
               ' '.join(f'{s:.3f}' for s in scores), flush=True)
         ridge_traits = np.stack(ridge_traits, axis=1)
