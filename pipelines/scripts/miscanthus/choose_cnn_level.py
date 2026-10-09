@@ -2,7 +2,8 @@
 
 h2opt.selection.score_linear_conv_levels on the training plants of each fold, on the date of
 choose_noise.py: linear H2-opt (the noise of choose_noise.py for the fold and date, linear_steps
-steps), then the LinearConvModel with h2opt.ImageConvModel (steps steps) at every level of
+steps), then the LinearConvModel with h2opt.PositionImageConvModel (steps steps; a weight per
+position: the plant is at the center, its neighbors at the edges) at every level of
 h2opt.selection.NOISE_LEVELS, Henderson3 heritability, 5 validation splits of the training plants.
 The level of each fold is h2opt.selection.highest_level_within_one_se of its scores, and it serves
 all dates. Writes an .npz (date; folds; levels; chosen: one level per fold; scores: folds x splits
@@ -16,7 +17,7 @@ x levels).
 import argparse
 
 import numpy as np
-from h2opt import ImageConvModel
+from h2opt import PositionImageConvModel
 from h2opt.selection import NOISE_LEVELS, highest_level_within_one_se, score_linear_conv_levels
 
 from h2opt_analysis import miscanthus
@@ -43,8 +44,9 @@ def main():
     x = miscanthus.load_date(args.images, design.keep, date)
     subsets = np.array([design.fold != f for f in folds])
     cnn_scores, _ = score_linear_conv_levels(
-        lambda: ImageConvModel(x.shape[1]), x, design.families, design.environment,
-        noise_sd[:, date], NOISE_LEVELS, subsets=subsets, seed=args.seed, subgroups=design.plots,
+        lambda: PositionImageConvModel(x.shape[1], x.shape[2:]), x, design.families,
+        design.environment, noise_sd[:, date], NOISE_LEVELS, subsets=subsets, seed=args.seed,
+        subgroups=design.plots,
         estimator='henderson3', split_units=np.arange(len(x)), n_linear_iter=args.linear_steps,
         n_iter=args.steps, device=args.device, max_copies=args.max_copies)
     levels = np.array([highest_level_within_one_se(NOISE_LEVELS, s) for s in cnn_scores])

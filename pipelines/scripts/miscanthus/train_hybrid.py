@@ -2,7 +2,8 @@
 
 h2opt.train_linear_conv_models: linear H2-opt on all pixels of the date (the noise of
 choose_noise.py for the fold and date, linear_steps steps), then h2opt.LinearConvModel, the linear
-map plus h2opt.ImageConvModel, trained together (steps steps), with the CNN noise level of
+map plus h2opt.PositionImageConvModel (a weight per position: the plant is at the center, its
+neighbors at the edges), trained together (steps steps), with the CNN noise level of
 choose_cnn_level.py for the fold times noise_scale of the fold's training pixels of the date.
 Henderson3 heritability (families, plots within families, rep and field column fixed). Writes an
 .npz with 'traits' (folds x plants x traits, uncorrelated on each fold's training plants).
@@ -16,7 +17,7 @@ import argparse
 
 import numpy as np
 import torch
-from h2opt import ImageConvModel, synthetic_traits, train_linear_conv_models
+from h2opt import PositionImageConvModel, synthetic_traits, train_linear_conv_models
 from h2opt.selection import noise_scale
 
 from h2opt_analysis import miscanthus
@@ -50,8 +51,8 @@ def main():
     train_test = np.array([(design.fold == f).astype(int) for f in folds])
     conv_sd = np.array([cnn_level[f] * noise_scale(flat[design.fold != f]) for f in folds])
     models = train_linear_conv_models(
-        lambda: ImageConvModel(x.shape[1]), x, design.families, design.environment, train_test,
-        noise_sd[:, None], conv_sd[:, None], n_traits=args.traits,
+        lambda: PositionImageConvModel(x.shape[1], x.shape[2:]), x, design.families,
+        design.environment, train_test, noise_sd[:, None], conv_sd[:, None], n_traits=args.traits,
         n_linear_iter=args.linear_steps, n_iter=args.steps, device=args.device,
         subgroups=design.plots, estimator='henderson3', max_copies=args.max_copies)
     np.savez(args.out, traits=np.stack([synthetic_traits(m, x, tt == 0)

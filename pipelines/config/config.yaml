@@ -95,10 +95,11 @@ miscanthus:
   # train_hybrid.py: h2opt.LinearConvModel with h2opt.ImageConvModel), Henderson3 loss, Adam, the
   # levels of h2opt.selection.NOISE_LEVELS chosen by h2opt.selection.highest_level_within_one_se.
   # max_copies: models trained at once (GPU memory only; same result). The levels are chosen
-  # per fold on one date, selection_date (index into miscanthus.DATES; 7 = 08/08, the middle of
-  # the season, fixed before any result), and used for all dates: a search on every date costs
+  # per fold on one date, selection_date (index into miscanthus.DATES; 2 = 06/08, before canopy
+  # closure; a closed-canopy date has no signal and the rule then picks the top level), and used
+  # for all dates: a search on every date costs
   # about 14 x as much (overnight 2026-10-08: about 12 h of GPU for the linear levels alone).
-  selection_date: 7
+  selection_date: 2
   h2opt:
     steps: 10000
     max_copies: 105
