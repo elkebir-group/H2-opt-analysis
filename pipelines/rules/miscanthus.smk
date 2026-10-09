@@ -55,8 +55,9 @@ rule misc_train_baselines:
         " --traits {MISC[traits]} --out {output} > {log} 2>&1"
 
 
-# Linear and hybrid H2-opt: one noise level per fold for all dates (choose_noise.py), one CNN
-# level per fold (choose_cnn_level.py, on one date), then one job per date with all 5 folds.
+# Linear and hybrid H2-opt: one noise level and one CNN level per fold, chosen on one date and
+# used for all dates (choose_noise.py, choose_cnn_level.py), then one job per date with all 5
+# folds.
 MISC_H2OPT_METHODS = ["h2opt", "h2opt_hybrid"]
 
 
@@ -80,7 +81,7 @@ rule misc_choose_linear_h2opt_noise:
         gpu=lambda wc: 4 if MISC["h2opt"]["device"] == "cuda" else 0,
     shell:
         "python -u {MISC_SCRIPTS}/choose_noise.py --population {wildcards.population}"
-        " --images {input} --out {output} --steps {params.steps}"
+        " --images {input} --date {MISC[selection_date]} --out {output} --steps {params.steps}"
         " --max-copies {params.max_copies} --device {params.device} > {log} 2>&1"
 
 
