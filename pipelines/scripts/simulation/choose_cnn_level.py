@@ -1,15 +1,15 @@
 """Choose the noise level of the CNN branch of the hybrid H2-opt on one simulation instance.
 
-h2opt.selection.score_linear_conv_levels on the training plants: 5 validation splits of the training
-lines; for each split and CNN level of h2opt.selection.NOISE_LEVELS, the first trait of linear
-H2-opt (the noise SD of choose_noise.py, linear_steps steps), then the CNN branch
-(simulation.make_cnn: h2opt.ConvModel over wavelength, or h2opt.ImageConvModel for images; steps
-steps) with input noise of standard deviation level x noise_scale of the training measurements.
-The chosen level is the highest level whose held-out heritability of trait 1 is within one
-standard error of the best (h2opt.selection.highest_level_within_one_se, the rule of every level):
-a high level keeps the hybrid near the linear trait, so the CNN must clearly raise the held-out
-heritability to get a low level. Writes an .npz (levels; chosen; scores: splits x levels) read by
-train_hybrid.py.
+h2opt.selection.score_linear_conv_levels on the training plants: 20 validation splits of the
+training lines (4 partitions into 5 folds); for each split and CNN level of
+h2opt.selection.NOISE_LEVELS, the first trait of linear H2-opt (the noise SD of choose_noise.py,
+linear_steps steps), then the CNN branch (simulation.make_cnn: h2opt.ConvModel over wavelength, or
+h2opt.ImageConvModel for images; steps steps) with input noise of standard deviation level x
+noise_scale of the training measurements. The chosen level is the highest level whose held-out
+heritability of trait 1 is within one standard error of the best
+(h2opt.selection.highest_level_within_one_se, the rule of every level): a high level keeps the
+hybrid near the linear trait, so the CNN must clearly raise the held-out heritability to get a low
+level. Writes an .npz (levels; chosen; scores: splits x levels) read by train_hybrid.py.
 
     python pipelines/scripts/simulation/choose_cnn_level.py --measurements spectra.npz \\
         --noise noise.npz --out cnn_level.npz \\

@@ -43,7 +43,7 @@ simulation:
   traits: 5
   # H2-opt trained with Adam, no clipping, and normal input noise whose level is chosen per
   # instance on the training plants (choose_noise.py: h2opt.selection.select_noise_level, the
-  # best held-out heritability of trait 1 over 5 splits of the lines, with the same steps). PCH
+  # best held-out heritability of trait 1 over 20 splits of the lines, with the same steps). PCH
   # chooses its ridge by the same procedure and rule (PCH.tune). noise_sweep.py retrains H2-opt
   # at every level of h2opt.selection.NOISE_LEVELS for the sensitivity figure.
   h2opt:

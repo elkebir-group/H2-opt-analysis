@@ -1,14 +1,14 @@
 """Choose the noise level of Arabidopsis H2-opt in each accession fold, one for all traits.
 
 h2opt.selection.select_noise_level on the training samples of each fold of one treatment (all folds
-in one batch), with the linear model and the training settings of train_h2opt.py: 5 validation
-splits of the training accessions; the highest level whose held-out heritability of the first
-trait is within one standard error of the best (h2opt.selection.highest_level_within_one_se). The
-test samples of a fold never take part in its choice. Writes an .npz
-(folds; levels; chosen: one level per fold; noise_sd: the standard deviation of the chosen noise per
-fold; scores: folds x splits x levels) read by train_h2opt.py; an .npz of the trained validation
-traits (traits: folds x splits x levels x samples), to examine other selection rules without
-training again; and a figure of the choices.
+in one batch), with the linear model and the training settings of train_h2opt.py: 20 validation
+splits of the training accessions (4 partitions into 5 folds); the highest level whose held-out
+heritability of the first trait is within one standard error of the best
+(h2opt.selection.highest_level_within_one_se). The test samples of a fold never take part in its
+choice. Writes an .npz (folds; levels; chosen: one level per fold; noise_sd: the standard deviation
+of the chosen noise per fold; scores: folds x splits x levels) read by train_h2opt.py; an .npz of
+the trained validation traits (traits: folds x splits x levels x samples), to examine other
+selection rules without training again; and a figure of the choices.
 
     python pipelines/scripts/arabidopsis/choose_noise.py --features features.npy --treatment 6d \\
         --folds 0 1 2 3 4 --out noise.npz --out-traits noise_traits.npz --figure noise.pdf \\

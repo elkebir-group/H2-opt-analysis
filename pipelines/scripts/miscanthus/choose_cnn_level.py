@@ -1,14 +1,14 @@
 """Choose the one CNN noise level of Miscanthus hybrid H2-opt: all folds and all dates.
 
 h2opt.selection.score_linear_conv_levels on the training plants of one fold (SEARCH_FOLD, fixed in
-advance; one fold instead of all 5 keeps the search at about 20 min), on the date of
+advance; one fold instead of all 5 keeps the search at about 80 min), on the date of
 choose_noise.py: linear H2-opt (the one linear level of choose_noise.py, linear_steps steps), then
-the LinearConvModel with h2opt.PositionImageConvModel (steps steps; a weight per position: the
-plant is at the center, its neighbors at the edges) at every level of h2opt.selection.NOISE_LEVELS,
-Henderson3 heritability, 5 validation splits of the training plants. The CNN level is
-h2opt.selection.highest_level_within_one_se of the scores; it is separate from the linear level
-(the two levels act on different branches and are not comparable). Writes an .npz (date; fold;
-levels; chosen: the level; scores: splits x levels).
+the LinearConvModel with h2opt.PositionImageConvModel (steps steps; a weight per position: the plant
+is at the center, its neighbors at the edges) at every level of h2opt.selection.NOISE_LEVELS,
+Henderson3 heritability, 20 validation splits of the training plants (4 partitions into 5 folds).
+The CNN level is h2opt.selection.highest_level_within_one_se of the scores; it is separate from the
+linear level (the two levels act on different branches and are not comparable). Writes an .npz
+(date; fold; levels; chosen: the level; scores: splits x levels).
 
     python pipelines/scripts/miscanthus/choose_cnn_level.py --population central \\
         --images images.npy --noise noise.npz --out cnn_level.npz --linear-steps 10000 \\

@@ -4,9 +4,10 @@ the linear branch of the hybrid.
 h2opt.selection.select_noise_level on the training plants of each fold (all folds in one batch),
 on one date (--date): h2opt.LinearModel on all pixels of the date (h2opt_analysis.miscanthus.
 load_date, flattened), Henderson3 heritability (families, plots within families, rep and field
-column fixed), 5 validation splits of the training plants, every level of
+column fixed), 20 validation splits of the training plants (4 partitions into 5 folds), every
+level of
 h2opt.selection.NOISE_LEVELS, the first trait trained for steps steps. The rule
-h2opt.selection.highest_level_within_one_se takes the 25 validation splits of all folds together
+h2opt.selection.highest_level_within_one_se takes the 100 validation splits of all folds together
 and gives one level, the same for all folds (a level per fold follows the noise of the flat,
 jagged curves of Central). The level serves all dates, as the level times noise_scale of the
 fold's training pixels of each date (the CNN branch has its own level, choose_cnn_level.py). A

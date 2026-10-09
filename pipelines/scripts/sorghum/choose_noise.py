@@ -1,14 +1,14 @@
 """Choose the noise level of sorghum H2-opt in each genotype fold, one for all traits.
 
 h2opt.selection.select_noise_level on the training plants of each fold (all folds in one batch),
-with the linear model and the training settings of train_h2opt.py: 5 validation splits of the
-training genotypes; the highest level whose held-out heritability of the first trait is within one
-standard error of the best (h2opt.selection.highest_level_within_one_se). The test plants of a
-fold never take part in its choice. Writes an .npz (folds; levels;
-chosen: one level per fold; noise_sd: the standard deviation of the chosen noise per fold; scores:
-folds x splits x levels) read by train_h2opt.py; an .npz of the trained validation traits (traits:
-folds x splits x levels x plants), to examine other selection rules without training again; and a
-figure of the choices.
+with the linear model and the training settings of train_h2opt.py: 20 validation splits of the
+training genotypes (4 partitions into 5 folds); the highest level whose held-out heritability of the
+first trait is within one standard error of the best (h2opt.selection.highest_level_within_one_se).
+The test plants of a fold never take part in its choice. Writes an .npz (folds; levels; chosen: one
+level per fold; noise_sd: the standard deviation of the chosen noise per fold; scores: folds x
+splits x levels) read by train_h2opt.py; an .npz of the trained validation traits (traits: folds x
+splits x levels x plants), to examine other selection rules without training again; and a figure of
+the choices.
 
     python pipelines/scripts/sorghum/choose_noise.py --folds 0 1 2 --out noise.npz \\
         --out-traits noise_traits.npz --figure noise.pdf --steps 10000 --device cuda

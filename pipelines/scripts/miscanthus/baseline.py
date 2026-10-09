@@ -3,7 +3,7 @@
 Each baseline is fitted to all pixels of one date on the fold's training plants
 (h2opt_analysis.methods.BASELINES). PCH maximizes Henderson3 heritability (families, plots within
 families, rep and field column fixed); its ridge is one for all dates, chosen on the training plants
-by held-out Henderson3 heritability of the first trait over 5 splits of the plants (PCH.tune over
+by held-out Henderson3 heritability of the first trait over 20 splits of the plants (PCH.tune over
 h2opt.baselines.RIDGES), the mean over the dates. The other baselines are as for sorghum. Writes an
 .npz with 'traits' (dates x plants x traits, uncorrelated on the training plants) and, for pch, its
 tuning and ridge_traits (ridges x dates x plants x traits), the traits at every ridge.

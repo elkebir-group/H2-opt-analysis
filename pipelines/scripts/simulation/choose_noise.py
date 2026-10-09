@@ -1,12 +1,12 @@
 """Choose the noise level of linear H2-opt on one simulation instance, one for all traits.
 
-h2opt.selection.select_noise_level on the training plants: 5 validation splits of the training
-lines, every level of h2opt.selection.NOISE_LEVELS, the first trait trained with the steps of
-train_h2opt.py; the highest level whose held-out heritability of the first trait is within one
-standard error of the best (h2opt.selection.highest_level_within_one_se). The test plants never
-take part in the choice. Writes an .npz (levels; chosen; noise_sd:
-the chosen level times noise_scale of the training spectra; scores: splits x levels) read by
-train_h2opt.py, choose_cnn_level.py, train_hybrid.py, baseline.py and plot_noise_sweep.py.
+h2opt.selection.select_noise_level on the training plants: 20 validation splits of the training
+lines (4 partitions into 5 folds), every level of h2opt.selection.NOISE_LEVELS, the first trait
+trained with the steps of train_h2opt.py; the highest level whose held-out heritability of the first
+trait is within one standard error of the best (h2opt.selection.highest_level_within_one_se). The
+test plants never take part in the choice. Writes an .npz (levels; chosen; noise_sd: the chosen
+level times noise_scale of the training spectra; scores: splits x levels) read by train_h2opt.py,
+choose_cnn_level.py, train_hybrid.py, baseline.py and plot_noise_sweep.py.
 
     python pipelines/scripts/simulation/choose_noise.py --measurements spectra.npz \\
         --out noise.npz --steps 10000 --seed 0 --device cuda
