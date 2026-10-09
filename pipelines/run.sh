@@ -37,6 +37,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 cd "$REPO"
+# Large GPU jobs (CNNs on images) fail with "reserved but unallocated" memory under the default
+# allocator, which fragments; expandable segments avoid that.
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 # The h2opt commit each run used, for provenance (h2opt is an editable sibling
 # checkout, so the lockfile does not record it).
 h2opt_dir="$(uv run --no-sync python -c 'import h2opt, pathlib; print(pathlib.Path(h2opt.__file__).resolve().parent.parent)')"
