@@ -91,14 +91,13 @@ miscanthus:
   traits: 1
   # PCH is left out (PI, 2026-10-08): it needs more than 10 GB per job.
   baselines: [pca, genetic_pca, max_features]
-  # Linear H2-opt (choose_noise.py, train_h2opt.py) and the hybrid (choose_cnn_level.py,
-  # train_hybrid.py: h2opt.LinearConvModel with h2opt.ImageConvModel), Henderson3 loss, Adam, the
-  # levels of h2opt.selection.NOISE_LEVELS chosen by h2opt.selection.highest_level_within_one_se.
-  # max_copies: models trained at once (GPU memory only; same result). The levels are chosen
-  # per fold on one date, selection_date (index into miscanthus.DATES; 2 = 06/08, before canopy
-  # closure; a closed-canopy date has no signal and the rule then picks the top level), and used
-  # for all dates: a search on every date costs
-  # about 14 x as much (overnight 2026-10-08: about 12 h of GPU for the linear levels alone).
+  # Linear H2-opt (choose_noise.py, train_h2opt.py) and the hybrid (train_hybrid.py:
+  # h2opt.LinearConvModel with h2opt.PositionImageConvModel), Henderson3 loss, Adam. ONE noise
+  # level of h2opt.selection.NOISE_LEVELS for all folds, all dates, linear H2-opt and both branches
+  # of the hybrid: the linear search of choose_noise.py on one date, selection_date (index into
+  # miscanthus.DATES; 2 = 06/08, before canopy closure; a closed-canopy date has no signal and the
+  # rule then picks the top level), h2opt.selection.highest_level_within_one_se over the
+  # validation splits of all folds. max_copies: models trained at once (GPU memory only).
   selection_date: 2
   h2opt:
     steps: 10000

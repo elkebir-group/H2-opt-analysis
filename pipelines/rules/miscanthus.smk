@@ -55,9 +55,8 @@ rule misc_train_baselines:
         " --traits {MISC[traits]} --out {output} > {log} 2>&1"
 
 
-# Linear and hybrid H2-opt: one noise level and one CNN level per fold, chosen on one date and
-# used for all dates (choose_noise.py, choose_cnn_level.py), then one job per date with all 5
-# folds.
+# Linear and hybrid H2-opt: one noise level for all folds, all dates and both branches of the
+# hybrid, chosen on one date (choose_noise.py), then one job per date with all 5 folds.
 MISC_H2OPT_METHODS = ["h2opt", "h2opt_hybrid"]
 
 
@@ -108,35 +107,10 @@ rule misc_train_linear_h2opt:
         " --out {output} > {log} 2>&1"
 
 
-rule misc_choose_hybrid_cnn_level:
-    input:
-        images=misc_images,
-        noise=str(MISC_OUT / "{population}" / "h2opt" / "noise.npz"),
-    output:
-        str(MISC_OUT / "{population}" / "h2opt_hybrid" / "cnn_level.npz"),
-    log:
-        str(MISC_OUT / "{population}" / "h2opt_hybrid" / "cnn_level.log"),
-    params:
-        linear_steps=MISC["hybrid"]["linear_steps"],
-        steps=MISC["hybrid"]["steps"],
-        max_copies=MISC["hybrid"]["max_copies"],
-        device=MISC["hybrid"]["device"],
-    threads: 2
-    # The CNN on images needs most of the GPU memory: one job at a time.
-    resources:
-        gpu=lambda wc: 8 if MISC["hybrid"]["device"] == "cuda" else 0,
-    shell:
-        "python -u {MISC_SCRIPTS}/choose_cnn_level.py --population {wildcards.population}"
-        " --images {input.images} --noise {input.noise} --out {output}"
-        " --linear-steps {params.linear_steps} --steps {params.steps}"
-        " --max-copies {params.max_copies} --seed 0 --device {params.device} > {log} 2>&1"
-
-
 rule misc_train_hybrid_h2opt:
     input:
         images=misc_images,
         noise=str(MISC_OUT / "{population}" / "h2opt" / "noise.npz"),
-        cnn_level=str(MISC_OUT / "{population}" / "h2opt_hybrid" / "cnn_level.npz"),
     output:
         str(MISC_OUT / "{population}" / "h2opt_hybrid" / "date{date}.npz"),
     log:
@@ -153,7 +127,7 @@ rule misc_train_hybrid_h2opt:
         gpu=lambda wc: 4 if MISC["hybrid"]["device"] == "cuda" else 0,
     shell:
         "python -u {MISC_SCRIPTS}/train_hybrid.py --population {wildcards.population}"
-        " --images {input.images} --noise {input.noise} --cnn-level {input.cnn_level}"
+        " --images {input.images} --noise {input.noise}"
         " --date {wildcards.date} --traits {MISC[traits]}"
         " --linear-steps {params.linear_steps} --steps {params.steps}"
         " --max-copies {params.max_copies} --device {params.device} --out {output} > {log} 2>&1"

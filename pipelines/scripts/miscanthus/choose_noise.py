@@ -1,15 +1,18 @@
-"""Choose the noise level of Miscanthus linear H2-opt in each plant fold, one for all dates.
+"""Choose the one noise level of Miscanthus H2-opt: all folds, all dates, linear H2-opt and both
+branches of the hybrid.
 
 h2opt.selection.select_noise_level on the training plants of each fold (all folds in one batch),
 on one date (--date): h2opt.LinearModel on all pixels of the date (h2opt_analysis.miscanthus.
 load_date, flattened), Henderson3 heritability (families, plots within families, rep and field
 column fixed), 5 validation splits of the training plants, every level of
-h2opt.selection.NOISE_LEVELS, the first trait trained for steps steps, and the rule
-h2opt.selection.highest_level_within_one_se. The level of a fold serves all dates, as that level
-times noise_scale of the fold's training pixels of each date. A search on every date costs about
-14 x as much (about 12 h of GPU for both populations). The test plants of a fold never take part
-in its choice. Writes an .npz (date; folds; dates; levels; chosen: one level per fold; noise_sd:
-folds x dates; scores: folds x splits x levels).
+h2opt.selection.NOISE_LEVELS, the first trait trained for steps steps. The rule
+h2opt.selection.highest_level_within_one_se takes the 25 validation splits of all folds together
+and gives one level, the same for all folds (a level per fold follows the noise of the flat,
+jagged curves of Central). The level serves all dates, as the level times noise_scale of the
+fold's training pixels of each date, and the CNN branch of the hybrid (train_hybrid.py). A
+validation split of one fold uses training plants that are test plants of the other folds, so the
+test plants take a small part in the choice of the one level. Writes an .npz (date; folds; dates;
+levels; chosen: the level; noise_sd: folds x dates; scores: folds x splits x levels).
 
     python pipelines/scripts/miscanthus/choose_noise.py --population central --images images.npy \\
         --date 7 --out noise.npz --steps 10000 --max-copies 105 --device cuda
@@ -55,14 +58,14 @@ def main():
         lambda: LinearModel(x.shape[1]), x, design.families, design.environment, subsets,
         subgroups=design.plots, estimator='henderson3', split_units=np.arange(len(x)),
         n_iter=args.steps, device=args.device, max_copies=args.max_copies)
-    chosen = np.array([highest_level_within_one_se(NOISE_LEVELS, s) for s in scores])
+    chosen = highest_level_within_one_se(NOISE_LEVELS, scores.reshape((-1, len(NOISE_LEVELS))))
     noise_sd = np.zeros((len(folds), len(miscanthus.DATES)))
     for d in range(len(miscanthus.DATES)):
         x = pixels(d)
-        noise_sd[:, d] = [chosen[f] * noise_scale(x[subsets[f]]) for f in folds]
+        noise_sd[:, d] = [chosen * noise_scale(x[subsets[f]]) for f in folds]
     np.savez(args.out, date=args.date, folds=folds, dates=miscanthus.DATES, levels=NOISE_LEVELS,
              chosen=chosen, noise_sd=noise_sd, scores=scores)
-    print(f'date {miscanthus.DATES[args.date]}; chosen level per fold:', chosen)
+    print(f'date {miscanthus.DATES[args.date]}; chosen level {chosen:g}')
     print('held-out Henderson3 heritability of trait 1, mean over folds and splits:')
     for level, s in zip(NOISE_LEVELS, scores.mean(axis=(0, 1)), strict=True):
         print(f'  {level:<9.3g} {s:.4f}')
