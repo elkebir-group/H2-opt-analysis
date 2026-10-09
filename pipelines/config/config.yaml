@@ -51,9 +51,10 @@ simulation:
     device: cuda
   # The CNN/linear hybrid (h2opt.LinearConvModel with h2opt.ConvModel over wavelength), trained by
   # h2opt.train_linear_conv_models: linear H2-opt for linear_steps per trait, then the hybrid for
-  # steps per trait. One level for everything: both branches use the noise level of linear H2-opt
-  # (choose_noise.py), the CNN branch as input noise of that level times
-  # h2opt.selection.noise_scale of the training spectra.
+  # steps per trait. The linear branch keeps the noise of linear H2-opt; the CNN level (input
+  # noise, times h2opt.selection.noise_scale of the training spectra) is chosen per instance from
+  # h2opt.selection.NOISE_LEVELS (choose_cnn_level.py: the highest level within one SE of the
+  # best held-out heritability of trait 1; a high level keeps the hybrid at the linear trait).
   hybrid:
     linear_steps: 10000
     steps: 1000
@@ -75,9 +76,8 @@ image_simulation:
   h2opt:
     steps: 10000
     device: cuda
-  # The hybrid with h2opt.ImageConvModel; both branches at the noise level of linear H2-opt (one
-  # level for everything). max_copies: models trained at once (GPU memory); the result does not
-  # depend on it (the copies of one split share every noise draw).
+  # The hybrid with h2opt.ImageConvModel. max_copies: models trained at once (GPU memory); the
+  # result does not depend on it (the copies of one split share every noise draw).
   hybrid:
     linear_steps: 10000
     steps: 1000

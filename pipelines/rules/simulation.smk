@@ -111,10 +111,35 @@ rule sim_choose_linear_h2opt_noise:
         " > {log} 2>&1"
 
 
+rule sim_choose_hybrid_cnn_level:
+    input:
+        spectra=sim_file("{instance}", "spectra.npz"),
+        noise=sim_file("{instance}", "noise.npz"),
+    output:
+        sim_file("{instance}", "cnn_level.npz"),
+    log:
+        sim_file("{instance}", "cnn_level.log"),
+    params:
+        linear_steps=SIM["hybrid"]["linear_steps"],
+        steps=SIM["hybrid"]["steps"],
+        device=SIM["hybrid"]["device"],
+    threads: 1
+    # All levels and splits train at once (105 models, about 4 GB of GPU memory): half of
+    # run.sh's default --gpu-jobs, so at most two jobs share the GPU.
+    resources:
+        gpu=lambda wc: 4 if SIM["hybrid"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {SIM_SCRIPTS}/choose_cnn_level.py --measurements {input.spectra}"
+        " --noise {input.noise} --out {output}"
+        " --linear-steps {params.linear_steps} --steps {params.steps}"
+        " --seed {wildcards.instance} --device {params.device} > {log} 2>&1"
+
+
 rule sim_train_hybrid_h2opt:
     input:
         spectra=sim_file("{instance}", "spectra.npz"),
         noise=sim_file("{instance}", "noise.npz"),
+        cnn_level=sim_file("{instance}", "cnn_level.npz"),
     output:
         traits=sim_file("{instance}", "h2opt_hybrid.npz"),
         model=sim_file("{instance}", "h2opt_hybrid.pt"),
@@ -130,6 +155,7 @@ rule sim_train_hybrid_h2opt:
         gpu=lambda wc: 1 if SIM["hybrid"]["device"] == "cuda" else 0,
     shell:
         "python -u {SIM_SCRIPTS}/train_hybrid.py --measurements {input.spectra} --noise {input.noise}"
+        " --cnn-level {input.cnn_level}"
         " --out-traits {output.traits} --out-model {output.model} --traits {params.traits}"
         " --linear-steps {params.linear_steps} --steps {params.steps}"
         " --seed {wildcards.instance} --device {params.device} > {log} 2>&1"
