@@ -1,5 +1,5 @@
-# Miscanthus multispectral drone images, one date at a time: the baselines per date, and the
-# heritability of their traits and of the hybrid H2-opt traits by Henderson's Method III.
+# Miscanthus multispectral drone images, one date at a time: linear and hybrid H2-opt and the
+# baselines per date, and the heritability of their traits by Henderson's Method III.
 
 from h2opt_analysis import miscanthus
 
@@ -55,16 +55,114 @@ rule misc_train_baselines:
         " --traits {MISC[traits]} --out {output} > {log} 2>&1"
 
 
-def misc_hybrid_traits(population):
-    """Traits of the hybrid H2-opt, one file per date. Imported from a scratch run of the earlier
-    hybrid design (h2opt_hybrid/PROVENANCE.md) until a rule trains them."""
-    return [str(MISC_OUT / population / "h2opt_hybrid" / f"date{d}.npz") for d in MISC_DATES]
+# Linear and hybrid H2-opt: one noise level per fold for all dates (choose_noise.py), one CNN
+# level per fold (choose_cnn_level.py, on one date), then one job per date with all 5 folds.
+MISC_H2OPT_METHODS = ["h2opt", "h2opt_hybrid"]
+
+
+def misc_date_files(population, method):
+    return [str(MISC_OUT / population / method / f"date{d}.npz") for d in MISC_DATES]
+
+
+rule misc_choose_linear_h2opt_noise:
+    input:
+        misc_images,
+    output:
+        str(MISC_OUT / "{population}" / "h2opt" / "noise.npz"),
+    log:
+        str(MISC_OUT / "{population}" / "h2opt" / "noise.log"),
+    params:
+        steps=MISC["h2opt"]["steps"],
+        max_copies=MISC["h2opt"]["max_copies"],
+        device=MISC["h2opt"]["device"],
+    threads: 4
+    resources:
+        gpu=lambda wc: 4 if MISC["h2opt"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {MISC_SCRIPTS}/choose_noise.py --population {wildcards.population}"
+        " --images {input} --out {output} --steps {params.steps}"
+        " --max-copies {params.max_copies} --device {params.device} > {log} 2>&1"
+
+
+rule misc_train_linear_h2opt:
+    input:
+        images=misc_images,
+        noise=str(MISC_OUT / "{population}" / "h2opt" / "noise.npz"),
+    output:
+        str(MISC_OUT / "{population}" / "h2opt" / "date{date}.npz"),
+    log:
+        str(MISC_OUT / "{population}" / "h2opt" / "date{date}.log"),
+    wildcard_constraints:
+        date=r"\d+",
+    params:
+        steps=MISC["h2opt"]["steps"],
+        device=MISC["h2opt"]["device"],
+    threads: 2
+    resources:
+        gpu=lambda wc: 2 if MISC["h2opt"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {MISC_SCRIPTS}/train_h2opt.py --population {wildcards.population}"
+        " --images {input.images} --noise {input.noise} --date {wildcards.date}"
+        " --traits {MISC[traits]} --steps {params.steps} --device {params.device}"
+        " --out {output} > {log} 2>&1"
+
+
+rule misc_choose_hybrid_cnn_level:
+    input:
+        images=misc_images,
+        noise=str(MISC_OUT / "{population}" / "h2opt" / "noise.npz"),
+    output:
+        str(MISC_OUT / "{population}" / "h2opt_hybrid" / "cnn_level.npz"),
+    log:
+        str(MISC_OUT / "{population}" / "h2opt_hybrid" / "cnn_level.log"),
+    params:
+        linear_steps=MISC["hybrid"]["linear_steps"],
+        steps=MISC["hybrid"]["steps"],
+        max_copies=MISC["hybrid"]["max_copies"],
+        device=MISC["hybrid"]["device"],
+    threads: 2
+    # The CNN on images needs most of the GPU memory: one job at a time.
+    resources:
+        gpu=lambda wc: 8 if MISC["hybrid"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {MISC_SCRIPTS}/choose_cnn_level.py --population {wildcards.population}"
+        " --images {input.images} --noise {input.noise} --out {output}"
+        " --linear-steps {params.linear_steps} --steps {params.steps}"
+        " --max-copies {params.max_copies} --seed 0 --device {params.device} > {log} 2>&1"
+
+
+rule misc_train_hybrid_h2opt:
+    input:
+        images=misc_images,
+        noise=str(MISC_OUT / "{population}" / "h2opt" / "noise.npz"),
+        cnn_level=str(MISC_OUT / "{population}" / "h2opt_hybrid" / "cnn_level.npz"),
+    output:
+        str(MISC_OUT / "{population}" / "h2opt_hybrid" / "date{date}.npz"),
+    log:
+        str(MISC_OUT / "{population}" / "h2opt_hybrid" / "date{date}.log"),
+    wildcard_constraints:
+        date=r"\d+",
+    params:
+        linear_steps=MISC["hybrid"]["linear_steps"],
+        steps=MISC["hybrid"]["steps"],
+        max_copies=MISC["hybrid"]["max_copies"],
+        device=MISC["hybrid"]["device"],
+    threads: 2
+    resources:
+        gpu=lambda wc: 4 if MISC["hybrid"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {MISC_SCRIPTS}/train_hybrid.py --population {wildcards.population}"
+        " --images {input.images} --noise {input.noise} --cnn-level {input.cnn_level}"
+        " --date {wildcards.date} --traits {MISC[traits]}"
+        " --linear-steps {params.linear_steps} --steps {params.steps}"
+        " --max-copies {params.max_copies} --device {params.device} --out {output} > {log} 2>&1"
 
 
 def misc_method_args(wildcards):
-    """'--by-date h2opt_hybrid date files --by-fold baseline fold files ...' for one population."""
+    """'--by-date method date files ... --by-fold baseline fold files ...' for one population."""
     out = MISC_OUT / wildcards.population
-    args = "--by-date h2opt_hybrid " + " ".join(misc_hybrid_traits(wildcards.population))
+    args = " ".join(f"--by-date {m} " + " ".join(misc_date_files(wildcards.population, m))
+                    for m in MISC_H2OPT_METHODS)
     for baseline in MISC_BASELINES:
         args += f" --by-fold {baseline} " + " ".join(
             str(out / baseline / f"fold{f}.npz") for f in MISC_FOLDS)
@@ -73,7 +171,7 @@ def misc_method_args(wildcards):
 
 rule misc_score_heritability:
     input:
-        hybrid=lambda wc: misc_hybrid_traits(wc.population),
+        h2opt=lambda wc: [f for m in MISC_H2OPT_METHODS for f in misc_date_files(wc.population, m)],
         baselines=lambda wc: [str(MISC_OUT / wc.population / b / f"fold{f}.npz")
                               for b in MISC_BASELINES for f in MISC_FOLDS],
     output:

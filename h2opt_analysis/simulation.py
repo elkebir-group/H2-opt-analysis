@@ -13,13 +13,21 @@ sorghum spectrum (h2opt.reconstruction_residuals), the real variation that the 5
 miss (0.7% of the real spectra's variance), which is not heritable in the simulation.
 """
 
+import functools
 import pickle
 import types
 
 import numpy as np
 import torch
 import torch.nn as nn
-from h2opt import AutoEncoder, encode_latent, latent_scale, reconstruction_residuals
+from h2opt import (
+    AutoEncoder,
+    ConvModel,
+    ImageConvModel,
+    encode_latent,
+    latent_scale,
+    reconstruction_residuals,
+)
 from h2opt.folds import per_group
 
 from .paths import data
@@ -30,6 +38,15 @@ HERITABILITY = (0.6, 0.4, 0.2)
 N_QTNS = 100  # per trait
 N_LATENT = 5
 PAPER_AUTOENCODER = data('plant', 'models', 'autoencode_2.pt')  # pickled model of the paper code
+
+
+def make_cnn(X):
+    """The CNN of the hybrid H2-opt for the measurements X (plants first), a function with no
+    arguments: h2opt.ConvModel over the features of a spectrum (X: plants x features), or
+    h2opt.ImageConvModel over images (X: plants x channels x height x width)."""
+    if X.ndim == 2:
+        return functools.partial(ConvModel, X.shape[1])
+    return functools.partial(ImageConvModel, X.shape[1])
 
 
 def correlations(truth, Y):

@@ -8,8 +8,8 @@ take part in the choice. Writes an .npz (levels; chosen; noise_sd:
 the chosen level times noise_scale of the training spectra; scores: splits x levels) read by
 train_h2opt.py, choose_cnn_level.py, train_hybrid.py, baseline.py and plot_noise_sweep.py.
 
-    python pipelines/scripts/simulation/choose_noise.py --spectra spectra.npz --out noise.npz \\
-        --steps 10000 --seed 0 --device cuda
+    python pipelines/scripts/simulation/choose_noise.py --measurements spectra.npz \\
+        --out noise.npz --steps 10000 --seed 0 --device cuda
 """
 
 import argparse
@@ -21,15 +21,17 @@ from h2opt.selection import NOISE_LEVELS, highest_level_within_one_se, select_no
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--spectra', required=True)
+    parser.add_argument('--measurements', required=True,
+                        help='.npz with X (plants first; images are flattened), names, test')
     parser.add_argument('--out', required=True)
     parser.add_argument('--steps', type=int, required=True, help='steps per training run')
     parser.add_argument('--seed', type=int, required=True)
     parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
     args = parser.parse_args()
 
-    with np.load(args.spectra) as f:
+    with np.load(args.measurements) as f:
         X, names, test = f['X'], f['names'], f['test']
+    X = X.reshape((len(X), -1))
     noise_sd, scores, _ = select_noise_level(lambda: LinearModel(X.shape[1]), X, names, None,
                                              subsets=(~test)[None], seed=args.seed,
                                              n_iter=args.steps, device=args.device)

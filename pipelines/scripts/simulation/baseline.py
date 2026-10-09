@@ -7,7 +7,7 @@ plants.
 Writes an .npz with array 'traits' and, for pch, its ridge tuning
 (h2opt_analysis.methods.fit_baseline).
 
-    python pipelines/scripts/simulation/baseline.py --spectra spectra.npz --method pch \\
+    python pipelines/scripts/simulation/baseline.py --measurements spectra.npz --method pch \\
         --out pch.npz --traits 5
 """
 
@@ -20,14 +20,16 @@ from h2opt_analysis.methods import BASELINES, fit_baseline
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--spectra', required=True)
+    parser.add_argument('--measurements', required=True,
+                        help='.npz with X (plants first; images are flattened), names, test')
     parser.add_argument('--method', choices=list(BASELINES), required=True)
     parser.add_argument('--out', required=True)
     parser.add_argument('--traits', type=int, required=True)
     args = parser.parse_args()
 
-    with np.load(args.spectra) as f:
+    with np.load(args.measurements) as f:
         X, names, test = f['X'], f['names'], f['test']
+    X = X.reshape((len(X), -1))
     environment = np.zeros((len(names), 0))
     traits, tuning = fit_baseline(args.method, X, names, environment, ~test, args.traits)
     np.savez(args.out, traits=traits, **tuning)

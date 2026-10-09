@@ -86,7 +86,7 @@ rule sim_train_linear_h2opt:
     resources:
         gpu=lambda wc: 1 if SIM["h2opt"]["device"] == "cuda" else 0,
     shell:
-        "python -u {SIM_SCRIPTS}/train_h2opt.py --spectra {input.spectra} --noise {input.noise}"
+        "python -u {SIM_SCRIPTS}/train_h2opt.py --measurements {input.spectra} --noise {input.noise}"
         " --out-traits {output.traits} --out-model {output.model} --traits {params.traits}"
         " --steps {params.steps} --seed {wildcards.instance} --device {params.device}"
         " > {log} 2>&1"
@@ -106,7 +106,7 @@ rule sim_choose_linear_h2opt_noise:
     resources:
         gpu=lambda wc: 1 if SIM["h2opt"]["device"] == "cuda" else 0,
     shell:
-        "python -u {SIM_SCRIPTS}/choose_noise.py --spectra {input} --out {output}"
+        "python -u {SIM_SCRIPTS}/choose_noise.py --measurements {input} --out {output}"
         " --steps {params.steps} --seed {wildcards.instance} --device {params.device}"
         " > {log} 2>&1"
 
@@ -129,7 +129,7 @@ rule sim_choose_hybrid_cnn_level:
     resources:
         gpu=lambda wc: 4 if SIM["hybrid"]["device"] == "cuda" else 0,
     shell:
-        "python -u {SIM_SCRIPTS}/choose_cnn_level.py --spectra {input.spectra}"
+        "python -u {SIM_SCRIPTS}/choose_cnn_level.py --measurements {input.spectra}"
         " --noise {input.noise} --out {output}"
         " --linear-steps {params.linear_steps} --steps {params.steps}"
         " --seed {wildcards.instance} --device {params.device} > {log} 2>&1"
@@ -154,7 +154,7 @@ rule sim_train_hybrid_h2opt:
     resources:
         gpu=lambda wc: 1 if SIM["hybrid"]["device"] == "cuda" else 0,
     shell:
-        "python -u {SIM_SCRIPTS}/train_hybrid.py --spectra {input.spectra} --noise {input.noise}"
+        "python -u {SIM_SCRIPTS}/train_hybrid.py --measurements {input.spectra} --noise {input.noise}"
         " --cnn-level {input.cnn_level}"
         " --out-traits {output.traits} --out-model {output.model} --traits {params.traits}"
         " --linear-steps {params.linear_steps} --steps {params.steps}"
@@ -212,7 +212,7 @@ rule sim_train_baselines:
         traits=SIM["traits"],
     threads: 2
     shell:
-        "python -u {SIM_SCRIPTS}/baseline.py --spectra {input}"
+        "python -u {SIM_SCRIPTS}/baseline.py --measurements {input}"
         " --method {wildcards.baseline} --out {output} --traits {params.traits} > {log} 2>&1"
 
 
@@ -268,7 +268,7 @@ rule sim_score_traits:
         methods=sim_method_args("{}.npz"),
     threads: 4
     shell:
-        "python -u {SIM_SCRIPTS}/evaluate.py --spectra {input.spectra} --truth {input.truth}"
+        "python -u {SIM_SCRIPTS}/evaluate.py --measurements {input.spectra} --truth {input.truth}"
         " {params.methods} --out {output} > {log} 2>&1"
 
 

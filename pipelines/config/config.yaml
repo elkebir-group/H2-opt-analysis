@@ -67,12 +67,43 @@ simulation:
   # The GWAS shown as Manhattan and QQ plots.
   example: {instance: 0, method: h2opt}
 
+image_simulation:
+  instances: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+  # Methods compared with the true traits (slugs of h2opt_analysis.methods.LABELS).
+  methods: [h2opt, h2opt_hybrid, pca, genetic_pca, pch, max_features]
+  traits: 5
+  # As in the spectral simulation; linear models take the flattened pixels.
+  h2opt:
+    steps: 10000
+    device: cuda
+  # The hybrid with h2opt.ImageConvModel. max_copies: models trained at once (GPU memory); the
+  # result does not depend on it (the copies of one split share every noise draw).
+  hybrid:
+    linear_steps: 10000
+    steps: 1000
+    max_copies: 4
+    device: cuda
+
 miscanthus:
   # Populations analyzed (h2opt_analysis.miscanthus.POPULATIONS).
   populations: [central, south]
   # Trait 1 of every date, for H2-opt and the baselines.
   traits: 1
-  baselines: [pca, genetic_pca, pch, max_features]
+  # PCH is left out (PI, 2026-10-08): it needs more than 10 GB per job.
+  baselines: [pca, genetic_pca, max_features]
+  # Linear H2-opt (choose_noise.py, train_h2opt.py) and the hybrid (choose_cnn_level.py,
+  # train_hybrid.py: h2opt.LinearConvModel with h2opt.ImageConvModel), Henderson3 loss, Adam, the
+  # levels of h2opt.selection.NOISE_LEVELS chosen by h2opt.selection.highest_level_within_one_se.
+  # max_copies: models trained at once (GPU memory only; same result).
+  h2opt:
+    steps: 10000
+    max_copies: 105
+    device: cuda
+  hybrid:
+    linear_steps: 10000
+    steps: 1000
+    max_copies: 4
+    device: cuda
 
 arabidopsis:
   # Treatments, each analyzed on its own (h2opt_analysis.arabidopsis.TREATMENTS); folds of
