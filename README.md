@@ -93,8 +93,7 @@ the lines) and everything after are rebuilt here. All outputs are under `data/de
 | `sim_simulate_spectra` | `instance{i}/{spectra,truth}.npz` | simulated spectra (linearized decoder plus the residual of a random real spectrum), test plants, line of each plant, true traits |
 | `sim_choose_linear_h2opt_noise` | `instance{i}/noise.npz` | the noise level of H2-opt, chosen on the training lines by the held-out heritability of trait 1 (`h2opt.selection.select_noise_level`) |
 | `sim_train_linear_h2opt` | `instance{i}/h2opt.{npz,pt}` | H2-opt with the chosen noise (device from the config) |
-| `sim_choose_hybrid_cnn_level` | `instance{i}/cnn_level.npz` | the CNN noise level of the hybrid: the highest level within one SE of the best held-out heritability of trait 1 (`h2opt.selection.score_linear_conv_levels`, `highest_level_within_one_se`) |
-| `sim_train_hybrid_h2opt` | `instance{i}/h2opt_hybrid.{npz,pt}` | H2-opt with the linear + CNN model (`h2opt.LinearConvModel`, 1D `ConvModel`), warm started from linear H2-opt, at the chosen noise and CNN level (device from the config) |
+| `sim_train_hybrid_h2opt` | `instance{i}/h2opt_hybrid.{npz,pt}` | H2-opt with the linear + CNN model (`h2opt.LinearConvModel`, 1D `ConvModel`), warm started from linear H2-opt; both branches at the noise level of linear H2-opt (device from the config) |
 | `sim_sweep_linear_h2opt_noise` | `instance{i}/h2opt_noise_sweep.npz` | H2-opt at every level of `h2opt.selection.NOISE_LEVELS`, all levels in one job |
 | `sim_plot_linear_h2opt_noise_sweep` | `noise_sweep.npz`, `figures/noise_sweep.{pdf,png}` | \|r\| of traits 1-3 with the true traits against the noise level |
 | `sim_train_baselines` | `instance{i}/{pca,genetic_pca,pch,max_features}.npz` | baselines fitted on the training lines (PCH's ridge chosen by `PCH.tune`, the procedure and rule of H2-opt's noise level) |

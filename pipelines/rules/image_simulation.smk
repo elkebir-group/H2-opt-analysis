@@ -80,36 +80,10 @@ rule img_train_linear_h2opt:
         " --device {params.device} > {log} 2>&1"
 
 
-rule img_choose_hybrid_cnn_level:
-    input:
-        measurements=img_file("{instance}", "images.npz"),
-        noise=img_file("{instance}", "noise.npz"),
-    output:
-        img_file("{instance}", "cnn_level.npz"),
-    log:
-        img_file("{instance}", "cnn_level.log"),
-    params:
-        linear_steps=IMG["hybrid"]["linear_steps"],
-        steps=IMG["hybrid"]["steps"],
-        max_copies=IMG["hybrid"]["max_copies"],
-        device=IMG["hybrid"]["device"],
-    threads: 1
-    # The CNN on images needs most of the GPU memory: one job at a time.
-    resources:
-        gpu=lambda wc: 8 if IMG["hybrid"]["device"] == "cuda" else 0,
-    shell:
-        "python -u {SIM_SCRIPTS}/choose_cnn_level.py --measurements {input.measurements}"
-        " --noise {input.noise} --out {output}"
-        " --linear-steps {params.linear_steps} --steps {params.steps}"
-        " --max-copies {params.max_copies} --seed {wildcards.instance}"
-        " --device {params.device} > {log} 2>&1"
-
-
 rule img_train_hybrid_h2opt:
     input:
         measurements=img_file("{instance}", "images.npz"),
         noise=img_file("{instance}", "noise.npz"),
-        cnn_level=img_file("{instance}", "cnn_level.npz"),
     output:
         traits=img_file("{instance}", "h2opt_hybrid.npz"),
         model=img_file("{instance}", "h2opt_hybrid.pt"),
@@ -126,7 +100,7 @@ rule img_train_hybrid_h2opt:
         gpu=lambda wc: 4 if IMG["hybrid"]["device"] == "cuda" else 0,
     shell:
         "python -u {SIM_SCRIPTS}/train_hybrid.py --measurements {input.measurements}"
-        " --noise {input.noise} --cnn-level {input.cnn_level}"
+        " --noise {input.noise}"
         " --out-traits {output.traits} --out-model {output.model} --traits {params.traits}"
         " --linear-steps {params.linear_steps} --steps {params.steps}"
         " --max-copies {params.max_copies} --seed {wildcards.instance}"
