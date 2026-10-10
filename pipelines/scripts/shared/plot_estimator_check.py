@@ -16,7 +16,9 @@ import numpy as np  # noqa: E402
 LABELS = {'sorghum': 'sorghum (ANOVA)', 'miscanthus-central': 'Miscanthus Central (Henderson3)',
           'miscanthus-south': 'Miscanthus South (Henderson3)',
           'arabidopsis-0d': 'Arabidopsis 0 day (ANOVA)',
-          'arabidopsis-6d': 'Arabidopsis 6 day (ANOVA)'}
+          'arabidopsis-6d': 'Arabidopsis 6 day (ANOVA)',
+          'miscanthus-traits-central': 'Miscanthus Central H2-opt traits (Henderson3)',
+          'miscanthus-traits-south': 'Miscanthus South H2-opt traits (Henderson3)'}
 
 
 def main():
@@ -26,7 +28,7 @@ def main():
     parser.add_argument('--out', required=True)
     args = parser.parse_args()
 
-    fig, axes = plt.subplots(1, len(args.dataset), figsize=(3 * len(args.dataset), 3.2))
+    fig, axes = plt.subplots(1, len(args.dataset), figsize=(3 * len(args.dataset), 3.4))
     for ax, (name, estimator, lme4) in zip(np.atleast_1d(axes), args.dataset, strict=True):
         ours = np.load(estimator)['h2']
         theirs = np.genfromtxt(lme4, delimiter=',', skip_header=1, usecols=1)

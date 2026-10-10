@@ -1,16 +1,28 @@
 # The lme4 check of the heritability estimators (paper Fig. ANOVA): for the raw features of each
-# dataset, the pipeline's estimator (ANOVA or Henderson3) against an lme4 mixed model with the
-# same design (all design terms random). R and lme4 come from pipelines/envs/lme4.yaml.
-
-import numpy as np
+# dataset (and for the Miscanthus H2-opt traits), the pipeline's estimator (ANOVA or Henderson3) against an lme4 mixed model with the
+# same design (environment fixed; group and plots random). R and lme4 come from pipelines/envs/lme4.yaml.
 
 CHECK_OUT = OUT_ROOT / "estimator_check"
 SHARED_SCRIPTS = PIPELINE_DIR / "scripts" / "shared"
 CHECK_DATASETS = ["sorghum", "miscanthus-central", "miscanthus-south", "arabidopsis-0d",
-                  "arabidopsis-6d"]
+                  "arabidopsis-6d", "miscanthus-traits-central", "miscanthus-traits-south"]
+
+
+# lme4 model terms per dataset kind: group, other random terms, fixed (environment) terms; the
+# design columns that estimator_inputs.py writes.
+CHECK_TERMS = {"sorghum": ("genotype", "", "set"),
+               "miscanthus": ("family", "plot", "rep,column"),
+               "arabidopsis": ("accession", "", "year")}
+
+
+def check_terms(wildcards):
+    return CHECK_TERMS[wildcards.dataset.split("-")[0]]
 
 
 def check_inputs(wildcards):
+    if wildcards.dataset.startswith("miscanthus-traits"):
+        population = wildcards.dataset.split("-")[2]
+        return [str(MISC_OUT / population / "h2opt_hybrid" / f"date{d}.npz") for d in MISC_DATES]
     if wildcards.dataset.startswith("miscanthus"):
         return [str(OUT_ROOT / "miscanthus" / wildcards.dataset.split("-")[1] / "images.npy")]
     if wildcards.dataset.startswith("arabidopsis"):
@@ -19,6 +31,8 @@ def check_inputs(wildcards):
 
 
 def check_input_args(wildcards, input):
+    if wildcards.dataset.startswith("miscanthus-traits"):
+        return "--traits " + " ".join(input)
     if wildcards.dataset.startswith("miscanthus"):
         return f"--images {input[0]} --date {MISC['selection_date']}"
     if wildcards.dataset.startswith("arabidopsis"):
@@ -60,14 +74,15 @@ rule check_lme4_heritability:
     wildcard_constraints:
         dataset="|".join(CHECK_DATASETS),
     params:
-        group=lambda wc, input: str(np.load(input.npz)["group"]),
-        others=lambda wc, input: str(np.load(input.npz)["others"]),
+        group=lambda wc: check_terms(wc)[0],
+        random=lambda wc: check_terms(wc)[1],
+        fixed=lambda wc: check_terms(wc)[2],
     threads: 8
     conda:
         "../envs/lme4.yaml"
     shell:
         "Rscript {SHARED_SCRIPTS}/lme4_heritability.R {input.csv} {params.group}"
-        " '{params.others}' {output} {threads} > {log} 2>&1"
+        " '{params.random}' '{params.fixed}' {output} {threads} > {log} 2>&1"
 
 
 rule check_plot_estimators:

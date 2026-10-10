@@ -1,14 +1,16 @@
 """Raw features of one dataset with their design, for the lme4 check of the heritability estimator.
 
 Writes a .csv for lme4_heritability.R (the design columns, then one column per feature) and an
-.npz with the pipeline estimator's heritability of each feature on all individuals (h2) and the
-design columns the lme4 model uses (group, others):
+.npz with the pipeline estimator's heritability of each feature on all individuals (h2):
 - sorghum: the 2,151 wavelengths; ANOVA among genotypes with the field set as environment.
 - miscanthus-central, miscanthus-south: date --date, every third pixel in each direction of the
   6 channels (6 x 21 x 21 = 2,646 features, as the paper); Henderson3 among families, plots
   within families, rep and field column as environment.
 - arabidopsis-0d, arabidopsis-6d: the features summed over retention time (MS level x m/z,
   3,000), those with nonzero variance; ANOVA among accessions with the year as environment.
+- miscanthus-traits-central, miscanthus-traits-south: trait 1 of hybrid H2-opt (--traits, one
+  file per date) of every date and fold, on the fold's test plants only (missing elsewhere), as
+  the paper reports it; Henderson3 as for the pixels.
 
     python pipelines/scripts/shared/estimator_inputs.py --dataset sorghum --out-csv sorghum.csv \\
         --out sorghum.npz
@@ -22,7 +24,7 @@ from h2opt import anova_heritability, heritability
 from h2opt_analysis import arabidopsis, miscanthus, sorghum
 
 DATASETS = ('sorghum', 'miscanthus-central', 'miscanthus-south', 'arabidopsis-0d',
-            'arabidopsis-6d')
+            'arabidopsis-6d', 'miscanthus-traits-central', 'miscanthus-traits-south')
 
 
 def load(args):
@@ -33,6 +35,20 @@ def load(args):
         X = np.asarray(X, dtype=np.float64)
         design = {'genotype': genotypes, 'set': environment[:, 0]}
         return X, design, anova_heritability(X, genotypes, environment)
+    if args.dataset.startswith('miscanthus-traits'):
+        population = args.dataset.split('-')[2]
+        d = miscanthus.design(population)
+        traits = np.stack([np.load(f)['traits'][:, :, 0] for f in args.traits])  # dates x folds
+        X = np.full((len(d.families), traits.shape[0] * traits.shape[1]), np.nan)
+        h2 = np.zeros(X.shape[1])
+        for j, (date, fold) in enumerate(np.ndindex(traits.shape[:2])):
+            test = d.fold == fold
+            X[test, j] = traits[date, fold, test]
+            h2[j] = heritability(X[test, j], d.families[test], d.environment[test], d.plots[test],
+                                 'henderson3')[0]
+        design = {'family': d.families, 'plot': d.plots, 'rep': d.environment[:, 0],
+                  'column': d.environment[:, 1]}
+        return X, design, h2
     if args.dataset.startswith('miscanthus'):
         population = args.dataset.split('-')[1]
         d = miscanthus.design(population)
@@ -55,6 +71,7 @@ def main():
     parser.add_argument('--images', help='miscanthus: images.npy of the population')
     parser.add_argument('--date', type=int, help='miscanthus: index into miscanthus.DATES')
     parser.add_argument('--features', help='arabidopsis: features.npy')
+    parser.add_argument('--traits', nargs='+', help='miscanthus-traits: one traits file per date')
     parser.add_argument('--out-csv', required=True)
     parser.add_argument('--out', required=True)
     args = parser.parse_args()
@@ -63,10 +80,9 @@ def main():
     names = list(design)
     header = names + [f'f{j}' for j in range(X.shape[1])]
     table = np.column_stack([np.asarray(design[c]).astype(str) for c in names]
-                            + [np.char.mod('%.9g', X)])
+                            + [np.where(np.isnan(X), 'NA', np.char.mod('%.9g', X))])
     np.savetxt(args.out_csv, table, fmt='%s', delimiter=',', header=','.join(header), comments='')
-    np.savez(args.out, h2=np.asarray(h2, dtype=np.float64), group=names[0],
-             others=','.join(names[1:]))
+    np.savez(args.out, h2=np.asarray(h2, dtype=np.float64))
     print(f'{args.dataset}: {X.shape[0]} individuals, {X.shape[1]} features, design {names}')
 
 
