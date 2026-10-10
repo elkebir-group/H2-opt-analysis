@@ -1,8 +1,8 @@
 """Train linear H2-opt on one Arabidopsis treatment for the accession folds, all folds at once.
 
 One linear model per trait and fold, and normal input noise with the standard deviation that
-choose_noise.py chose for that fold (one for all traits). The paper's L1 penalty (--penalty l1
-1e-4, from the config) but not its clipping, so the loss is the heritability that the evaluation
+choose_noise.py chose for that fold (one for all traits). An L1 penalty (--penalty l1 1e-6, from
+the config) but not the paper's clipping, so the loss is the heritability that the evaluation
 scores plus the penalty. Trained with h2opt.train's
 default optimizer (Adam), all folds together by h2opt.train_models. Writes, per fold, the model
 (.pt) and the traits of all samples of the treatment, uncorrelated on the training samples (.npz,
@@ -10,7 +10,7 @@ array 'traits').
 
     python pipelines/scripts/arabidopsis/train_h2opt.py --features features.npy --treatment 6d \\
         --folds 0 1 --noise noise.npz --out-traits fold0.npz fold1.npz \\
-        --out-models fold0.pt fold1.pt --steps 16000 --traits 10 --seed 0 --penalty l1 1e-4 \\
+        --out-models fold0.pt fold1.pt --steps 16000 --traits 10 --seed 0 --penalty l1 1e-6 \\
         --device cuda
 """
 

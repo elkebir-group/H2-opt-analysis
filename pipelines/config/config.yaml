@@ -26,10 +26,10 @@ sorghum:
     traits: 10
     steps: 320000
     device: cuda
-    # The paper's penalty (main.tex, appendix "Machine learning models and regularization"; the
-    # paper's code divides it by the spread of the trait, as h2opt.train does): total variation over
-    # wavelength, weight 1e-4. The spectra are the paper's, unscaled, so the weight carries over.
-    penalty: [tv, 1.0e-4]
+    # Total variation penalty over wavelength (the paper's kind; the paper's code divides it by the
+    # spread of the trait, as h2opt.train does), weight 1e-6 for every dataset (PI). The paper's
+    # 1e-4 is too strong when training runs to convergence (see arabidopsis.h2opt.penalty).
+    penalty: [tv, 1.0e-6]
   # Baselines fitted once per fold (baseline.py) and evaluated against every source;
   # traits must be at least the traits of every source.
   baselines:
@@ -141,9 +141,11 @@ arabidopsis:
     traits: 10
     steps: 16000
     device: cuda
-    # The paper's penalty (as for sorghum): L1, weight 1e-4. The features are the paper's (binned
-    # intensities over their largest value), so the weight carries over.
-    penalty: [l1, 1.0e-4]
+    # L1 penalty (the paper's kind), weight 1e-6 (PI). The paper's 1e-4 is too strong when training
+    # runs to convergence (the paper's code stopped after about 2,000 RMSprop steps): on 6d fold 0
+    # trait 1 it lowers held-out h2 (0.99 -> 0.87, 0.59 at 64k steps) and picks other masses.
+    # 1e-6 keeps h2 and gives about 150 nonzero MS1 coefficients (mean/max |w| 0.0002).
+    penalty: [l1, 1.0e-6]
   # GEMMA LMM of the per-accession means of H2-opt traits, per treatment and fold.
   gwas:
     traits: 10

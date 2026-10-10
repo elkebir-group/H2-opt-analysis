@@ -12,7 +12,7 @@ selection rules without training again; and a figure of the choices.
 
     python pipelines/scripts/arabidopsis/choose_noise.py --features features.npy --treatment 6d \\
         --folds 0 1 2 3 4 --out noise.npz --out-traits noise_traits.npz --figure noise.pdf \\
-        --steps 16000 --penalty l1 1e-4 --device cuda
+        --steps 16000 --penalty l1 1e-6 --device cuda
 """
 
 import argparse

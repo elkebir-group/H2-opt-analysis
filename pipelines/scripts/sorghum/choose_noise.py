@@ -11,7 +11,7 @@ splits x levels x plants), to examine other selection rules without training aga
 the choices.
 
     python pipelines/scripts/sorghum/choose_noise.py --folds 0 1 2 --out noise.npz \\
-        --out-traits noise_traits.npz --figure noise.pdf --steps 10000 --penalty tv 1e-4 \\
+        --out-traits noise_traits.npz --figure noise.pdf --steps 10000 --penalty tv 1e-6 \\
         --device cuda
 """
 

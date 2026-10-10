@@ -1,8 +1,8 @@
 """Train linear H2-opt on sorghum for the paper's genotype folds, all folds at once.
 
 One linear model per trait and fold, and normal input noise with the standard deviation that
-choose_noise.py chose for that fold (one for all traits). The paper's total variation penalty
-over wavelength (--penalty tv 1e-4, from the config) but not its clipping of the traits at 2, so
+choose_noise.py chose for that fold (one for all traits). A total variation penalty over
+wavelength (--penalty tv 1e-6, from the config), but not the paper's clipping of the traits at 2, so
 the loss is the heritability that the evaluation scores plus the penalty.
 Trained with h2opt.train's default optimizer (Adam), all folds together by h2opt.train_models.
 Writes, per fold, the model (.pt) and the traits of all plants, uncorrelated on the training
@@ -10,7 +10,7 @@ plants (.npz, array 'traits').
 
     python pipelines/scripts/sorghum/train_h2opt.py --folds 0 1 --noise noise.npz \\
         --out-traits fold0.npz fold1.npz --out-models fold0.pt fold1.pt --steps 10000 \\
-        --traits 10 --seed 0 --penalty tv 1e-4 --device cuda
+        --traits 10 --seed 0 --penalty tv 1e-6 --device cuda
 """
 
 import argparse
