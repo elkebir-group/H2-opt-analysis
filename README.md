@@ -202,13 +202,19 @@ under `data/derived/arabidopsis/{treatment}/`.
 | `arabi_score_heritability` | `heritability.npz` | train and test heritability of every method, fold and trait |
 | `arabi_plot_heritability` | `figures/heritability_{test,train}.pdf` | heritability per trait, H2-opt against the baselines (Fig. arabiResult b and its train counterpart) |
 
-Peak lists for pathway enrichment are a separate target, `arabidopsis_enrichment_inputs`. Each
-list goes to MetaboAnalyst functional analysis (mummichog, web tool, default settings) by hand.
+Pathway enrichment is a separate target, `arabidopsis_pathway_enrichment`, run only on request.
+It runs MetaboAnalyst's functional analysis (MS peaks to pathways, mummichog v2) offline with
+MetaboAnalystR, in its own conda environment (`pipelines/envs/metaboanalyst.yaml`; the package is
+installed from GitHub at a pinned commit by `metaboanalyst.post-deploy.sh`). The settings are in
+the config (`arabidopsis.pathways`). The peak lists alone are the target
+`arabidopsis_enrichment_inputs`.
 
 | Rule | Output | Content |
 |---|---|---|
 | `arabi_prepare_precise_masses` | `precise_masses.npz` | precise m/z, mean retention time and intensity SD of each precise mass in the feature bins (streams `massIntensitiesPrecise2_{treatment}.npz`, 36.6 GB; about 22 GB of memory) |
 | `arabi_enrichment_inputs` | `enrichment/trait{k}.txt` | the 10,000 precise masses with the largest \|MS1 coefficient x intensity SD\| per H2-opt trait, fold 0, in the paper's format |
+| `arabi_download_pathway_library` | `../pathway_library/ath_kegg.qs` | the mummichog library from the MetaboAnalyst server (the log records the date and checksum) |
+| `arabi_pathway_enrichment` | `enrichment/trait{k}_pathways.csv` | MetaboAnalyst's pathway table of one peak list: the first 500 peaks are the significant peaks, all peaks the reference |
 
 The GWAS is a separate target, `arabidopsis_gwas_all`, run only on request. The genotypes are the
 250k SNP panel `metab/metabData_Alex/call_method_75/call_method_75_TAIR8` with its full sample list

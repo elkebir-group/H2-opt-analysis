@@ -1,0 +1,64 @@
+# R with MetaboAnalystR, for the offline MS peaks to pathways analysis (mummichog) of the
+# Arabidopsis H2-opt traits (pathway_enrichment.R). MetaboAnalystR is not packaged in conda:
+# metaboanalyst.post-deploy.sh installs it from GitHub at a pinned commit; these are its
+# dependencies (DESCRIPTION Imports, and the packages its mummichog code loads at run time).
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-base=4.4
+  - c-compiler
+  - cxx-compiler
+  - make
+  - curl
+  - r-callr
+  - r-cairo
+  - r-caret
+  - r-crmn
+  - r-data.table
+  - r-dplyr
+  - r-effsize
+  - r-fitdistrplus
+  - r-ggplot2
+  - r-ggrepel
+  - r-glasso
+  - r-gplots
+  - r-gridextra
+  - r-httr
+  - r-igraph
+  - r-jsonlite
+  - r-lattice
+  - r-mass
+  - r-memoise
+  - r-pheatmap
+  - r-plotly
+  - r-pls
+  - r-plyr
+  - r-proc
+  - r-progress
+  - r-pryr
+  - r-purrr
+  - r-qs2
+  - r-rcolorbrewer
+  - r-rcpp
+  - r-reshape
+  - r-rjson
+  - r-rjsonio
+  - r-rlang
+  - r-rserve
+  - r-rsqlite
+  - r-scales
+  - r-splitstackshape
+  - r-stringr
+  - r-tibble
+  - r-vctrs
+  - r-xtable
+  - bioconductor-biocparallel
+  - bioconductor-edger
+  - bioconductor-fgsea
+  - bioconductor-graph
+  - bioconductor-impute
+  - bioconductor-limma
+  - bioconductor-pcamethods
+  - bioconductor-rbgl
+  - bioconductor-siggenes

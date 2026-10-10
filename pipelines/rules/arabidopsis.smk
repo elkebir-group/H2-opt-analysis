@@ -293,8 +293,8 @@ rule arabi_paper_gwas:
         " --title '{wildcards.treatment}, fold {ARABI_PAPER_FOLD}' --out {output.pdf} > {log} 2>&1"
 
 
-# Peak lists for pathway enrichment (MetaboAnalyst functional analysis, web tool, default
-# settings): upload each trait<k>.txt by hand. Run only on request.
+# Peak lists for pathway enrichment (MetaboAnalyst functional analysis): the input of
+# arabidopsis_pathway_enrichment, or upload each trait<k>.txt to the web tool. Run only on request.
 rule arabidopsis_enrichment_inputs:
     input:
         expand(str(ARABI_OUT / "{treatment}" / "enrichment" / "trait1.txt"),
@@ -332,3 +332,46 @@ rule arabi_enrichment_inputs:
         " --coefficients {input.coefficients} --peaks {ARABI[enrichment_peaks]}"
         " --out-dir {params.out_dir} > {log} 2>&1"
 
+
+
+# MS peaks to pathways of each peak list, offline with MetaboAnalystR, with the settings of the
+# paper's web runs (config arabidopsis.pathways). Not part of arabidopsis_all: run only on request.
+ARABI_PATHWAYS = ARABI["pathways"]
+ARABI_MUMMICHOG_LIBRARY = str(ARABI_OUT / "pathway_library" / f"{ARABI_PATHWAYS['library']}.qs")
+
+
+rule arabidopsis_pathway_enrichment:
+    input:
+        expand(str(ARABI_OUT / "{treatment}" / "enrichment" / "trait{k}_pathways.csv"),
+               treatment=ARABI["treatments"], k=range(1, ARABI["h2opt"]["traits"] + 1)),
+
+
+# The library changes on the server over time: the log records the download date.
+rule arabi_download_pathway_library:
+    output:
+        ARABI_MUMMICHOG_LIBRARY,
+    log:
+        str(ARABI_OUT / "pathway_library" / "download.log"),
+    params:
+        url=f"https://www.metaboanalyst.ca/resources/libs/mummichog/{ARABI_PATHWAYS['library']}.qs",
+    shell:
+        "(date -u && curl -sSfL {params.url} -o {output} && sha256sum {output}) > {log} 2>&1"
+
+
+rule arabi_pathway_enrichment:
+    input:
+        peaks=str(ARABI_OUT / "{treatment}" / "enrichment" / "trait{k}.txt"),
+        library=ARABI_MUMMICHOG_LIBRARY,
+    output:
+        str(ARABI_OUT / "{treatment}" / "enrichment" / "trait{k}_pathways.csv"),
+    log:
+        str(ARABI_OUT / "{treatment}" / "enrichment" / "trait{k}_pathways.log"),
+    params:
+        settings=" ".join(str(ARABI_PATHWAYS[key])
+                          for key in ("mode", "ppm", "primary_ion", "retention_time")),
+    threads: 1
+    conda:
+        "../envs/metaboanalyst.yaml"
+    shell:
+        "Rscript {ARABI_SCRIPTS}/pathway_enrichment.R {input.peaks} {input.library} {output}"
+        " {params.settings} > {log} 2>&1"

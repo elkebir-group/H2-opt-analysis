@@ -152,3 +152,16 @@ arabidopsis:
     threads: 1   # OpenBLAS threads per GEMMA run (its per-SNP fit uses one core)
   # Masses per peak list for pathway enrichment (enrichment_inputs.py), as the paper.
   enrichment_peaks: 10000
+  # MS peaks to pathways of each peak list (pathway_enrichment.R: MetaboAnalystR, mummichog v2).
+  # The settings that come closest to the paper's results (web runs): on the paper's 6d trait 1
+  # peak list, these give its 18 pathways with the same total hits, the same top pathways and the
+  # same significant hits in 14 of 18 (the web form's defaults, positive mode without primary ions,
+  # share no pathway hit counts with it). The rest of the difference is probably from MetaboAnalyst
+  # versions. library: the mummichog library (KEGG, Arabidopsis thaliana); retention_time:
+  # seconds (the lists' rt) or no.
+  pathways:
+    library: ath_kegg
+    mode: negative
+    ppm: 10
+    primary_ion: "yes"
+    retention_time: seconds
