@@ -17,9 +17,9 @@ sorghum:
   # H2-opt retrained (train_h2opt.py, all folds in one job), trained with Adam (h2opt.train's
   # default optimizer), no clipping, with normal input noise whose level is chosen per fold, one for
   # all traits, by held-out heritability on the fold's training plants (choose_noise.py,
-  # h2opt.selection.select_noise_level: 5 group folds, best mean held-out heritability of the first
-  # trait) with the same steps. The raw spectra are badly conditioned and gradient training converges slowly: steps
-  # is where doubling it changes the train heritability of traits 1-3 by at most about 0.01
+  # h2opt.selection.select_noise_level: 20 validation splits of the genotypes, the highest level
+  # within one SE of the best held-out heritability of the first trait) with the same steps. The
+  # raw spectra are badly conditioned and gradient training converges slowly: steps is where doubling it changes the train heritability of traits 1-3 by at most about 0.01
   # (fold 0, noise level 0.01: 160k -> 320k steps changes it by 0.002, 0.007, 0.010).
   h2opt:
     traits: 10
@@ -43,7 +43,8 @@ simulation:
   traits: 5
   # H2-opt trained with Adam, no clipping, and normal input noise whose level is chosen per
   # instance on the training plants (choose_noise.py: h2opt.selection.select_noise_level, the
-  # best held-out heritability of trait 1 over 20 splits of the lines, with the same steps). PCH
+  # highest level within one SE of the best held-out heritability of trait 1 over 20 splits of
+  # the lines, with the same steps). PCH
   # chooses its ridge by the same procedure and rule (PCH.tune). noise_sweep.py retrains H2-opt
   # at every level of h2opt.selection.NOISE_LEVELS for the sensitivity figure.
   h2opt:
@@ -77,7 +78,7 @@ image_simulation:
     steps: 10000
     device: cuda
   # The hybrid with h2opt.ImageConvModel. max_copies: models trained at once (GPU memory); the
-  # result does not depend on it (the copies of one split share every noise draw).
+  # copies of one split train together and share every noise draw.
   hybrid:
     linear_steps: 10000
     steps: 1000
@@ -120,8 +121,9 @@ arabidopsis:
   traits: 10
   baselines: [pca, genetic_pca, pch, max_features]
   # H2-opt: h2opt.LinearModel with ANOVA heritability, Adam, normal input noise, no clipping and no
-  # L1 penalty. The level is one per fold for all traits, chosen by choose_noise.py on 5
-  # validation splits of the training accessions from h2opt.selection.NOISE_LEVELS. steps is
+  # L1 penalty. The level is one per fold for all traits, chosen by choose_noise.py on 20
+  # validation splits of the training accessions from h2opt.selection.NOISE_LEVELS (the highest
+  # level within one SE of the best held-out heritability of trait 1). steps is
   # where doubling it changes the train heritability of traits 1-3 by at most about 0.01 (fold 0,
   # levels 0.01, 0.1 and 1, both treatments: 16k -> 32k steps changes it by at most 0.001; at
   # levels 0.01 and 0.1 the train heritability is 1.000 from about 8k steps).

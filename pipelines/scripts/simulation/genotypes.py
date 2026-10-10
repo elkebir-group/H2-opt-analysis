@@ -24,8 +24,9 @@ def main():
     located = gwas.read_bim(sorghum.GENOTYPES)[:, [0, 3]].astype(np.int64)
     qtns = simulation.qtns(args.instance).reshape(-1, 2)
     is_qtn = (located[:, None, :] == qtns[None, :, :]).all(axis=2).any(axis=1)
-    if is_qtn.sum() != len(np.unique(qtns, axis=0)):
-        raise ValueError(f'{is_qtn.sum()} QTNs found in the .bim, expected {len(qtns)}')
+    expected = len(np.unique(qtns, axis=0))
+    if is_qtn.sum() != expected:
+        raise ValueError(f'{is_qtn.sum()} QTNs found in the .bim, expected {expected}')
 
     gwas.write_snp_subset(sorghum.GENOTYPES, ~is_qtn, args.out_prefix)
     np.save(args.out_pcs, gwas.genotype_pcs(args.out_prefix, args.pcs))

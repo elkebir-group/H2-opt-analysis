@@ -55,7 +55,7 @@ rule arabi_choose_linear_h2opt_noise:
         folds=" ".join(str(f) for f in ARABI_FOLDS),
     threads: 2
     resources:
-        gpu=1,
+        gpu=lambda wc: 1 if ARABI["h2opt"]["device"] == "cuda" else 0,
     shell:
         "python -u {ARABI_SCRIPTS}/choose_noise.py --features {input}"
         " --treatment {wildcards.treatment} --folds {params.folds} --out {output.noise}"
@@ -77,7 +77,7 @@ rule arabi_train_linear_h2opt:
         folds=" ".join(str(f) for f in ARABI_FOLDS),
     threads: 2
     resources:
-        gpu=1,
+        gpu=lambda wc: 1 if ARABI["h2opt"]["device"] == "cuda" else 0,
     shell:
         "python -u {ARABI_SCRIPTS}/train_h2opt.py --features {input.features}"
         " --treatment {wildcards.treatment} --folds {params.folds} --noise {input.noise}"

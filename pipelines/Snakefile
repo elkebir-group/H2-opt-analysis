@@ -36,3 +36,4 @@ rule all:
         rules.simulation_all.input,
         rules.miscanthus_all.input,
         rules.arabidopsis_all.input,
+        rules.image_simulation_all.input,

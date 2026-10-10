@@ -36,7 +36,7 @@ def main():
     parser.add_argument('--steps', type=int, required=True, help='steps of the CNN branch')
     parser.add_argument('--seed', type=int, required=True)
     parser.add_argument('--max-copies', type=int,
-                        help='models trained at once (GPU memory only; same result)')
+                        help='models trained at once (GPU memory)')
     parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
     args = parser.parse_args()
 

@@ -8,7 +8,7 @@ the paper's metric (|r| of true trait t with synthetic trait t), the best |r| ov
 synthetic traits, the mean absolute deviation of the test heritability of synthetic traits 1-3
 from the true traits, and the mean test heritability of synthetic traits 4-5.
 
-    python pipelines/scripts/simulation/evaluate.py --spectra s0.npz ... s9.npz \\
+    python pipelines/scripts/simulation/evaluate.py --measurements s0.npz ... s9.npz \\
         --method pca p0.npz ... p9.npz [--method ...] --out evaluation.npz
 """
 

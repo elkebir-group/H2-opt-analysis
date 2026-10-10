@@ -16,7 +16,7 @@ test plants take a small part in the choice of the one level. Writes an .npz (da
 levels; chosen: the level; noise_sd: folds x dates; scores: folds x splits x levels).
 
     python pipelines/scripts/miscanthus/choose_noise.py --population central --images images.npy \\
-        --date 7 --out noise.npz --steps 10000 --max-copies 105 --device cuda
+        --date 2 --out noise.npz --steps 10000 --max-copies 105 --device cuda
 """
 
 import argparse
@@ -42,7 +42,7 @@ def main():
     parser.add_argument('--out', required=True)
     parser.add_argument('--steps', type=int, required=True)
     parser.add_argument('--max-copies', type=int,
-                        help='models trained at once (GPU memory only; same result)')
+                        help='models trained at once (GPU memory; a multiple of the levels)')
     parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
     args = parser.parse_args()
 
