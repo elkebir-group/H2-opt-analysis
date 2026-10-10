@@ -65,7 +65,7 @@ simulation:
   gwas:
     pcs: 5
     jobs: 3      # traits run at once
-    threads: 2   # OpenBLAS threads per GEMMA run
+    threads: 1   # OpenBLAS threads per GEMMA run (its per-SNP fit uses one core)
   # The GWAS shown as Manhattan and QQ plots.
   example: {instance: 0, method: h2opt}
 
