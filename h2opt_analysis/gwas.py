@@ -43,6 +43,30 @@ def read_bim(prefix):
     return np.loadtxt(f'{prefix}.bim', dtype=str, ndmin=2)
 
 
+def check_plink_set(prefix):
+    """Raise unless the .bed has the size that the .fam and .bim give: 3 + ceil(n / 4) bytes per
+    SNP. GEMMA does not check this; with a .fam of the wrong individuals it reads shifted rows."""
+    n, m = len(read_fam(prefix)), len(read_bim(prefix))
+    size = Path(f'{prefix}.bed').stat().st_size
+    if size != 3 + (n + 3) // 4 * m:
+        raise ValueError(f'{prefix}.bed has {size} bytes, not 3 + {(n + 3) // 4} x {m} for the '
+                         f'{n} individuals of the .fam and {m} SNPs of the .bim')
+
+
+def write_plink_set(prefix, fam, out_prefix):
+    """PLINK set out_prefix with the .bed of prefix (symlinked), its .bim with every chromosome
+    that is not an integer (e.g. unplaced scaffolds) set to 0, and the .fam file fam."""
+    out_prefix = Path(out_prefix)
+    link = Path(f'{out_prefix}.bed')
+    link.unlink(missing_ok=True)
+    link.symlink_to(Path(f'{prefix}.bed').resolve())
+    bim = read_bim(prefix)
+    bim[~np.char.isdigit(bim[:, 0]), 0] = '0'
+    np.savetxt(f'{out_prefix}.bim', bim, fmt='%s', delimiter='\t')
+    shutil.copyfile(fam, f'{out_prefix}.fam')
+    check_plink_set(out_prefix)
+
+
 def _bed_blocks(prefix, n, chunk=20000):
     """Raw SNP rows of the .bed file of n individuals, up to chunk SNPs at a time, each an
     (SNPs, bytes per SNP) uint8 array."""
@@ -84,6 +108,7 @@ def genotype_pcs(prefix, n_pcs=5, individuals=None, chunk=20000):
     Missing genotypes are set to the SNP mean. individuals (boolean, .fam order) selects the
     individuals; the others get NaN.
     """
+    check_plink_set(prefix)
     n = len(read_fam(prefix))
     keep = np.ones(n, bool) if individuals is None else np.asarray(individuals, bool)
     gram = np.zeros((keep.sum(), keep.sum()))
@@ -161,6 +186,7 @@ def run_gemma(prefix, phenotypes, workdir, covariates=None, intercept=True, jobs
     allele1, allele0, af (per SNP) and beta, se, l_remle, p_wald (traits x SNPs).
     """
     prefix, workdir = Path(prefix).resolve(), Path(workdir)
+    check_plink_set(prefix)
     workdir.mkdir(parents=True, exist_ok=True)
     binary = binary or gemma_binary()
     Y = np.asarray(phenotypes, dtype=np.float64).reshape(len(phenotypes), -1)

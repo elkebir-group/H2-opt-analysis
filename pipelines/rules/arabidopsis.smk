@@ -31,6 +31,50 @@ rule arabidopsis_all:
                treatment=ARABI["treatments"]),
 
 
+# GWAS of the H2-opt traits, every treatment and fold. Run only on request.
+rule arabidopsis_gwas_all:
+    input:
+        expand(str(ARABI_OUT / "{treatment}" / "gwas" / "fold{fold}.npz"),
+               treatment=ARABI["treatments"], fold=ARABI_FOLDS),
+
+
+rule arabi_prepare_genotypes:
+    output:
+        multiext(str(ARABI_OUT / "{treatment}" / "gwas" / "genotypes"), ".bed", ".bim", ".fam"),
+        pcs=str(ARABI_OUT / "{treatment}" / "gwas" / "genotype_pcs.npy"),
+    log:
+        str(ARABI_OUT / "{treatment}" / "gwas" / "genotypes.log"),
+    params:
+        prefix=lambda wc: str(ARABI_OUT / wc.treatment / "gwas" / "genotypes"),
+    threads: 2
+    shell:
+        "python -u {ARABI_SCRIPTS}/genotypes.py --treatment {wildcards.treatment}"
+        " --out {params.prefix} --out-pcs {output.pcs} --pcs {ARABI[gwas][pcs]} > {log} 2>&1"
+
+
+rule arabi_run_gwas:
+    input:
+        traits=lambda wc: arabi_traits(wc.treatment, "h2opt", wc.fold),
+        genotypes=multiext(str(ARABI_OUT / "{treatment}" / "gwas" / "genotypes"),
+                           ".bed", ".bim", ".fam"),
+        pcs=str(ARABI_OUT / "{treatment}" / "gwas" / "genotype_pcs.npy"),
+    output:
+        str(ARABI_OUT / "{treatment}" / "gwas" / "fold{fold}.npz"),
+    log:
+        str(ARABI_OUT / "{treatment}" / "gwas" / "fold{fold}.log"),
+    wildcard_constraints:
+        fold=r"\d+",
+    params:
+        prefix=lambda wc: str(ARABI_OUT / wc.treatment / "gwas" / "genotypes"),
+        work=lambda wc: str(ARABI_OUT / wc.treatment / "gwas" / "work" / f"fold{wc.fold}"),
+    threads: ARABI["gwas"]["jobs"] * ARABI["gwas"]["threads"]
+    shell:
+        "python -u {ARABI_SCRIPTS}/gwas.py --treatment {wildcards.treatment}"
+        " --h2opt-traits {input.traits} --genotypes {params.prefix} --pcs {input.pcs}"
+        " --out {output} --work {params.work} --traits {ARABI[gwas][traits]}"
+        " --jobs {ARABI[gwas][jobs]} --threads {ARABI[gwas][threads]} > {log} 2>&1"
+
+
 rule arabi_prepare_features:
     output:
         ARABI_FEATURES,

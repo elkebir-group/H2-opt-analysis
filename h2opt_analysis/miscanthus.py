@@ -20,6 +20,12 @@ N_FOLDS = 5
 INPUTS = data('miscPlant', 'inputs')
 _TABLES = {'central': 'Miscanthus_C.tsv', 'south': 'Miscanthus_S.tsv'}
 _IMAGES = {'central': 'all.npz', 'south': 'south_all.npz'}
+# PLINK sets of the genotyped plants. The .fam beside each .bed was overwritten with a subset by
+# the original GWAS code; the full sample list of the .bed is the _copy.fam (GENOTYPE_SAMPLES).
+GENOTYPES = {'central': data('miscPlant', 'SNP', 'bed', 'MsiC_annotated'),
+             'south': data('miscPlant', 'SNP', 'bed', 'MsiS_annotated')}
+GENOTYPE_SAMPLES = {p: GENOTYPES[p].with_name(GENOTYPES[p].name + '_copy.fam')
+                    for p in POPULATIONS}
 
 
 def plant_table(population):
@@ -57,6 +63,23 @@ def design(population):
     fold = np.random.RandomState(1).randint(N_FOLDS, size=len(family))
     return types.SimpleNamespace(keep=keep, families=family[keep], plots=plot[keep],
                                  environment=environment[keep], fold=fold[keep])
+
+
+def genotype_rows(population, fam):
+    """Row in the .fam file fam of each kept plant (design order), -1 for a plant without
+    genotypes. A sample ID is <plate well>_<population>_<plot>_<plant>, e.g. B2FP10D_MsiC_213_5.
+
+    A plant with two samples (9 in Central, 1 in South) gets -1: the two samples of each such
+    plant agree at 77-92% of SNPs, no more than two random plants (85%), so the label of at least
+    one of them is wrong and neither can be trusted."""
+    table = np.loadtxt(plant_table(population), delimiter='\t', dtype=str, skiprows=1)
+    plants = np.char.add(np.char.add(np.char.strip(table[:, 2]), '_'), np.char.strip(table[:, 3]))
+    plants = plants[design(population).keep]
+    samples = np.loadtxt(fam, dtype=str, usecols=0, ndmin=1)
+    rows = {}
+    for r, sample in enumerate(samples):
+        rows.setdefault('_'.join(sample.split('_')[2:]), []).append(r)
+    return np.array([rows[p][0] if len(rows.get(p, [])) == 1 else -1 for p in plants])
 
 
 def clip_artifacts(images):

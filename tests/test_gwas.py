@@ -89,3 +89,14 @@ def test_line_means():
     np.testing.assert_allclose(out[0], Z[3])
     np.testing.assert_allclose(out[2], Z[:2].mean(axis=0))
     assert np.isnan(out[[1, 3]]).all()
+
+
+def test_plink_set_rejects_wrong_fam(tmp_path):
+    G = genotypes()
+    write_plink(tmp_path / 'g', G)
+    np.savetxt(tmp_path / 'subset.fam', [[f'i{i}', f'i{i}', 0, 0, 0, -9] for i in range(40)],
+               fmt='%s')
+    with pytest.raises(ValueError, match='bytes'):
+        gwas.write_plink_set(tmp_path / 'g', tmp_path / 'subset.fam', tmp_path / 's')
+    gwas.write_plink_set(tmp_path / 'g', tmp_path / 'g.fam', tmp_path / 's')
+    assert np.array_equal(gwas.read_bed(tmp_path / 's'), G, equal_nan=True)

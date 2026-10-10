@@ -25,6 +25,7 @@ POOLED = {f'6909-{k}': '6909' for k in range(1, 10)}
 # PLINK set of the genotyped accessions (call method 75, TAIR8). The .fam beside it was overwritten
 # with a subset by the original GWAS code; the full sample list of the .bed is the _copy.fam.
 GENOTYPES = data('metab', 'metabData_Alex', 'call_method_75', 'call_method_75_TAIR8')
+GENOTYPE_SAMPLES = GENOTYPES.with_name(GENOTYPES.name + '_copy.fam')
 
 
 def labels():
@@ -60,3 +61,11 @@ def load(features_path, treatment):
 def folds(accessions, seed=0):
     """Fold (0-4) of each sample; all samples of an accession share a fold."""
     return per_group(accessions, lambda c: np.random.RandomState(seed).randint(N_FOLDS, size=c))
+
+
+def genotype_rows(accessions, fam):
+    """Row in the .fam file fam of the accession of each sample, -1 for an accession without
+    genotypes. The sample IDs of the .fam are accession numbers."""
+    samples = np.loadtxt(fam, dtype=str, usecols=0, ndmin=1)
+    row = {sample: r for r, sample in enumerate(samples)}
+    return np.array([row.get(a, -1) for a in np.asarray(accessions).astype(str)])

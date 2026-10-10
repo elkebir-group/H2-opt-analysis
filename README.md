@@ -149,6 +149,16 @@ capped at 1). The config lists the populations. All outputs are under
 | `misc_score_heritability` | `heritability.npz` | train and test Henderson3 of every method, date and fold |
 | `misc_plot_heritability` | `figures/heritability.{pdf,png}` | test heritability per date, hybrid H2-opt against the baselines |
 
+The GWAS is a separate target, `miscanthus_gwas_all`, run only on request. The genotypes are the
+PLINK sets `miscPlant/SNP/bed/Msi{C,S}_annotated` with their full sample lists (`_copy.fam`; the
+`.fam` beside each `.bed` is a subset written by the original code, and GEMMA reads shifted
+genotypes with it). Plants with two conflicting samples are left out.
+
+| Rule | Output | Content |
+|---|---|---|
+| `misc_prepare_genotypes` | `gwas/genotypes.{bed,bim,fam}`, `gwas/genotype_pcs.npy` | the PLINK set (unplaced scaffolds as chromosome 0) and 5 genotype PCs of the genotyped plants with traits |
+| `misc_run_gwas` | `gwas/date{d}.npz` | GEMMA LMM of trait 1 of hybrid H2-opt, one run per fold (intercept + 5 PCs) |
+
 ### Arabidopsis
 
 LC-MS metabolomics of 280 accessions, 263 in 0d and 277 in 6d, all genotyped
@@ -170,6 +180,15 @@ under `data/derived/arabidopsis/{treatment}/`.
 | `arabi_train_baselines` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | the baselines of one fold; PCH's ridge by `PCH.tune` |
 | `arabi_score_heritability` | `heritability.npz` | train and test heritability of every method, fold and trait |
 | `arabi_plot_heritability` | `figures/heritability_{test,train}.pdf` | heritability per trait, H2-opt against the baselines (Fig. arabiResult b and its train counterpart) |
+
+The GWAS is a separate target, `arabidopsis_gwas_all`, run only on request. The genotypes are the
+250k SNP panel `metab/metabData_Alex/call_method_75/call_method_75_TAIR8` with its full sample list
+(`_copy.fam`; the `.fam` beside the `.bed` is a subset, as for Miscanthus).
+
+| Rule | Output | Content |
+|---|---|---|
+| `arabi_prepare_genotypes` | `gwas/genotypes.{bed,bim,fam}`, `gwas/genotype_pcs.npy` | the PLINK set and 5 genotype PCs of the treatment's accessions |
+| `arabi_run_gwas` | `gwas/fold{k}.npz` | GEMMA LMM of the per-accession means of H2-opt traits 1-10 (intercept + 5 PCs) |
 
 Each script under `pipelines/scripts/` also runs by hand; its docstring gives
 the arguments.

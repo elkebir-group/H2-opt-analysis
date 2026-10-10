@@ -38,6 +38,50 @@ rule miscanthus_all:
                population=MISC_POPULATIONS),
 
 
+# GWAS of trait 1 of hybrid H2-opt, every date and fold. Run only on request.
+rule miscanthus_gwas_all:
+    input:
+        expand(str(MISC_OUT / "{population}" / "gwas" / "date{date}.npz"),
+               population=MISC_POPULATIONS, date=MISC_DATES),
+
+
+rule misc_prepare_genotypes:
+    output:
+        multiext(str(MISC_OUT / "{population}" / "gwas" / "genotypes"), ".bed", ".bim", ".fam"),
+        pcs=str(MISC_OUT / "{population}" / "gwas" / "genotype_pcs.npy"),
+    log:
+        str(MISC_OUT / "{population}" / "gwas" / "genotypes.log"),
+    params:
+        prefix=lambda wc: str(MISC_OUT / wc.population / "gwas" / "genotypes"),
+    threads: 2
+    shell:
+        "python -u {MISC_SCRIPTS}/genotypes.py --population {wildcards.population}"
+        " --out {params.prefix} --out-pcs {output.pcs} --pcs {MISC[gwas][pcs]} > {log} 2>&1"
+
+
+rule misc_run_gwas:
+    input:
+        traits=str(MISC_OUT / "{population}" / "h2opt_hybrid" / "date{date}.npz"),
+        genotypes=multiext(str(MISC_OUT / "{population}" / "gwas" / "genotypes"),
+                           ".bed", ".bim", ".fam"),
+        pcs=str(MISC_OUT / "{population}" / "gwas" / "genotype_pcs.npy"),
+    output:
+        str(MISC_OUT / "{population}" / "gwas" / "date{date}.npz"),
+    log:
+        str(MISC_OUT / "{population}" / "gwas" / "date{date}.log"),
+    wildcard_constraints:
+        date=r"\d+",
+    params:
+        prefix=lambda wc: str(MISC_OUT / wc.population / "gwas" / "genotypes"),
+        work=lambda wc: str(MISC_OUT / wc.population / "gwas" / "work" / f"date{wc.date}"),
+    threads: MISC["gwas"]["jobs"] * MISC["gwas"]["threads"]
+    shell:
+        "python -u {MISC_SCRIPTS}/gwas.py --population {wildcards.population}"
+        " --h2opt-traits {input.traits} --genotypes {params.prefix} --pcs {input.pcs}"
+        " --out {output} --work {params.work} --jobs {MISC[gwas][jobs]}"
+        " --threads {MISC[gwas][threads]} > {log} 2>&1"
+
+
 rule misc_choose_pch_ridge:
     input:
         misc_images,

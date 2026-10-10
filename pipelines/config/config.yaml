@@ -112,6 +112,11 @@ miscanthus:
     steps: 1000
     max_copies: 4
     device: cuda
+  # GEMMA LMM of trait 1 of hybrid H2-opt, per date and fold, on the genotyped plants.
+  gwas:
+    pcs: 5
+    jobs: 5      # folds run at once
+    threads: 1   # OpenBLAS threads per GEMMA run (its per-SNP fit uses one core)
 
 arabidopsis:
   # Treatments, each analyzed on its own (h2opt_analysis.arabidopsis.TREATMENTS); folds of
@@ -132,3 +137,9 @@ arabidopsis:
     traits: 10
     steps: 16000
     device: cuda
+  # GEMMA LMM of the per-accession means of H2-opt traits, per treatment and fold.
+  gwas:
+    traits: 10
+    pcs: 5
+    jobs: 5      # traits run at once
+    threads: 1   # OpenBLAS threads per GEMMA run (its per-SNP fit uses one core)
