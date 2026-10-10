@@ -270,3 +270,131 @@ rule misc_plot_heritability:
     shell:
         "python -u {MISC_SCRIPTS}/plot_heritability.py --heritability {input}"
         " --out {output.pdf} > {log} 2>&1"
+
+
+# The Miscanthus figures of the paper, in figures/paper/ (file names as in the paper). miscFig and
+# miscGWAS need the GWAS (miscanthus_gwas_all). miscSecondTrait is not made: it needs trait 2.
+MISC_PAPER = MISC_OUT / "figures" / "paper"
+MISC_PAPER_FIGURES = ["miscFig", "NDVI_canopy", "miscVegIndex", "trainHeritMisc",
+                      "miscCorTimeSimple", "miscCorTime", "traitCorrelation_allTraits",
+                      "traitCorrelation_simplePearson", "miscGWAS"]
+
+
+def misc_by_population(name):
+    return [str(MISC_OUT / p / name) for p in miscanthus.POPULATIONS]
+
+
+def misc_gwas_files(dates):
+    return [str(MISC_OUT / p / "gwas" / f"date{d}.npz") for p in miscanthus.POPULATIONS
+            for d in dates]
+
+
+rule miscanthus_paper_figures:
+    input:
+        expand(str(MISC_PAPER / "{stem}.pdf"), stem=MISC_PAPER_FIGURES),
+
+
+rule misc_score_ndvi:
+    input:
+        misc_images,
+    output:
+        str(MISC_OUT / "{population}" / "ndvi.npz"),
+    log:
+        str(MISC_OUT / "{population}" / "ndvi.log"),
+    threads: 2
+    shell:
+        "python -u {MISC_SCRIPTS}/ndvi.py --population {wildcards.population} --images {input}"
+        " --out {output} > {log} 2>&1"
+
+
+rule misc_date_correlations:
+    input:
+        lambda wc: misc_date_files(wc.population, "h2opt_hybrid"),
+    output:
+        str(MISC_OUT / "{population}" / "date_correlations.npz"),
+    log:
+        str(MISC_OUT / "{population}" / "date_correlations.log"),
+    threads: 1
+    shell:
+        "python -u {MISC_SCRIPTS}/date_correlations.py --population {wildcards.population}"
+        " --traits {input} --out {output} > {log} 2>&1"
+
+
+rule misc_measured_correlations:
+    input:
+        misc_date_files("central", "h2opt_hybrid"),
+    output:
+        str(MISC_OUT / "central" / "measured_correlations.npz"),
+    log:
+        str(MISC_OUT / "central" / "measured_correlations.log"),
+    threads: 1
+    shell:
+        "python -u {MISC_SCRIPTS}/measured_correlations.py --traits {input} --out {output}"
+        " > {log} 2>&1"
+
+
+rule misc_plot_paper_heritability:
+    input:
+        heritability=misc_by_population("heritability.npz"),
+        ndvi=misc_by_population("ndvi.npz"),
+    output:
+        train=str(MISC_PAPER / "trainHeritMisc.pdf"),
+        ndvi=str(MISC_PAPER / "miscVegIndex.pdf"),
+        canopy=str(MISC_PAPER / "NDVI_canopy.pdf"),
+    log:
+        str(MISC_PAPER / "heritability.log"),
+    threads: 1
+    shell:
+        "python -u {MISC_SCRIPTS}/plot_paper_heritability.py --heritability {input.heritability}"
+        " --ndvi {input.ndvi} --out-train {output.train} --out-ndvi-heritability {output.ndvi}"
+        " --out-canopy {output.canopy} > {log} 2>&1"
+
+
+rule misc_plot_paper_correlations:
+    input:
+        dates=misc_by_population("date_correlations.npz"),
+        measured=str(MISC_OUT / "central" / "measured_correlations.npz"),
+    output:
+        dates_plant=str(MISC_PAPER / "miscCorTimeSimple.pdf"),
+        dates_family=str(MISC_PAPER / "miscCorTime.pdf"),
+        measured_family=str(MISC_PAPER / "traitCorrelation_allTraits.pdf"),
+        measured_plant=str(MISC_PAPER / "traitCorrelation_simplePearson.pdf"),
+    log:
+        str(MISC_PAPER / "correlations.log"),
+    threads: 1
+    shell:
+        "python -u {MISC_SCRIPTS}/plot_paper_correlations.py --dates {input.dates}"
+        " --measured {input.measured} --out-dates-plant {output.dates_plant}"
+        " --out-dates-family {output.dates_family}"
+        " --out-measured-family {output.measured_family}"
+        " --out-measured-plant {output.measured_plant} > {log} 2>&1"
+
+
+rule misc_plot_paper_gwas:
+    input:
+        misc_gwas_files(MISC_DATES),
+    output:
+        str(MISC_PAPER / "miscGWAS.pdf"),
+    log:
+        str(MISC_PAPER / "miscGWAS.log"),
+    threads: 1
+    shell:
+        "python -u {MISC_SCRIPTS}/plot_paper_gwas.py --gwas {input} --out {output} > {log} 2>&1"
+
+
+rule misc_plot_paper_main:
+    input:
+        images=misc_by_population("images.npy"),
+        heritability=misc_by_population("heritability.npz"),
+        dates=misc_by_population("date_correlations.npz"),
+        measured=str(MISC_OUT / "central" / "measured_correlations.npz"),
+        gwas=misc_gwas_files(range(5)),
+    output:
+        str(MISC_PAPER / "miscFig.pdf"),
+    log:
+        str(MISC_PAPER / "miscFig.log"),
+    threads: 1
+    shell:
+        "python -u {MISC_SCRIPTS}/plot_paper_main.py --images {input.images}"
+        " --heritability {input.heritability} --dates {input.dates}"
+        " --measured {input.measured} --gwas {input.gwas} --out {output} > {log} 2>&1"

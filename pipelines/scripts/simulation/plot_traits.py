@@ -19,6 +19,29 @@ from h2opt_analysis import simulation  # noqa: E402
 from h2opt_analysis.figures import save_trait_boxplots  # noqa: E402
 
 
+def heritability_values(ev):
+    """Test heritability (clipped at 0) of the true traits and of each method's traits.
+
+    ev: an evaluate.py result. Returns the slugs ('truth' first), the values (values[slug][t] is
+    an array over the instances) and the number of synthetic traits."""
+    methods = list(ev['methods'])
+    herit = np.clip(ev['herit'][:, :, 1], 0, None)  # methods x instances x traits, test plants
+    values = {'truth': {t: np.clip(ev['herit_truth'][:, 1, t], 0, None)
+                        for t in range(simulation.N_TRAITS)}}
+    values.update({m: {t: herit[j, :, t] for t in range(herit.shape[2])}
+                   for j, m in enumerate(methods)})
+    return ['truth'] + methods, values, herit.shape[2]
+
+
+def correlation_values(ev):
+    """|r| of true trait t with synthetic trait t of each method: the slugs and the values
+    (values[slug][t] is an array over the instances)."""
+    methods = list(ev['methods'])
+    n_t = simulation.N_TRAITS
+    diagonal = np.abs(ev['cor'][:, :, np.arange(n_t), np.arange(n_t)])
+    return methods, {m: {t: diagonal[j, :, t] for t in range(n_t)} for j, m in enumerate(methods)}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--evaluation', required=True)
@@ -26,20 +49,14 @@ def main():
     args = parser.parse_args()
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    n_t = simulation.N_TRAITS
 
     ev = np.load(args.evaluation)
-    methods = list(ev['methods'])
-    herit = np.clip(ev['herit'][:, :, 1], 0, None)  # methods x instances x traits, test plants
-    values = {'truth': {t: np.clip(ev['herit_truth'][:, 1, t], 0, None) for t in range(n_t)}}
-    values.update({m: {t: herit[j, :, t] for t in range(herit.shape[2])}
-                   for j, m in enumerate(methods)})
-    save_trait_boxplots(out / 'heritability.pdf', herit.shape[2], ['truth'] + methods, values,
-                        'test heritability', width=7)
-
-    diagonal = np.abs(ev['cor'][:, :, np.arange(n_t), np.arange(n_t)])
-    values = {m: {t: diagonal[j, :, t] for t in range(n_t)} for j, m in enumerate(methods)}
-    save_trait_boxplots(out / 'correlation.pdf', n_t, methods, values, '|r| with true trait')
+    slugs, values, n_traits = heritability_values(ev)
+    save_trait_boxplots(out / 'heritability.pdf', n_traits, slugs, values, 'test heritability',
+                        width=7)
+    slugs, values = correlation_values(ev)
+    save_trait_boxplots(out / 'correlation.pdf', simulation.N_TRAITS, slugs, values,
+                        '|r| with true trait')
 
 
 if __name__ == '__main__':

@@ -8,11 +8,16 @@
 
 from h2opt_analysis import sorghum
 from h2opt_analysis.methods import BASELINES
+import h2opt_analysis.paths
 
 SORGHUM = config["sorghum"]
 SORGHUM_OUT = OUT_ROOT / "sorghum"
 SORGHUM_SCRIPTS = PIPELINE_DIR / "scripts" / "sorghum"
 SORGHUM_FOLDS = SORGHUM["folds"]
+SORGHUM_PAPER_FIGURES = SORGHUM_OUT / "figures" / "paper"
+# Genotype means of the measured traits (Ferguson et al. 2021, Supplemental Table S12).
+SORGHUM_MEASURED_TRAITS = h2opt_analysis.paths.data(
+    "plant", "processed", "traits", "SorgumTraits.tsv")
 # Method slug (h2opt_analysis.methods.LABELS) of each trait source.
 SORGHUM_SOURCES = {"paper": "h2opt_paper", "h2opt": "h2opt"}
 assert all(SORGHUM[s]["traits"] <= SORGHUM["baselines"]["traits"] for s in SORGHUM_SOURCES), \
@@ -183,3 +188,70 @@ rule sorghum_run_gwas:
         " --out {output} --work {params.work} --traits {params.traits}"
         " --jobs {params.jobs} --threads {params.threads}"
         " > {log} 2>&1"
+
+
+# The figures of the paper, made from the h2opt source (linear H2-opt retrained here). They need
+# the GWAS, so they are not part of sorghum_all.
+rule sorghum_paper_figures:
+    input:
+        expand(str(SORGHUM_PAPER_FIGURES / "{stem}.pdf"),
+               stem=["sorFig", "multiTraitHerit_all", "crossGWAS", "sorGWAS"]),
+
+
+rule sorghum_plot_paper_main:
+    input:
+        heritability=str(SORGHUM_OUT / "heritability_h2opt.npz"),
+        model=str(SORGHUM_OUT / "h2opt" / f"fold{SORGHUM_FOLDS[0]}.pt"),
+        traits=[sorghum_traits("h2opt", f) for f in SORGHUM_FOLDS],
+        measured=str(SORGHUM_MEASURED_TRAITS),
+        gwas=str(SORGHUM_OUT / "gwas" / f"h2opt_fold{SORGHUM_FOLDS[0]}.npz"),
+    output:
+        pdf=str(SORGHUM_PAPER_FIGURES / "sorFig.pdf"),
+        png=str(SORGHUM_PAPER_FIGURES / "sorFig.png"),
+    log:
+        str(SORGHUM_PAPER_FIGURES / "sorFig.log"),
+    params:
+        fold=SORGHUM_FOLDS[0],
+        fold_traits=sorghum_traits("h2opt", SORGHUM_FOLDS[0]),
+    threads: 1
+    shell:
+        "python -u {SORGHUM_SCRIPTS}/plot_paper_main.py --heritability {input.heritability}"
+        " --model {input.model} --fold-traits {params.fold_traits} --fold {params.fold}"
+        " --traits-files {input.traits} --measured-traits {input.measured} --gwas {input.gwas}"
+        " --out {output.pdf} --traits 4 > {log} 2>&1"
+
+
+rule sorghum_plot_paper_heritability:
+    input:
+        str(SORGHUM_OUT / "heritability_h2opt.npz"),
+    output:
+        pdf=str(SORGHUM_PAPER_FIGURES / "multiTraitHerit_all.pdf"),
+        png=str(SORGHUM_PAPER_FIGURES / "multiTraitHerit_all.png"),
+    log:
+        str(SORGHUM_PAPER_FIGURES / "multiTraitHerit_all.log"),
+    params:
+        traits=SORGHUM["h2opt"]["traits"],
+    threads: 1
+    shell:
+        "python -u {SORGHUM_SCRIPTS}/plot_paper_heritability.py --heritability {input}"
+        " --out {output.pdf} --traits {params.traits} > {log} 2>&1"
+
+
+rule sorghum_plot_paper_gwas:
+    input:
+        [str(SORGHUM_OUT / "gwas" / f"h2opt_fold{f}.npz") for f in SORGHUM_FOLDS],
+    output:
+        folds=str(SORGHUM_PAPER_FIGURES / "crossGWAS.pdf"),
+        folds_png=str(SORGHUM_PAPER_FIGURES / "crossGWAS.png"),
+        manhattan=str(SORGHUM_PAPER_FIGURES / "sorGWAS.pdf"),
+        manhattan_png=str(SORGHUM_PAPER_FIGURES / "sorGWAS.png"),
+    log:
+        str(SORGHUM_PAPER_FIGURES / "gwas.log"),
+    params:
+        folds=" ".join(str(f) for f in SORGHUM_FOLDS),
+        example=SORGHUM_FOLDS[0],
+    threads: 1
+    shell:
+        "python -u {SORGHUM_SCRIPTS}/plot_paper_gwas.py --folds {params.folds} --gwas {input}"
+        " --trait 1 --example-fold {params.example} --out-folds {output.folds}"
+        " --out-manhattan {output.manhattan} > {log} 2>&1"

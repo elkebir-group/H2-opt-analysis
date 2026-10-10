@@ -177,3 +177,114 @@ rule arabi_plot_heritability:
     shell:
         "python -u {ARABI_SCRIPTS}/plot_heritability.py --heritability {input}"
         " --out-test {output.test} --out-train {output.train} > {log} 2>&1"
+
+
+# Figures of the paper (main.tex image names), from fold ARABI_PAPER_FOLD ("the first
+# cross-validation split") and the GWAS of that fold. Panel e of metabFig (pathway enrichment) is
+# not made: its input (the mummichog files) is missing. Run only on request, as the GWAS.
+ARABI_PAPER = ARABI_OUT / "figures" / "paper"
+ARABI_PAPER_FOLD = 0
+
+
+def arabi_paper_coefficients(treatment):
+    return str(ARABI_OUT / treatment / "h2opt" / f"coefficients_fold{ARABI_PAPER_FOLD}.npz")
+
+
+def arabi_paper_gwas(treatment):
+    return str(ARABI_OUT / treatment / "gwas" / f"fold{ARABI_PAPER_FOLD}.npz")
+
+
+rule arabidopsis_paper_figures:
+    input:
+        expand(str(ARABI_PAPER / "{stem}.pdf"),
+               stem=["metabFig", "ArabiHeritTrain"]
+                    + [f"coef_{t.removesuffix('d')}day" for t in ARABI["treatments"]]
+                    + [f"metab{t}_GWAS" for t in ARABI["treatments"]]),
+
+
+rule arabi_trait_coefficients:
+    input:
+        features=ARABI_FEATURES,
+        model=str(ARABI_OUT / "{treatment}" / "h2opt" / "fold{fold}.pt"),
+        traits=str(ARABI_OUT / "{treatment}" / "h2opt" / "fold{fold}.npz"),
+    output:
+        str(ARABI_OUT / "{treatment}" / "h2opt" / "coefficients_fold{fold}.npz"),
+    log:
+        str(ARABI_OUT / "{treatment}" / "h2opt" / "coefficients_fold{fold}.log"),
+    wildcard_constraints:
+        fold=r"\d+",
+    threads: 2
+    shell:
+        "python -u {ARABI_SCRIPTS}/coefficients.py --features {input.features}"
+        " --treatment {wildcards.treatment} --fold {wildcards.fold} --model {input.model}"
+        " --traits {input.traits} --out {output} > {log} 2>&1"
+
+
+rule arabi_paper_main_figure:
+    input:
+        features=ARABI_FEATURES,
+        heritability=expand(str(ARABI_OUT / "{treatment}" / "heritability.npz"),
+                            treatment=ARABI["treatments"]),
+        coefficients=arabi_paper_coefficients(ARABI["treatments"][0]),
+        gwas=[arabi_paper_gwas(t) for t in ARABI["treatments"]],
+    output:
+        pdf=str(ARABI_PAPER / "metabFig.pdf"),
+        png=str(ARABI_PAPER / "metabFig.png"),
+    log:
+        str(ARABI_PAPER / "metabFig.log"),
+    params:
+        treatments=" ".join(ARABI["treatments"]),
+    threads: 1
+    shell:
+        "python -u {ARABI_SCRIPTS}/plot_paper_main.py --features {input.features}"
+        " --treatments {params.treatments} --heritability {input.heritability}"
+        " --coefficients {input.coefficients} --gwas {input.gwas} --out {output.pdf}"
+        " > {log} 2>&1"
+
+
+rule arabi_paper_heritability:
+    input:
+        expand(str(ARABI_OUT / "{treatment}" / "heritability.npz"),
+               treatment=ARABI["treatments"]),
+    output:
+        pdf=str(ARABI_PAPER / "ArabiHeritTrain.pdf"),
+        png=str(ARABI_PAPER / "ArabiHeritTrain.png"),
+    log:
+        str(ARABI_PAPER / "ArabiHeritTrain.log"),
+    params:
+        treatments=" ".join(ARABI["treatments"]),
+    threads: 1
+    shell:
+        "python -u {ARABI_SCRIPTS}/plot_paper_heritability.py --treatments {params.treatments}"
+        " --heritability {input} --out {output.pdf} > {log} 2>&1"
+
+
+# coef_0day for treatment 0d, coef_6day for 6d.
+rule arabi_paper_coefficients:
+    input:
+        lambda wc: arabi_paper_coefficients(f"{wc.days}d"),
+    output:
+        pdf=str(ARABI_PAPER / "coef_{days}day.pdf"),
+        png=str(ARABI_PAPER / "coef_{days}day.png"),
+    log:
+        str(ARABI_PAPER / "coef_{days}day.log"),
+    wildcard_constraints:
+        days="|".join(t.removesuffix("d") for t in ARABI["treatments"]),
+    threads: 1
+    shell:
+        "python -u {ARABI_SCRIPTS}/plot_paper_coefficients.py --coefficients {input}"
+        " --title '{wildcards.days} day, fold {ARABI_PAPER_FOLD}' --out {output.pdf} > {log} 2>&1"
+
+
+rule arabi_paper_gwas:
+    input:
+        lambda wc: arabi_paper_gwas(wc.treatment),
+    output:
+        pdf=str(ARABI_PAPER / "metab{treatment}_GWAS.pdf"),
+        png=str(ARABI_PAPER / "metab{treatment}_GWAS.png"),
+    log:
+        str(ARABI_PAPER / "metab{treatment}_GWAS.log"),
+    threads: 1
+    shell:
+        "python -u {ARABI_SCRIPTS}/plot_paper_gwas.py --gwas {input}"
+        " --title '{wildcards.treatment}, fold {ARABI_PAPER_FOLD}' --out {output.pdf} > {log} 2>&1"

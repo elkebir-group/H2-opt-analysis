@@ -102,7 +102,8 @@ def plot_gwas(path, summary, rows, row_labels, title, dpi=150):
                              gridspec_kw={'width_ratios': [3, 1]})
     for ax_row, r, label in zip(axes, rows, row_labels, strict=True):
         ax = ax_row[0]
-        ax.scatter(position + offset, score[r], s=1, c=np.where(parity, 'tab:red', 'tab:blue'))
+        ax.scatter(position + offset, score[r], s=1, c=np.where(parity, 'tab:red', 'tab:blue'),
+                   rasterized=True)
         ax.axhline(threshold, color='black', linestyle=':', linewidth=1)
         ax.set_ylabel(f'{label}\n-log10 p')
         ax.set_xticks([])
@@ -110,7 +111,7 @@ def plot_gwas(path, summary, rows, row_labels, title, dpi=150):
         ax = ax_row[1]
         observed = np.sort(score[r])
         expected = -np.log10(np.arange(len(observed), 0, -1) / (len(observed) + 1))
-        ax.scatter(expected, observed, s=1)
+        ax.scatter(expected, observed, s=1, rasterized=True)
         top = min(expected.max(), observed.max())
         ax.plot([0, top], [0, top], 'r--', linewidth=1)
         ax.set_title(f'lambda GC {summary["lambda_gc"][r]:.3f}', fontsize=8)

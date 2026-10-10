@@ -325,3 +325,36 @@ rule sim_plot_gwas:
         "python -u {SIM_SCRIPTS}/plot_gwas.py --roc {input.roc}"
         " --gwas-example {input.example} --example-name {params.name}"
         " --example-label '{params.label}' --out-dir {params.out_dir} > {log} 2>&1"
+
+
+# The simulation figures of the paper (file stems as in the paper's images/), from the saved
+# results. They need the GWAS outputs, so they are not part of simulation_all.
+SIM_PAPER = SIM_OUT / "figures" / "paper"
+
+
+rule simulation_paper_figures:
+    input:
+        [str(SIM_PAPER / f"{stem}.{ext}") for stem in ["simFig", "simCompareSNP"]
+         for ext in ["pdf", "png"]],
+
+
+rule sim_plot_paper_figures:
+    input:
+        evaluation=str(SIM_OUT / "evaluation.npz"),
+        roc=str(SIM_OUT / "roc.npz"),
+        example=sim_file(SIM["example"]["instance"], f"gwas/{SIM['example']['method']}.npz"),
+    output:
+        figure=str(SIM_PAPER / "simFig.pdf"),
+        figure_png=str(SIM_PAPER / "simFig.png"),
+        compare=str(SIM_PAPER / "simCompareSNP.pdf"),
+        compare_png=str(SIM_PAPER / "simCompareSNP.png"),
+    log:
+        str(SIM_PAPER / "plot_paper.log"),
+    params:
+        label=(f"{LABELS[SIM['example']['method']]}, "
+               f"instance {SIM['example']['instance']}, trait 1"),
+    threads: 1
+    shell:
+        "python -u {SIM_SCRIPTS}/plot_paper.py --evaluation {input.evaluation} --roc {input.roc}"
+        " --gwas-example {input.example} --example-label '{params.label}'"
+        " --out-figure {output.figure} --out-compare {output.compare} > {log} 2>&1"

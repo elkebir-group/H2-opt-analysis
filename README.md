@@ -79,6 +79,10 @@ or `h2opt` (retrained here with Adam, with the noise level of each fold, one for
 | `sorghum_score_heritability` | `heritability_{source}.npz` | train and test heritability of the source's H2-opt traits and the baselines' |
 | `sorghum_plot_heritability` | `figures/top_trait_heritability_{source}.{pdf,png}` | boxplots of the top trait over the folds |
 | `sorghum_run_gwas` | `gwas/{source}_fold{k}.npz` | GEMMA LMM of the per-line trait means (intercept + 5 genotype PCs) |
+| `sorghum_plot_paper_main` | `figures/paper/sorFig.{pdf,png}` | paper Fig. (sorghum): example spectra; mean test heritability of traits 1-4 of `h2opt` and the baselines; wavelength coefficients of traits 1-4, fold 0; median over folds of \|r\| between genotype means of traits 1-4 and the measured traits (Ferguson et al. 2021, Table S12); Bonferroni-significant SNPs per trait, fold 0 |
+| `sorghum_plot_paper_heritability` | `figures/paper/multiTraitHerit_all.{pdf,png}` | mean train and test heritability of traits 1-10 of `h2opt` and the baselines |
+| `sorghum_plot_paper_gwas` | `figures/paper/{crossGWAS,sorGWAS}.{pdf,png}` | Pearson r of -log10 p of trait 1 between the folds; Manhattan and QQ plots of the fold 0 traits with significant SNPs |
+| `sorghum_paper_figures` | | the four paper figures above (needs the GWAS, so not in `sorghum_all`) |
 
 ### Simulation
 
@@ -104,6 +108,7 @@ the lines) and everything after are rebuilt here. All outputs are under `data/de
 | `sim_score_gwas` | `roc.npz` | AUC and ROC curves of causal 100 kb bins |
 | `sim_plot_traits` | `figures/{heritability,correlation}.pdf` | test heritability and \|r\| with the true traits per method (Fig. 3 and Fig. S2 panels) |
 | `sim_plot_gwas` | `figures/{auc,roc_trait1-3}.pdf`, `figures/gwas_{method}_instance{i}.png` | AUC, ROC curves, and Manhattan and QQ plots of one example (Fig. 3 and Fig. S2 panels) |
+| `sim_plot_paper_figures` (target `simulation_paper_figures`) | `figures/paper/{simFig,simCompareSNP}.{pdf,png}` | the paper's Fig. 3 (a-e: heritability, \|r\|, QQ and Manhattan plots of the example, ROC of trait 1, AUC) and Fig. S2 (ROC of traits 2 and 3), from `evaluation.npz`, `roc.npz` and the example GWAS |
 
 ### Image simulation
 
@@ -159,6 +164,22 @@ genotypes with it). Plants with two conflicting samples are left out.
 | `misc_prepare_genotypes` | `gwas/genotypes.{bed,bim,fam}`, `gwas/genotype_pcs.npy` | the PLINK set (unplaced scaffolds as chromosome 0) and 5 genotype PCs of the genotyped plants with traits |
 | `misc_run_gwas` | `gwas/date{d}.npz` | GEMMA LMM of trait 1 of hybrid H2-opt, one run per fold (intercept + 5 PCs) |
 
+The paper figures are a separate target, `miscanthus_paper_figures`; `miscFig` and `miscGWAS` need
+the GWAS. The figures are under `data/derived/miscanthus/figures/paper/`, each a `.pdf` and a
+`.png`; the data rules write beside the population outputs. Correlations are the median over the
+folds of \|r\|; GWAS counts are Bonferroni-significant SNPs of the first fold. `miscSecondTrait`
+is not made: it needs a run with `traits: 2`.
+
+| Rule | Output | Content |
+|---|---|---|
+| `misc_score_ndvi` | `ndvi.npz` | NDVI (mean red and NIR of the pixels) of every plant and date, and its train and test Henderson3 per date and fold, scored as the methods |
+| `misc_date_correlations` | `date_correlations.npz` | Pearson r of trait 1 of hybrid H2-opt between dates, per plant and between half-sib family means, per fold (all kept plants) |
+| `misc_measured_correlations` | `central/measured_correlations.npz` | the same with the 16 measured traits of the Central plant data table (Central only) |
+| `misc_plot_paper_main` | `miscFig.pdf` | a example images; b test heritability per date; c family-mean \|r\| between the first five dates; d the same with the 6 top measured traits; e significant SNPs per date |
+| `misc_plot_paper_heritability` | `NDVI_canopy.pdf`, `miscVegIndex.pdf`, `trainHeritMisc.pdf` | mean NDVI per date; test heritability of NDVI and the methods; train heritability |
+| `misc_plot_paper_correlations` | `miscCorTimeSimple.pdf`, `miscCorTime.pdf`, `traitCorrelation_{allTraits,simplePearson}.pdf` | \|r\| between dates and with the measured traits, per plant and between family means |
+| `misc_plot_paper_gwas` | `miscGWAS.pdf` | Manhattan and QQ plots of the dates with significant SNPs, first fold (one page per population) |
+
 ### Arabidopsis
 
 LC-MS metabolomics of 280 accessions, 263 in 0d and 277 in 6d, all genotyped
@@ -189,6 +210,19 @@ The GWAS is a separate target, `arabidopsis_gwas_all`, run only on request. The 
 |---|---|---|
 | `arabi_prepare_genotypes` | `gwas/genotypes.{bed,bim,fam}`, `gwas/genotype_pcs.npy` | the PLINK set and 5 genotype PCs of the treatment's accessions |
 | `arabi_run_gwas` | `gwas/fold{k}.npz` | GEMMA LMM of the per-accession means of H2-opt traits 1-10 (intercept + 5 PCs) |
+
+The paper figures are a separate target, `arabidopsis_paper_figures` (it needs the GWAS of fold 0).
+The figures are under `data/derived/arabidopsis/figures/paper/`, named as the paper's images, each
+a `.pdf` and a `.png`. Panel e of `metabFig` (pathway enrichment) is not made: its input (the
+mummichog files) is missing.
+
+| Rule | Output | Content |
+|---|---|---|
+| `arabi_trait_coefficients` | `{treatment}/h2opt/coefficients_fold{k}.npz` | coefficients of the uncorrelated H2-opt traits per feature, over each trait's largest magnitude (checked against the saved traits) |
+| `arabi_paper_main_figure` | `metabFig.pdf` | Fig. arabiResult a-d: one input matrix per treatment, test heritability per method, coefficients of 0d traits 1-3 (MS1), significant SNPs per trait |
+| `arabi_paper_heritability` | `ArabiHeritTrain.pdf` | train and test heritability per trait, every method, both treatments |
+| `arabi_paper_coefficients` | `coef_0day.pdf`, `coef_6day.pdf` | coefficients of traits 1-10 (magnitude at least 2% of the largest; MS1 and MS/MS), fold 0 |
+| `arabi_paper_gwas` | `metab0d_GWAS.pdf`, `metab6d_GWAS.pdf` | Manhattan and QQ plots of the traits with significant SNPs, fold 0 |
 
 Each script under `pipelines/scripts/` also runs by hand; its docstring gives
 the arguments.
