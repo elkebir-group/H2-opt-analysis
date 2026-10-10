@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 from h2opt_analysis import simulation  # noqa: E402
-from h2opt_analysis.figures import COLORS, save_trait_boxplots  # noqa: E402
+from h2opt_analysis.figures import COLORS, plot_gwas, save_trait_boxplots  # noqa: E402
 from h2opt_analysis.methods import LABELS  # noqa: E402
 
 
@@ -54,40 +54,10 @@ def main():
         ax.spines[['top', 'right']].set_visible(False)
         fig.tight_layout()
         fig.savefig(out / f'roc_trait{t + 1}.pdf')
+        plt.close(fig)
 
-    g = np.load(args.gwas_example)
-    chromosome, position, score = g['chr'], g['ps'], g['neg_log10_p']
-    offset = np.zeros(len(position), dtype=np.int64)
-    start = 0
-    for c in np.unique(chromosome):
-        on = chromosome == c
-        offset[on] = start
-        start += position[on].max() + 1
-    threshold = -np.log10(0.05 / score.shape[1])
-    fig, axes = plt.subplots(n_t, 2, figsize=(8, 1.9 * n_t),
-                             gridspec_kw={'width_ratios': [3, 1]})
-    for t in range(n_t):
-        ax = axes[t, 0]
-        ax.scatter(position + offset, score[t], s=1, c=np.where(chromosome % 2, 'tab:red',
-                                                                 'tab:blue'))
-        ax.axhline(threshold, color='black', linestyle=':', linewidth=1)
-        ax.set_ylabel(f'trait {t + 1}\n-log10 p')
-        ax.set_xticks([])
-        ax.spines[['top', 'right']].set_visible(False)
-        ax = axes[t, 1]
-        observed = np.sort(score[t])
-        expected = -np.log10(np.arange(len(observed), 0, -1) / (len(observed) + 1))
-        ax.scatter(expected, observed, s=1)
-        top = min(expected.max(), observed.max())
-        ax.plot([0, top], [0, top], 'r--', linewidth=1)
-        ax.set_title(f'lambda GC {g["lambda_gc"][t]:.3f}', fontsize=8)
-        ax.spines[['top', 'right']].set_visible(False)
-    axes[-1, 0].set_xlabel('genome position')
-    axes[-1, 1].set_xlabel('expected -log10 p')
-    fig.suptitle(args.example_label, fontsize=9)
-    fig.tight_layout()
-    fig.savefig(out / f'gwas_{args.example_name}.png', dpi=150)
-
+    plot_gwas(out / f'gwas_{args.example_name}.png', np.load(args.gwas_example), range(n_t),
+              [f'trait {t + 1}' for t in range(n_t)], args.example_label)
 
 if __name__ == '__main__':
     main()

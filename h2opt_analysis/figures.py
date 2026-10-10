@@ -1,4 +1,4 @@
-"""Shared plotting helpers: method colors and grouped boxplots."""
+"""Shared plotting helpers: method colors, grouped boxplots, Manhattan and QQ plots."""
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -80,4 +80,44 @@ def plot_noise_choices(levels, chosen, scores, path, series='trait', series_labe
     fig.tight_layout()
     fig.savefig(path)
     fig.savefig(str(path).removesuffix('.pdf') + '.png', dpi=200)
+    plt.close(fig)
+
+
+def plot_gwas(path, summary, rows, row_labels, title, dpi=150):
+    """Manhattan (left) and QQ (right) plots of rows of a gwas.summarize result, one row each.
+
+    summary: dict or .npz with chr, ps, neg_log10_p (runs x SNPs) and lambda_gc. rows: indices
+    into its runs; row_labels: their y labels. The dotted line is the Bonferroni threshold
+    0.05 / SNPs. Chromosomes alternate red and blue in their sorted order."""
+    chromosome, position, score = summary['chr'], summary['ps'], summary['neg_log10_p']
+    offset = np.zeros(len(position), dtype=np.int64)
+    start = 0
+    for c in np.unique(chromosome):
+        on = chromosome == c
+        offset[on] = start
+        start += position[on].max() + 1
+    parity = np.searchsorted(np.unique(chromosome), chromosome) % 2
+    threshold = -np.log10(0.05 / score.shape[1])
+    fig, axes = plt.subplots(len(rows), 2, figsize=(8, 1.9 * len(rows)), squeeze=False,
+                             gridspec_kw={'width_ratios': [3, 1]})
+    for ax_row, r, label in zip(axes, rows, row_labels, strict=True):
+        ax = ax_row[0]
+        ax.scatter(position + offset, score[r], s=1, c=np.where(parity, 'tab:red', 'tab:blue'))
+        ax.axhline(threshold, color='black', linestyle=':', linewidth=1)
+        ax.set_ylabel(f'{label}\n-log10 p')
+        ax.set_xticks([])
+        ax.spines[['top', 'right']].set_visible(False)
+        ax = ax_row[1]
+        observed = np.sort(score[r])
+        expected = -np.log10(np.arange(len(observed), 0, -1) / (len(observed) + 1))
+        ax.scatter(expected, observed, s=1)
+        top = min(expected.max(), observed.max())
+        ax.plot([0, top], [0, top], 'r--', linewidth=1)
+        ax.set_title(f'lambda GC {summary["lambda_gc"][r]:.3f}', fontsize=8)
+        ax.spines[['top', 'right']].set_visible(False)
+    axes[-1, 0].set_xlabel('genome position')
+    axes[-1, 1].set_xlabel('expected -log10 p')
+    fig.suptitle(title, fontsize=9)
+    fig.tight_layout()
+    fig.savefig(path, dpi=dpi)
     plt.close(fig)
