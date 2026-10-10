@@ -6,12 +6,14 @@ map plus h2opt.PositionImageConvModel (a weight per position: the plant is at th
 neighbors at the edges), trained together (steps steps). The linear branch has the linear level of
 choose_noise.py; the CNN branch has the CNN level of choose_cnn_level.py, times noise_scale of the
 fold's training pixels of the date. Both levels serve all folds and dates.
-Henderson3 heritability (families, plots within families, rep and field column fixed). Writes an
-.npz with 'traits' (folds x plants x traits, uncorrelated on each fold's training plants).
+Henderson3 heritability (families, plots within families, rep and field column fixed). Writes the
+fold models (a list, torch.save) to --out-models and an .npz with 'traits' (folds x plants x
+traits, uncorrelated on each fold's training plants).
 
     python pipelines/scripts/miscanthus/train_hybrid.py --population central --images images.npy \\
         --noise noise.npz --cnn-level cnn_level.npz --date 0 --traits 1 --linear-steps 10000 \\
-        --steps 1000 --max-copies 4 --device cuda --out date0.npz
+        --steps 1000 --max-copies 4 --device cuda --out date0.npz \\
+        --out-models date0.pt
 """
 
 import argparse
@@ -38,6 +40,7 @@ def main():
                         help='models trained at once (GPU memory)')
     parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
     parser.add_argument('--out', required=True)
+    parser.add_argument('--out-models', required=True, help='.pt: the list of fold models')
     args = parser.parse_args()
 
     torch.manual_seed(args.date)
@@ -56,6 +59,7 @@ def main():
         design.environment, train_test, noise_sd[:, None], conv_sd[:, None], n_traits=args.traits,
         n_linear_iter=args.linear_steps, n_iter=args.steps, device=args.device,
         subgroups=design.plots, estimator='henderson3', max_copies=args.max_copies)
+    torch.save(models, args.out_models)
     np.savez(args.out, traits=np.stack([synthetic_traits(m, x, tt == 0)
                                         for m, tt in zip(models, train_test, strict=True)]))
 

@@ -146,9 +146,9 @@ capped at 1). The config lists the populations. All outputs are under
 |---|---|---|
 | `misc_prepare_images` | `images.npy` | the images as uncompressed float32, read one date at a time |
 | `misc_choose_linear_h2opt_noise` | `h2opt/noise.npz` | the one linear noise level for all folds and dates: `h2opt.selection.select_noise_level` on the selection date (06/08, before canopy closure), the validation splits of all folds together |
-| `misc_train_linear_h2opt` | `h2opt/date{d}.npz` | linear H2-opt of one date, all folds, at the linear level |
+| `misc_train_linear_h2opt` | `h2opt/date{d}.{npz,pt}` | linear H2-opt of one date, all folds, at the linear level |
 | `misc_choose_hybrid_cnn_level` | `h2opt_hybrid/cnn_level.npz` | the one CNN level of the hybrid for all folds and dates: `h2opt.selection.score_linear_conv_levels` on the selection date, fold 0 |
-| `misc_train_hybrid_h2opt` | `h2opt_hybrid/date{d}.npz` | the hybrid of one date, all folds: `h2opt.LinearConvModel` with `h2opt.PositionImageConvModel`, warm started from linear H2-opt, at the linear and CNN levels |
+| `misc_train_hybrid_h2opt` | `h2opt_hybrid/date{d}.{npz,pt}` | the hybrid of one date, all folds: `h2opt.LinearConvModel` with `h2opt.PositionImageConvModel`, warm started from linear H2-opt, at the linear and CNN levels |
 | `misc_choose_pch_ridge` | `pch/ridge.npz` | the one PCH ridge for all folds and dates: `PCH.tune` over `h2opt.baselines.RIDGES` on the selection date, the validation splits of all folds together (as the linear H2-opt level) |
 | `misc_train_baselines` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | baselines of every date in one fold; PCH maximizes Henderson3 at the ridge of `pch/ridge.npz` |
 | `misc_score_heritability` | `heritability.npz` | train and test Henderson3 of every method, date and fold |

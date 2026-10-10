@@ -161,7 +161,8 @@ rule misc_train_linear_h2opt:
         images=misc_images,
         noise=str(MISC_OUT / "{population}" / "h2opt" / "noise.npz"),
     output:
-        str(MISC_OUT / "{population}" / "h2opt" / "date{date}.npz"),
+        traits=str(MISC_OUT / "{population}" / "h2opt" / "date{date}.npz"),
+        models=str(MISC_OUT / "{population}" / "h2opt" / "date{date}.pt"),
     log:
         str(MISC_OUT / "{population}" / "h2opt" / "date{date}.log"),
     wildcard_constraints:
@@ -176,7 +177,7 @@ rule misc_train_linear_h2opt:
         "python -u {MISC_SCRIPTS}/train_h2opt.py --population {wildcards.population}"
         " --images {input.images} --noise {input.noise} --date {wildcards.date}"
         " --traits {MISC[traits]} --steps {params.steps} --device {params.device}"
-        " --out {output} > {log} 2>&1"
+        " --out {output.traits} --out-models {output.models} > {log} 2>&1"
 
 
 rule misc_choose_hybrid_cnn_level:
@@ -209,7 +210,8 @@ rule misc_train_hybrid_h2opt:
         noise=str(MISC_OUT / "{population}" / "h2opt" / "noise.npz"),
         cnn_level=str(MISC_OUT / "{population}" / "h2opt_hybrid" / "cnn_level.npz"),
     output:
-        str(MISC_OUT / "{population}" / "h2opt_hybrid" / "date{date}.npz"),
+        traits=str(MISC_OUT / "{population}" / "h2opt_hybrid" / "date{date}.npz"),
+        models=str(MISC_OUT / "{population}" / "h2opt_hybrid" / "date{date}.pt"),
     log:
         str(MISC_OUT / "{population}" / "h2opt_hybrid" / "date{date}.log"),
     wildcard_constraints:
@@ -227,7 +229,8 @@ rule misc_train_hybrid_h2opt:
         " --images {input.images} --noise {input.noise} --cnn-level {input.cnn_level}"
         " --date {wildcards.date} --traits {MISC[traits]}"
         " --linear-steps {params.linear_steps} --steps {params.steps}"
-        " --max-copies {params.max_copies} --device {params.device} --out {output} > {log} 2>&1"
+        " --max-copies {params.max_copies} --device {params.device} --out {output.traits}"
+        " --out-models {output.models} > {log} 2>&1"
 
 
 def misc_method_args(wildcards):

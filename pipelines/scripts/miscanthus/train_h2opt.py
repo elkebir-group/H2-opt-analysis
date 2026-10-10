@@ -3,11 +3,13 @@
 h2opt.train_models: h2opt.LinearModel on all pixels of the date (h2opt_analysis.miscanthus.
 load_date, flattened), Henderson3 heritability (families, plots within families, rep and field
 column fixed), Adam, normal input noise of the standard deviation of choose_noise.py for the fold
-and date, each fold's model on its training plants. Writes an .npz with 'traits' (folds x plants x
-traits, uncorrelated on each fold's training plants).
+and date, each fold's model on its training plants. Writes the fold models (a list, torch.save) to
+--out-models and an .npz with 'traits' (folds x plants x traits, uncorrelated on each fold's
+training plants).
 
     python pipelines/scripts/miscanthus/train_h2opt.py --population central --images images.npy \\
-        --noise noise.npz --date 0 --traits 1 --steps 10000 --device cuda --out date0.npz
+        --noise noise.npz --date 0 --traits 1 --steps 10000 --device cuda --out date0.npz \\
+        --out-models date0.pt
 """
 
 import argparse
@@ -29,6 +31,7 @@ def main():
     parser.add_argument('--steps', type=int, required=True)
     parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
     parser.add_argument('--out', required=True)
+    parser.add_argument('--out-models', required=True, help='.pt: the list of fold models')
     args = parser.parse_args()
 
     torch.manual_seed(args.date)
@@ -43,6 +46,7 @@ def main():
     train_models(models, x, design.families, design.environment, train_test,
                  n_traits=args.traits, n_iter=args.steps, noise_sd=noise_sd[:, None],
                  device=args.device, subgroups=design.plots, estimator='henderson3')
+    torch.save(models, args.out_models)
     np.savez(args.out, traits=np.stack([synthetic_traits(m, x, tt == 0)
                                         for m, tt in zip(models, train_test, strict=True)]))
 
