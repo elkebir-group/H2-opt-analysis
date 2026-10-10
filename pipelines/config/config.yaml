@@ -26,10 +26,10 @@ sorghum:
     traits: 10
     steps: 320000
     device: cuda
-    # Total variation penalty over wavelength (the paper's kind; the paper's code divides it by the
-    # spread of the trait, as h2opt.train does), weight 1e-6 for every dataset (PI). The paper's
-    # 1e-4 is too strong when training runs to convergence (see arabidopsis.h2opt.penalty).
-    penalty: [tv, 1.0e-6]
+    # The paper's penalty: total variation over wavelength, weight 1e-4 (PI; the paper's code
+    # divides it by the spread of the trait, as h2opt.train does). Fold 0, 20k steps: test h2 0.710
+    # -> 0.736, roughness sum |dw| / sum |w| 0.47 -> 0.03 (1e-6: 0.713, 0.20).
+    penalty: [tv, 1.0e-4]
   # Baselines fitted once per fold (baseline.py) and evaluated against every source;
   # traits must be at least the traits of every source.
   baselines:
@@ -130,8 +130,8 @@ arabidopsis:
   # Traits of H2-opt and the baselines.
   traits: 10
   baselines: [pca, genetic_pca, pch, max_features]
-  # H2-opt: h2opt.LinearModel with ANOVA heritability, Adam, normal input noise, no clipping and no
-  # L1 penalty. The level is one per fold for all traits, chosen by choose_noise.py on 20
+  # H2-opt: h2opt.LinearModel with ANOVA heritability, Adam, normal input noise, no clipping, and
+  # the L1 penalty below. The level is one per fold for all traits, chosen by choose_noise.py on 20
   # validation splits of the training accessions from h2opt.selection.NOISE_LEVELS (the highest
   # level within one SE of the best held-out heritability of trait 1). steps is
   # where doubling it changes the train heritability of traits 1-3 by at most about 0.01 (fold 0,
@@ -141,10 +141,10 @@ arabidopsis:
     traits: 10
     steps: 16000
     device: cuda
-    # L1 penalty (the paper's kind), weight 1e-6 (PI). The paper's 1e-4 is too strong when training
-    # runs to convergence (the paper's code stopped after about 2,000 RMSprop steps): on 6d fold 0
-    # trait 1 it lowers held-out h2 (0.99 -> 0.87, 0.59 at 64k steps) and picks other masses.
-    # 1e-6 keeps h2 and gives about 150 nonzero MS1 coefficients (mean/max |w| 0.0002).
+    # L1 penalty (the paper's kind), weight 1e-6 (PI). The paper's 1e-4 is too strong when
+    # training runs to convergence (the paper's code stopped after about 2,000 RMSprop steps): on
+    # 6d fold 0 trait 1 it lowers held-out h2 (0.99 -> 0.87, 0.59 at 64k steps) and picks other
+    # masses. 1e-6 keeps h2 and gives about 150 nonzero MS1 coefficients (mean/max |w| 0.0002).
     penalty: [l1, 1.0e-6]
   # GEMMA LMM of the per-accession means of H2-opt traits, per treatment and fold.
   gwas:
