@@ -26,6 +26,10 @@ sorghum:
     traits: 10
     steps: 320000
     device: cuda
+    # The paper's penalty (main.tex, appendix "Machine learning models and regularization"; the
+    # paper's code divides it by the spread of the trait, as h2opt.train does): total variation over
+    # wavelength, weight 1e-4. The spectra are the paper's, unscaled, so the weight carries over.
+    penalty: [tv, 1.0e-4]
   # Baselines fitted once per fold (baseline.py) and evaluated against every source;
   # traits must be at least the traits of every source.
   baselines:
@@ -137,6 +141,9 @@ arabidopsis:
     traits: 10
     steps: 16000
     device: cuda
+    # The paper's penalty (as for sorghum): L1, weight 1e-4. The features are the paper's (binned
+    # intensities over their largest value), so the weight carries over.
+    penalty: [l1, 1.0e-4]
   # GEMMA LMM of the per-accession means of H2-opt traits, per treatment and fold.
   gwas:
     traits: 10

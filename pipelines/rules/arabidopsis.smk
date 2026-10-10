@@ -97,6 +97,7 @@ rule arabi_choose_linear_h2opt_noise:
         str(ARABI_OUT / "{treatment}" / "h2opt" / "noise.log"),
     params:
         folds=" ".join(str(f) for f in ARABI_FOLDS),
+        penalty=" ".join(str(v) for v in ARABI["h2opt"]["penalty"]),
     threads: 2
     resources:
         gpu=lambda wc: 1 if ARABI["h2opt"]["device"] == "cuda" else 0,
@@ -104,7 +105,8 @@ rule arabi_choose_linear_h2opt_noise:
         "python -u {ARABI_SCRIPTS}/choose_noise.py --features {input}"
         " --treatment {wildcards.treatment} --folds {params.folds} --out {output.noise}"
         " --out-traits {output.traits} --figure {output.pdf}"
-        " --steps {ARABI[h2opt][steps]} --device {ARABI[h2opt][device]} > {log} 2>&1"
+        " --steps {ARABI[h2opt][steps]} --penalty {params.penalty}"
+        " --device {ARABI[h2opt][device]} > {log} 2>&1"
 
 
 # All folds train in one job (h2opt.train_models).
@@ -119,6 +121,7 @@ rule arabi_train_linear_h2opt:
         str(ARABI_OUT / "{treatment}" / "h2opt" / "train.log"),
     params:
         folds=" ".join(str(f) for f in ARABI_FOLDS),
+        penalty=" ".join(str(v) for v in ARABI["h2opt"]["penalty"]),
     threads: 2
     resources:
         gpu=lambda wc: 1 if ARABI["h2opt"]["device"] == "cuda" else 0,
@@ -127,7 +130,7 @@ rule arabi_train_linear_h2opt:
         " --treatment {wildcards.treatment} --folds {params.folds} --noise {input.noise}"
         " --out-traits {output.traits} --out-models {output.models}"
         " --traits {ARABI[h2opt][traits]} --steps {ARABI[h2opt][steps]} --seed 0"
-        " --device {ARABI[h2opt][device]} > {log} 2>&1"
+        " --penalty {params.penalty} --device {ARABI[h2opt][device]} > {log} 2>&1"
 
 
 rule arabi_train_baselines:
