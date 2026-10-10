@@ -48,5 +48,5 @@ echo "H2-opt-analysis: $(git rev-parse --short HEAD)$(git diff --quiet HEAD || e
 
 exec uv run --no-sync snakemake -s pipelines/Snakefile \
     --cores "$cores" --resources gpu="$gpu_jobs" \
-    --rerun-triggers mtime --keep-going --printshellcmds \
+    --rerun-triggers mtime --keep-going --printshellcmds --use-conda \
     "${extra[@]}" -- "$@"

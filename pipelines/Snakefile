@@ -27,6 +27,7 @@ include: "rules/simulation.smk"
 include: "rules/image_simulation.smk"
 include: "rules/miscanthus.smk"
 include: "rules/arabidopsis.smk"
+include: "rules/estimator_check.smk"
 
 
 rule all:

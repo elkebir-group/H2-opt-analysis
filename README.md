@@ -224,6 +224,20 @@ mummichog files) is missing.
 | `arabi_paper_coefficients` | `coef_0day.pdf`, `coef_6day.pdf` | coefficients of traits 1-10 (magnitude at least 2% of the largest; MS1 and MS/MS), fold 0 |
 | `arabi_paper_gwas` | `metab0d_GWAS.pdf`, `metab6d_GWAS.pdf` | Manhattan and QQ plots of the traits with significant SNPs, fold 0 |
 
+### lme4 check of the heritability estimators
+
+`estimator_check_all` compares, for the raw features of each dataset, the pipeline's estimator
+(ANOVA for sorghum and Arabidopsis, Henderson3 for Miscanthus) with an lme4 mixed model of the same
+design, all design terms random (paper Fig. ANOVA). R and lme4 come from `pipelines/envs/lme4.yaml`
+(Snakemake builds the environment; `run.sh` passes `--use-conda`). Outputs are under
+`data/derived/estimator_check/`.
+
+| Rule | Output | Content |
+|---|---|---|
+| `check_estimator_inputs` | `{dataset}.csv`, `{dataset}.npz` | the raw features with their design, and the estimator's heritability of each |
+| `check_lme4_heritability` | `{dataset}_lme4.csv` | lme4 heritability of each feature: group variance over the sum of all variance components |
+| `check_plot_estimators` | `figures/ANOVA.{pdf,png}` | one panel per dataset with the Pearson r |
+
 Each script under `pipelines/scripts/` also runs by hand; its docstring gives
 the arguments.
 

@@ -43,4 +43,5 @@ def test_pipeline_parses():
             'sorghum_plot_paper_gwas', 'arabidopsis_gwas_all', 'arabi_prepare_genotypes',
             'arabi_run_gwas', 'arabidopsis_paper_figures', 'arabi_trait_coefficients',
             'arabi_paper_main_figure', 'arabi_paper_heritability', 'arabi_paper_coefficients',
-            'arabi_paper_gwas'} <= rules
+            'arabi_paper_gwas', 'estimator_check_all', 'check_estimator_inputs',
+            'check_lme4_heritability', 'check_plot_estimators'} <= rules
