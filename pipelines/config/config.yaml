@@ -34,8 +34,8 @@ sorghum:
   gwas:
     traits: 5
     pcs: 5
-    jobs: 1      # traits run at once
-    threads: 4   # OpenBLAS threads per GEMMA run
+    jobs: 3      # traits run at once
+    threads: 1   # OpenBLAS threads per GEMMA run (its per-SNP fit uses one core)
 
 simulation:
   instances: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
