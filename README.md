@@ -119,7 +119,8 @@ capped at 1). The config lists the populations. All outputs are under
 | Rule | Output | Content |
 |---|---|---|
 | `misc_prepare_images` | `images.npy` | the images as uncompressed float32, read one date at a time |
-| `misc_train_baselines` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | baselines of every date in one fold; PCH maximizes Henderson3, one ridge for all dates (`PCH.tune` over `h2opt.baselines.RIDGES`) |
+| `misc_choose_pch_ridge` | `pch/ridge.npz` | the one PCH ridge for all folds and dates: `PCH.tune` over `h2opt.baselines.RIDGES` on the selection date, the validation splits of all folds together (as the linear H2-opt level) |
+| `misc_train_baselines` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | baselines of every date in one fold; PCH maximizes Henderson3 at the ridge of `pch/ridge.npz` |
 | `misc_score_heritability` | `heritability.npz` | train and test Henderson3 of every method, date and fold; the hybrid H2-opt traits (`h2opt_hybrid/date{d}.npz`) are imported from a scratch run of the earlier hybrid design until a rule trains them |
 | `misc_plot_heritability` | `figures/heritability.{pdf,png}` | test heritability per date, hybrid H2-opt against the baselines |
 

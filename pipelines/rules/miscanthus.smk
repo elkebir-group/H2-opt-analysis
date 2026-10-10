@@ -38,9 +38,33 @@ rule miscanthus_all:
                population=MISC_POPULATIONS),
 
 
-rule misc_train_baselines:
+rule misc_choose_pch_ridge:
     input:
         misc_images,
+    output:
+        str(MISC_OUT / "{population}" / "pch" / "ridge.npz"),
+    log:
+        str(MISC_OUT / "{population}" / "pch" / "ridge.log"),
+    threads: 8
+    shell:
+        "python -u {MISC_SCRIPTS}/choose_pch_ridge.py --population {wildcards.population}"
+        " --images {input} --date {MISC[selection_date]} --out {output} > {log} 2>&1"
+
+
+def misc_baseline_inputs(wildcards):
+    inputs = {"images": misc_images(wildcards)}
+    if wildcards.baseline == "pch":
+        inputs["ridge"] = str(MISC_OUT / wildcards.population / "pch" / "ridge.npz")
+    return inputs
+
+
+def misc_ridge_arg(wildcards, input):
+    return f"--ridge {input.ridge}" if wildcards.baseline == "pch" else ""
+
+
+rule misc_train_baselines:
+    input:
+        unpack(misc_baseline_inputs),
     output:
         str(MISC_OUT / "{population}" / "{baseline}" / "fold{fold}.npz"),
     log:
@@ -48,10 +72,13 @@ rule misc_train_baselines:
     wildcard_constraints:
         baseline="|".join(MISC_BASELINES),
         fold=r"\d+",
+    params:
+        ridge=misc_ridge_arg,
     threads: 4
     shell:
         "python -u {MISC_SCRIPTS}/baseline.py --population {wildcards.population}"
-        " --images {input} --method {wildcards.baseline} --fold {wildcards.fold}"
+        " --images {input.images} --method {wildcards.baseline} {params.ridge}"
+        " --fold {wildcards.fold}"
         " --traits {MISC[traits]} --out {output} > {log} 2>&1"
 
 
