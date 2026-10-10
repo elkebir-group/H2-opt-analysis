@@ -28,6 +28,14 @@ GENOTYPES = data('metab', 'metabData_Alex', 'call_method_75', 'call_method_75_TA
 GENOTYPE_SAMPLES = GENOTYPES.with_name(GENOTYPES.name + '_copy.fam')
 
 
+def precise_masses(treatment):
+    """Path of the precise-mass sums of one treatment: (4, 2000 m/z bins, 60 retention-time bins,
+    10001 steps) float64, the steps splitting each integer m/z bin into m/z - 0.5 + step / 10000;
+    the 4 sums over the treatment's samples are of the intensity, the retention time (s) times the
+    intensity, (unused), and the squared intensity."""
+    return PROCESSED / f'massIntensitiesPrecise2_{treatment}.npz'
+
+
 def labels():
     """Accession (pooled), treatment and year of every sample, in the order of imageMetab.npz."""
     names = load_npz(PROCESSED / 'names.npz').astype(str)

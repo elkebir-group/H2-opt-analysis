@@ -202,6 +202,14 @@ under `data/derived/arabidopsis/{treatment}/`.
 | `arabi_score_heritability` | `heritability.npz` | train and test heritability of every method, fold and trait |
 | `arabi_plot_heritability` | `figures/heritability_{test,train}.pdf` | heritability per trait, H2-opt against the baselines (Fig. arabiResult b and its train counterpart) |
 
+Peak lists for pathway enrichment are a separate target, `arabidopsis_enrichment_inputs`. Each
+list goes to MetaboAnalyst functional analysis (mummichog, web tool, default settings) by hand.
+
+| Rule | Output | Content |
+|---|---|---|
+| `arabi_prepare_precise_masses` | `precise_masses.npz` | precise m/z, mean retention time and intensity SD of each precise mass in the feature bins (streams `massIntensitiesPrecise2_{treatment}.npz`, 36.6 GB; about 22 GB of memory) |
+| `arabi_enrichment_inputs` | `enrichment/trait{k}.txt` | the 10,000 precise masses with the largest \|MS1 coefficient x intensity SD\| per H2-opt trait, fold 0, in the paper's format |
+
 The GWAS is a separate target, `arabidopsis_gwas_all`, run only on request. The genotypes are the
 250k SNP panel `metab/metabData_Alex/call_method_75/call_method_75_TAIR8` with its full sample list
 (`_copy.fam`; the `.fam` beside the `.bed` is a subset, as for Miscanthus).

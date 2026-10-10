@@ -288,3 +288,44 @@ rule arabi_paper_gwas:
     shell:
         "python -u {ARABI_SCRIPTS}/plot_paper_gwas.py --gwas {input}"
         " --title '{wildcards.treatment}, fold {ARABI_PAPER_FOLD}' --out {output.pdf} > {log} 2>&1"
+
+
+# Peak lists for pathway enrichment (MetaboAnalyst functional analysis, web tool, default
+# settings): upload each trait<k>.txt by hand. Run only on request.
+rule arabidopsis_enrichment_inputs:
+    input:
+        expand(str(ARABI_OUT / "{treatment}" / "enrichment" / "trait1.txt"),
+               treatment=ARABI["treatments"]),
+
+
+rule arabi_prepare_precise_masses:
+    output:
+        str(ARABI_OUT / "{treatment}" / "precise_masses.npz"),
+    log:
+        str(ARABI_OUT / "{treatment}" / "precise_masses.log"),
+    threads: 2
+    resources:
+        mem_gb=22,
+    shell:
+        "python -u {ARABI_SCRIPTS}/precise_masses.py --treatment {wildcards.treatment}"
+        " --out {output} > {log} 2>&1"
+
+
+rule arabi_enrichment_inputs:
+    input:
+        precise=str(ARABI_OUT / "{treatment}" / "precise_masses.npz"),
+        coefficients=str(ARABI_OUT / "{treatment}" / "h2opt"
+                         / f"coefficients_fold{ARABI_PAPER_FOLD}.npz"),
+    output:
+        expand(str(ARABI_OUT / "{{treatment}}" / "enrichment" / "trait{k}.txt"),
+               k=range(1, ARABI["h2opt"]["traits"] + 1)),
+    log:
+        str(ARABI_OUT / "{treatment}" / "enrichment" / "inputs.log"),
+    params:
+        out_dir=lambda wc: str(ARABI_OUT / wc.treatment / "enrichment"),
+    threads: 2
+    shell:
+        "python -u {ARABI_SCRIPTS}/enrichment_inputs.py --precise {input.precise}"
+        " --coefficients {input.coefficients} --peaks {ARABI[enrichment_peaks]}"
+        " --out-dir {params.out_dir} > {log} 2>&1"
+

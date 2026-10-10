@@ -143,3 +143,5 @@ arabidopsis:
     pcs: 5
     jobs: 5      # traits run at once
     threads: 1   # OpenBLAS threads per GEMMA run (its per-SNP fit uses one core)
+  # Masses per peak list for pathway enrichment (enrichment_inputs.py), as the paper.
+  enrichment_peaks: 10000
