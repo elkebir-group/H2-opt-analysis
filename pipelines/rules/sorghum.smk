@@ -62,6 +62,15 @@ rule sorghum_gwas_all:
                source=["paper", "h2opt"], fold=SORGHUM_FOLDS),
 
 
+# The permutation null of the whole H2-opt -> GWAS pipeline, and the GWAS of the cross-fitted
+# trait 1 (each line's phenotype from the fold model that held it out). Run only on request.
+rule sorghum_null_gwas_all:
+    input:
+        expand(str(SORGHUM_OUT / "null" / "perm{k}.npz"),
+               k=range(SORGHUM["gwas"]["permutations"])),
+        str(SORGHUM_OUT / "gwas" / "h2opt_crossfit.npz"),
+
+
 rule sorghum_choose_linear_h2opt_noise:
     output:
         noise=str(SORGHUM_OUT / "h2opt" / "noise.npz"),
@@ -256,3 +265,57 @@ rule sorghum_plot_paper_gwas:
         "python -u {SORGHUM_SCRIPTS}/plot_paper_gwas.py --folds {params.folds} --gwas {input}"
         " --trait 1 --example-fold {params.example} --out-folds {output.folds}"
         " --out-manhattan {output.manhattan} > {log} 2>&1"
+
+
+rule sorghum_null_gwas:
+    input:
+        noise=str(SORGHUM_OUT / "h2opt" / "noise.npz"),
+        pcs=str(SORGHUM_OUT / "genotype_pcs.npy"),
+    output:
+        str(SORGHUM_OUT / "null" / "perm{k}.npz"),
+    log:
+        str(SORGHUM_OUT / "null" / "perm{k}.log"),
+    wildcard_constraints:
+        k=r"\d+",
+    params:
+        work=lambda wc: str(SORGHUM_OUT / "null" / "work" / f"perm{wc.k}"),
+        penalty=" ".join(str(v) for v in SORGHUM["h2opt"]["penalty"]),
+    threads: SORGHUM["gwas"]["jobs"] * SORGHUM["gwas"]["threads"]
+    resources:
+        gpu=lambda wc: 1 if SORGHUM["h2opt"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {SORGHUM_SCRIPTS}/null_gwas.py --permutation {wildcards.k}"
+        " --noise {input.noise} --pcs {input.pcs} --out {output} --work {params.work}"
+        " --traits {SORGHUM[gwas][traits]} --steps {SORGHUM[h2opt][steps]}"
+        " --penalty {params.penalty} --device {SORGHUM[h2opt][device]}"
+        " --jobs {SORGHUM[gwas][jobs]} --threads {SORGHUM[gwas][threads]} > {log} 2>&1"
+
+
+rule sorghum_cross_fit_traits:
+    input:
+        [str(SORGHUM_OUT / "h2opt" / f"fold{f}.npz") for f in SORGHUM_FOLDS],
+    output:
+        str(SORGHUM_OUT / "h2opt" / "crossfit.npz"),
+    log:
+        str(SORGHUM_OUT / "h2opt" / "crossfit.log"),
+    threads: 1
+    shell:
+        "python -u {PIPELINE_DIR}/scripts/shared/cross_fit_traits.py --dataset sorghum"
+        " --traits {input} --out {output} > {log} 2>&1"
+
+
+rule sorghum_crossfit_gwas:
+    input:
+        traits=str(SORGHUM_OUT / "h2opt" / "crossfit.npz"),
+        pcs=str(SORGHUM_OUT / "genotype_pcs.npy"),
+    output:
+        str(SORGHUM_OUT / "gwas" / "h2opt_crossfit.npz"),
+    log:
+        str(SORGHUM_OUT / "gwas" / "h2opt_crossfit.log"),
+    params:
+        work=str(SORGHUM_OUT / "gwas" / "work" / "h2opt_crossfit"),
+    threads: SORGHUM["gwas"]["threads"]
+    shell:
+        "python -u {SORGHUM_SCRIPTS}/gwas.py --h2opt-traits {input.traits} --pcs {input.pcs}"
+        " --out {output} --work {params.work} --traits 1 --jobs 1"
+        " --threads {SORGHUM[gwas][threads]} > {log} 2>&1"

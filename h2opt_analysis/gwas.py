@@ -271,3 +271,19 @@ def summarize(result):
     return {'chr': result['chr'].astype(np.int16), 'ps': result['ps'].astype(np.int64),
             'neg_log10_p': (-np.log10(p)).astype(np.float32),
             'lambda_gc': np.median(stats.chi2.isf(p, 1), axis=1) / stats.chi2.ppf(0.5, 1)}
+
+
+def cross_fit(traits, fold_of_row):
+    """Cross-fitted trait: the trait of each row from the fold model that held that row out.
+
+    traits: (folds, n), one trait of all rows from each fold's model (e.g. trait 1). Each fold's
+    trait is standardized over all rows, and its sign set so that it correlates positively with
+    fold 0's (a trait's sign is arbitrary). fold_of_row: (n,) the held-out fold of each row.
+    Returns the (n,) cross-fitted trait and the correlation of each fold's trait with fold 0's
+    over all rows, after the sign change: the traits must agree for the stitching to make sense."""
+    z = np.asarray(traits, dtype=np.float64)
+    z = (z - z.mean(axis=1, keepdims=True)) / z.std(axis=1, keepdims=True)
+    r = np.array([np.corrcoef(z[0], t)[0, 1] for t in z])
+    z = z * np.where(r < 0, -1.0, 1.0)[:, None]
+    fold_of_row = np.asarray(fold_of_row)
+    return z[fold_of_row, np.arange(z.shape[1])], np.abs(r)

@@ -46,4 +46,9 @@ def test_pipeline_parses():
             'arabi_paper_gwas', 'estimator_check_all', 'check_estimator_inputs',
             'check_lme4_heritability', 'check_plot_estimators',
             'arabidopsis_enrichment_inputs', 'arabi_prepare_precise_masses',
-            'arabi_enrichment_inputs'} <= rules
+            'arabi_enrichment_inputs', 'arabidopsis_pathway_enrichment',
+            'arabi_download_pathway_library', 'arabi_pathway_enrichment',
+            'sorghum_null_gwas_all', 'sorghum_null_gwas', 'sorghum_cross_fit_traits',
+            'sorghum_crossfit_gwas', 'arabidopsis_null_gwas_all', 'arabi_null_gwas',
+            'arabi_cross_fit_traits', 'arabi_crossfit_gwas', 'miscanthus_null_gwas_all',
+            'misc_null_gwas', 'misc_cross_fit_traits', 'misc_crossfit_gwas'} <= rules

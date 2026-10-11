@@ -100,3 +100,15 @@ def test_plink_set_rejects_wrong_fam(tmp_path):
         gwas.write_plink_set(tmp_path / 'g', tmp_path / 'subset.fam', tmp_path / 's')
     gwas.write_plink_set(tmp_path / 'g', tmp_path / 'g.fam', tmp_path / 's')
     assert np.array_equal(gwas.read_bed(tmp_path / 's'), G, equal_nan=True)
+
+
+def test_cross_fit_takes_each_row_from_its_held_out_fold():
+    from h2opt_analysis.gwas import cross_fit
+    rng = np.random.default_rng(0)
+    base = rng.normal(size=40)
+    fold_of = np.arange(40) % 4
+    traits = np.stack([base * (-1) ** f * (f + 1) + f for f in range(4)])  # sign, scale, shift
+    stitched, r = cross_fit(traits, fold_of)
+    np.testing.assert_allclose(r, 1)
+    z = (base - base.mean()) / base.std()
+    np.testing.assert_allclose(stitched, z)

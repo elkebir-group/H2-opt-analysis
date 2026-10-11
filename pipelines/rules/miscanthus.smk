@@ -45,6 +45,17 @@ rule miscanthus_gwas_all:
                population=MISC_POPULATIONS, date=MISC_DATES),
 
 
+# The permutation null of the whole hybrid H2-opt -> GWAS pipeline on selection_date, and the GWAS
+# of the cross-fitted trait 1 (each plant's phenotype from the fold model that held it out) on
+# every date. Run only on request.
+rule miscanthus_null_gwas_all:
+    input:
+        expand(str(MISC_OUT / "{population}" / "null" / "perm{k}.npz"),
+               population=MISC_POPULATIONS, k=range(MISC["gwas"]["permutations"])),
+        expand(str(MISC_OUT / "{population}" / "gwas" / "crossfit_date{date}.npz"),
+               population=MISC_POPULATIONS, date=MISC_DATES),
+
+
 rule misc_prepare_genotypes:
     output:
         multiext(str(MISC_OUT / "{population}" / "gwas" / "genotypes"), ".bed", ".bim", ".fam"),
@@ -401,3 +412,71 @@ rule misc_plot_paper_main:
         "python -u {MISC_SCRIPTS}/plot_paper_main.py --images {input.images}"
         " --heritability {input.heritability} --dates {input.dates}"
         " --measured {input.measured} --gwas {input.gwas} --out {output} > {log} 2>&1"
+
+
+rule misc_null_gwas:
+    input:
+        images=misc_images,
+        noise=str(MISC_OUT / "{population}" / "h2opt" / "noise.npz"),
+        cnn_level=str(MISC_OUT / "{population}" / "h2opt_hybrid" / "cnn_level.npz"),
+        genotypes=multiext(str(MISC_OUT / "{population}" / "gwas" / "genotypes"),
+                           ".bed", ".bim", ".fam"),
+        pcs=str(MISC_OUT / "{population}" / "gwas" / "genotype_pcs.npy"),
+    output:
+        str(MISC_OUT / "{population}" / "null" / "perm{k}.npz"),
+    log:
+        str(MISC_OUT / "{population}" / "null" / "perm{k}.log"),
+    wildcard_constraints:
+        k=r"\d+",
+    params:
+        prefix=lambda wc: str(MISC_OUT / wc.population / "gwas" / "genotypes"),
+        work=lambda wc: str(MISC_OUT / wc.population / "null" / "work" / f"perm{wc.k}"),
+    threads: MISC["gwas"]["threads"]
+    resources:
+        gpu=lambda wc: 4 if MISC["hybrid"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {MISC_SCRIPTS}/null_gwas.py --population {wildcards.population}"
+        " --images {input.images} --noise {input.noise} --cnn-level {input.cnn_level}"
+        " --date {MISC[selection_date]} --permutation {wildcards.k}"
+        " --genotypes {params.prefix} --pcs {input.pcs} --out {output} --work {params.work}"
+        " --linear-steps {MISC[hybrid][linear_steps]} --steps {MISC[hybrid][steps]}"
+        " --max-copies {MISC[hybrid][max_copies]} --device {MISC[hybrid][device]}"
+        " --threads {MISC[gwas][threads]} > {log} 2>&1"
+
+
+rule misc_cross_fit_traits:
+    input:
+        str(MISC_OUT / "{population}" / "h2opt_hybrid" / "date{date}.npz"),
+    output:
+        str(MISC_OUT / "{population}" / "h2opt_hybrid" / "crossfit_date{date}.npz"),
+    log:
+        str(MISC_OUT / "{population}" / "h2opt_hybrid" / "crossfit_date{date}.log"),
+    wildcard_constraints:
+        date=r"\d+",
+    threads: 1
+    shell:
+        "python -u {PIPELINE_DIR}/scripts/shared/cross_fit_traits.py --dataset miscanthus"
+        " --population {wildcards.population} --traits {input} --out {output} > {log} 2>&1"
+
+
+rule misc_crossfit_gwas:
+    input:
+        traits=str(MISC_OUT / "{population}" / "h2opt_hybrid" / "crossfit_date{date}.npz"),
+        genotypes=multiext(str(MISC_OUT / "{population}" / "gwas" / "genotypes"),
+                           ".bed", ".bim", ".fam"),
+        pcs=str(MISC_OUT / "{population}" / "gwas" / "genotype_pcs.npy"),
+    output:
+        str(MISC_OUT / "{population}" / "gwas" / "crossfit_date{date}.npz"),
+    log:
+        str(MISC_OUT / "{population}" / "gwas" / "crossfit_date{date}.log"),
+    wildcard_constraints:
+        date=r"\d+",
+    params:
+        prefix=lambda wc: str(MISC_OUT / wc.population / "gwas" / "genotypes"),
+        work=lambda wc: str(MISC_OUT / wc.population / "gwas" / "work" / f"crossfit_date{wc.date}"),
+    threads: MISC["gwas"]["threads"]
+    shell:
+        "python -u {MISC_SCRIPTS}/gwas.py --population {wildcards.population}"
+        " --h2opt-traits {input.traits} --genotypes {params.prefix} --pcs {input.pcs}"
+        " --out {output} --work {params.work} --jobs 1 --threads {MISC[gwas][threads]}"
+        " > {log} 2>&1"

@@ -38,6 +38,16 @@ rule arabidopsis_gwas_all:
                treatment=ARABI["treatments"], fold=ARABI_FOLDS),
 
 
+# The permutation null of the whole H2-opt -> GWAS pipeline, and the GWAS of the cross-fitted
+# trait 1 (each accession's phenotype from the fold model that held it out). Run only on request.
+rule arabidopsis_null_gwas_all:
+    input:
+        expand(str(ARABI_OUT / "{treatment}" / "null" / "perm{k}.npz"),
+               treatment=ARABI["treatments"], k=range(ARABI["gwas"]["permutations"])),
+        expand(str(ARABI_OUT / "{treatment}" / "gwas" / "crossfit.npz"),
+               treatment=ARABI["treatments"]),
+
+
 rule arabi_prepare_genotypes:
     output:
         multiext(str(ARABI_OUT / "{treatment}" / "gwas" / "genotypes"), ".bed", ".bim", ".fam"),
@@ -373,3 +383,66 @@ rule arabi_pathway_enrichment:
     shell:
         "Rscript {ARABI_SCRIPTS}/pathway_enrichment.R {input.peaks} {input.library} {output}"
         " {params.settings} > {log} 2>&1"
+
+
+rule arabi_null_gwas:
+    input:
+        features=ARABI_FEATURES,
+        noise=str(ARABI_OUT / "{treatment}" / "h2opt" / "noise.npz"),
+        genotypes=multiext(str(ARABI_OUT / "{treatment}" / "gwas" / "genotypes"),
+                           ".bed", ".bim", ".fam"),
+        pcs=str(ARABI_OUT / "{treatment}" / "gwas" / "genotype_pcs.npy"),
+    output:
+        str(ARABI_OUT / "{treatment}" / "null" / "perm{k}.npz"),
+    log:
+        str(ARABI_OUT / "{treatment}" / "null" / "perm{k}.log"),
+    wildcard_constraints:
+        k=r"\d+",
+    params:
+        prefix=lambda wc: str(ARABI_OUT / wc.treatment / "gwas" / "genotypes"),
+        work=lambda wc: str(ARABI_OUT / wc.treatment / "null" / "work" / f"perm{wc.k}"),
+        penalty=" ".join(str(v) for v in ARABI["h2opt"]["penalty"]),
+    threads: ARABI["gwas"]["jobs"] * ARABI["gwas"]["threads"]
+    resources:
+        gpu=lambda wc: 1 if ARABI["h2opt"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {ARABI_SCRIPTS}/null_gwas.py --features {input.features}"
+        " --treatment {wildcards.treatment} --permutation {wildcards.k} --noise {input.noise}"
+        " --genotypes {params.prefix} --pcs {input.pcs} --out {output} --work {params.work}"
+        " --traits {ARABI[gwas][null_traits]} --steps {ARABI[h2opt][steps]}"
+        " --penalty {params.penalty} --device {ARABI[h2opt][device]}"
+        " --jobs {ARABI[gwas][jobs]} --threads {ARABI[gwas][threads]} > {log} 2>&1"
+
+
+rule arabi_cross_fit_traits:
+    input:
+        [str(ARABI_OUT / "{treatment}" / "h2opt" / f"fold{f}.npz") for f in ARABI_FOLDS],
+    output:
+        str(ARABI_OUT / "{treatment}" / "h2opt" / "crossfit.npz"),
+    log:
+        str(ARABI_OUT / "{treatment}" / "h2opt" / "crossfit.log"),
+    threads: 1
+    shell:
+        "python -u {PIPELINE_DIR}/scripts/shared/cross_fit_traits.py --dataset arabidopsis"
+        " --treatment {wildcards.treatment} --traits {input} --out {output} > {log} 2>&1"
+
+
+rule arabi_crossfit_gwas:
+    input:
+        traits=str(ARABI_OUT / "{treatment}" / "h2opt" / "crossfit.npz"),
+        genotypes=multiext(str(ARABI_OUT / "{treatment}" / "gwas" / "genotypes"),
+                           ".bed", ".bim", ".fam"),
+        pcs=str(ARABI_OUT / "{treatment}" / "gwas" / "genotype_pcs.npy"),
+    output:
+        str(ARABI_OUT / "{treatment}" / "gwas" / "crossfit.npz"),
+    log:
+        str(ARABI_OUT / "{treatment}" / "gwas" / "crossfit.log"),
+    params:
+        prefix=lambda wc: str(ARABI_OUT / wc.treatment / "gwas" / "genotypes"),
+        work=lambda wc: str(ARABI_OUT / wc.treatment / "gwas" / "work" / "crossfit"),
+    threads: ARABI["gwas"]["threads"]
+    shell:
+        "python -u {ARABI_SCRIPTS}/gwas.py --treatment {wildcards.treatment}"
+        " --h2opt-traits {input.traits} --genotypes {params.prefix} --pcs {input.pcs}"
+        " --out {output} --work {params.work} --traits 1 --jobs 1"
+        " --threads {ARABI[gwas][threads]} > {log} 2>&1"
