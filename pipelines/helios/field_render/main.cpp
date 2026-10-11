@@ -10,7 +10,7 @@
 //   keep col row shoots leaf_scale chlorophyll senesced dx dy soil_scale
 //   col, row: plot position in the tile (0-based); shoots: number of shoots; leaf_scale: leaf
 //   prototype scale (sorghum default 0.65); chlorophyll: ug/cm2 of the green leaves; senesced:
-//   number of leaves turned senescent; dx, dy: clump offset from the plot center (m); soil_scale:
+//   probability of each leaf to be senescent; dx, dy: clump offset from the plot center (m); soil_scale:
 //   factor on the soil reflectance spectrum.
 #include "RadiationModel.h"
 #include "PlantArchitecture.h"
@@ -35,8 +35,8 @@ static const float DIFFUSE_FLUX = 400.f;  // W/m2 of the diffuse sky: soft shado
 // the Monte Carlo noise of the full sorghum mesh at these ray counts.
 
 struct Plot {
-    int keep, col, row, shoots, senesced;
-    float leaf_scale, chlorophyll, dx, dy, soil_scale;
+    int keep, col, row, shoots;
+    float leaf_scale, chlorophyll, senesced, dx, dy, soil_scale;
 };
 
 static double secs(std::chrono::steady_clock::time_point t0) {
@@ -113,13 +113,18 @@ int main(int argc, char **argv) {
             plant_ids.push_back(plantarch.buildPlantInstanceFromLibrary(make_vec3(cx + p.dx + r * std::cos(a), cy + p.dy + r * std::sin(a), 0), AGE));
         }
         std::vector<uint> leaf_objects = plantarch.getPlantLeafObjectIDs(plant_ids);
-        // senescence: whole leaves drawn at random
-        for (int s = 0; s < p.senesced && !leaf_objects.empty(); s++) {
-            size_t pick = context.randu(0, int(leaf_objects.size()) - 1);
-            std::vector<uint> u = context.getObjectPrimitiveUUIDs(leaf_objects[pick]);
-            senescent_leaves.insert(senescent_leaves.end(), u.begin(), u.end());
-            leaf_objects.erase(leaf_objects.begin() + pick);
+        // senescence: each leaf with probability senesced (a fraction, so that it does not depend
+        // on the number of leaves of the clump)
+        std::vector<uint> green_leaves;
+        for (uint leaf : leaf_objects) {
+            if (context.randu() < p.senesced) {
+                std::vector<uint> u = context.getObjectPrimitiveUUIDs(leaf);
+                senescent_leaves.insert(senescent_leaves.end(), u.begin(), u.end());
+            } else {
+                green_leaves.push_back(leaf);
+            }
         }
+        leaf_objects = green_leaves;
         green.chlorophyllcontent = p.chlorophyll;
         if (!leaf_objects.empty()) leafoptics.run(context.getObjectPrimitiveUUIDs(leaf_objects), green, "leaf_" + std::to_string(k));
     }

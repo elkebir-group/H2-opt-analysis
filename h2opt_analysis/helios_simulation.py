@@ -9,8 +9,9 @@ the spectral simulation, standardized). They drive the same three plant traits:
 - tillers: shoots ~ Poisson(8 exp(0.8 z)), at least 1, uniform on a disk of radius
   0.03 sqrt(shoots) m (clump area grows with the shoot count).
 Non-heritable variation of each plot: clump offset (uniform +-8 pixels), soil brightness
-(x exp(0.15 N)), senescence (Poisson(10 Gamma(2) / 2) leaves turned senescent), and the Monte
-Carlo noise of the render.
+(x exp(0.15 N)), senescence (each leaf senescent with probability p ~ Beta(2, 10), mean 0.17,
+per plot: a fraction, so that it does not track the number of shoots), and the Monte Carlo noise
+of the render.
 
 A plot is a clump of sorghum shoots of 20 days (Helios has no Miscanthus model) on soil, 3 ft
 apart, seen from 50 m above in the 5 MicaSense RedEdge bands at 63 pixels per plot. The images
@@ -42,7 +43,7 @@ def plot_inputs(z_size, z_tillers, z_green, rng):
     shoots = np.maximum(rng.poisson(8 * np.exp(0.8 * z_tillers)), 1)
     leaf_scale = 0.65 * np.exp(0.3 * z_size + 0.05 * rng.standard_normal(n))
     chlorophyll = 40 * np.exp(0.2 * z_green)
-    senesced = rng.poisson(10 * rng.gamma(2.0, size=n) / 2.0)
+    senesced = rng.beta(2.0, 10.0, size=n)
     offset = rng.uniform(-8, 8, size=(n, 2)) * PLOT_M / PX
     soil_scale = np.exp(0.15 * rng.standard_normal(n))
     return np.column_stack([shoots, leaf_scale, chlorophyll, senesced, offset, soil_scale])
@@ -71,7 +72,7 @@ def write_table(path, rows):
         out.write(COLUMNS + '\n')
         for r in rows:
             out.write(f'{int(r[0]):d} {int(r[1]):d} {int(r[2]):d} {int(r[3]):d} {r[4]:.5f} '
-                      f'{r[5]:.4f} {int(r[6]):d} {r[7]:.5f} {r[8]:.5f} {r[9]:.5f}\n')
+                      f'{r[5]:.4f} {r[6]:.4f} {r[7]:.5f} {r[8]:.5f} {r[9]:.5f}\n')
 
 
 def crop(tile, rows):
@@ -111,6 +112,7 @@ def render(z_size, z_tillers, z_green, seed, binary, workdir):
                              check=True).stdout
         tile = np.fromfile(out, dtype=np.float32).reshape(6, side * PX, side * PX)
         images[plots] = crop(tile, rows)
+        os.remove(out)  # 19 MB per tile
         print(f'tile {t}: {len(plots)} plots, {time.time() - t0:.1f} s; '
               f'{log.strip().splitlines()[-1]}', flush=True)
     return images
