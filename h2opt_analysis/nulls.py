@@ -31,27 +31,6 @@ def permute_genotypes(genotypes, strata=None, seed=0):
     return permuted
 
 
-
-def permute_units(units, strata, seed=0):
-    """Whole units (e.g. plots) permuted among the units of each stratum (e.g. rep): the source row
-    of each row. Row j of a unit takes the row j of its source unit (rows in their order within the
-    unit), so everything genetic about a unit (its family, the genotypes of its plants) moves
-    together, while the unit's place in the field stays with its measurements. All units of a
-    stratum must have the same number of rows."""
-    units, strata = np.asarray(units), np.asarray(strata).reshape(len(units), -1)
-    _, stratum = np.unique(strata, axis=0, return_inverse=True)
-    stratum = stratum.reshape(-1)
-    rng = np.random.default_rng(seed)
-    source = np.arange(len(units))
-    for s in np.unique(stratum):
-        names = np.unique(units[stratum == s])
-        rows = [np.flatnonzero((units == u) & (stratum == s)) for u in names]
-        if len({len(r) for r in rows}) > 1:
-            raise ValueError(f'the units of stratum {s} have different numbers of rows')
-        for target, origin in zip(rows, [rows[i] for i in rng.permutation(len(rows))], strict=True):
-            source[target] = origin
-    return source
-
 def train_null_traits(make_model, X, groups, environment, train_test, n_traits, noise_sd, n_iter,
                       penalty, device, seed, estimator='anova', subgroups=None):
     """H2-opt traits of one permuted dataset, trained as the real ones (same model, noise and

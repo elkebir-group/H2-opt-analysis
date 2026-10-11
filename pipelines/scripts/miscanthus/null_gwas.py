@@ -1,9 +1,8 @@
 """One permutation of the null of the whole Miscanthus hybrid H2-opt -> GWAS pipeline, one date.
 
-Each (rep, field column) block of the field is one plot of 10 plants of one family, so the unit
-permuted is the plot: whole plots are permuted within reps (h2opt_analysis.nulls.permute_units),
-and plant j of a plot takes the family and the genotypes of plant j of its source plot. The plot,
-its rep and its column stay with the images. On the permuted families: hybrid H2-opt on fold 0 as
+The plants are permuted within reps, as the sorghum and Arabidopsis nulls (h2opt_analysis.nulls):
+a plant takes the family and the genotypes of another plant of its rep; its plot, rep and column
+stay with its images. On the permuted families: hybrid H2-opt on fold 0 as
 train_hybrid.py (the linear noise that choose_noise.py chose for fold 0 and the CNN level of
 choose_cnn_level.py; no new selection), Henderson3 heritability, and the GWAS of gwas.py (GEMMA of
 trait 1 with an intercept and the genotype PCs). No genotype-phenotype relation is left, so the
@@ -50,7 +49,8 @@ def main():
 
     design = miscanthus.design(args.population)
     rows = miscanthus.genotype_rows(args.population, f'{args.genotypes}.fam')
-    source = nulls.permute_units(design.plots, design.environment[:, 0], seed=args.permutation)
+    source = nulls.permute_genotypes(np.arange(len(design.families)), design.environment[:, 0],
+                                     seed=args.permutation)
     families, rows = design.families[source], rows[source]
 
     torch.manual_seed(args.permutation)
