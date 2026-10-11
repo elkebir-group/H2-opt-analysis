@@ -26,11 +26,13 @@ sorghum:
     traits: 10
     steps: 320000
     device: cuda
-    # The paper's penalty: total variation over wavelength, weight 1e-4 (PI; the paper's code
-    # divides it by the spread of the trait, as h2opt.train does). Fold 0, 20k steps: test h2 0.710
-    # -> 0.736, roughness sum |dw| / sum |w| 0.47 -> 0.03 (1e-6: 0.713, 0.20). Training only: the
-    # noise level is chosen without it (choose_noise.py).
-    penalty: [tv, 1.0e-4]
+    # Total variation over wavelength (the paper's kind; the paper's code divides it by the
+    # spread of the trait, as h2opt.train does), weight 1e-5 (PI). 10 folds, 320k steps, test h2
+    # traits 1-4: 1e-5 0.691 0.479 0.471 0.398 (PCH 0.687 0.468 0.437 0.445), roughness
+    # sum |dw| / sum |w| 0.06-0.10; the paper's 1e-4 lowers traits 1, 2 and 4 below PCH (0.664
+    # 0.383 0.523 0.385); 1e-6 ties PCH (roughness 0.17-0.24). Training only: the noise level is
+    # chosen without it (choose_noise.py).
+    penalty: [tv, 1.0e-5]
   # Baselines fitted once per fold (baseline.py) and evaluated against every source;
   # traits must be at least the traits of every source.
   baselines:
