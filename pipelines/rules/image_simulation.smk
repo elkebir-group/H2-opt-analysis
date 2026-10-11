@@ -125,29 +125,17 @@ rule img_train_linear_h2opt:
         " --device {params.device} > {log} 2>&1"
 
 
-rule img_choose_hybrid_cnn_level:
-    input:
-        measurements=img_file("{imgsim}", "{instance}", "images.npz"),
-        noise=img_file("{imgsim}", "{instance}", "noise.npz"),
+# One fixed CNN level for every instance of both image sources (PI: no selection of the CNN level
+# here; config image_simulation.hybrid.cnn_level).
+rule img_fixed_cnn_level:
     output:
         img_file("{imgsim}", "{instance}", "cnn_level.npz"),
     log:
         img_file("{imgsim}", "{instance}", "cnn_level.log"),
-    params:
-        linear_steps=IMG["hybrid"]["linear_steps"],
-        steps=IMG["hybrid"]["steps"],
-        max_copies=IMG["hybrid"]["max_copies"],
-        device=IMG["hybrid"]["device"],
     threads: 1
-    # The CNN on images needs most of the GPU memory: one job at a time.
-    resources:
-        gpu=lambda wc: 8 if IMG["hybrid"]["device"] == "cuda" else 0,
     shell:
-        "python -u {SIM_SCRIPTS}/choose_cnn_level.py --measurements {input.measurements}"
-        " --noise {input.noise} --out {output}"
-        " --linear-steps {params.linear_steps} --steps {params.steps}"
-        " --max-copies {params.max_copies} --seed {wildcards.instance}"
-        " --device {params.device} > {log} 2>&1"
+        "python -u {IMG_SCRIPTS}/fixed_cnn_level.py --level {IMG[hybrid][cnn_level]}"
+        " --out {output} > {log} 2>&1"
 
 
 rule img_train_hybrid_h2opt:

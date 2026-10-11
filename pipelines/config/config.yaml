@@ -91,6 +91,9 @@ image_simulation:
   # The hybrid with h2opt.ImageConvModel. max_copies: models trained at once (GPU memory); the
   # copies of one split train together and share every noise draw.
   hybrid:
+    # One CNN level for all instances, not selected (PI, 2026-10-11): 0.316, the median of the
+    # levels selection chose below the top of the grid (toy 0.316, Helios about 0.44).
+    cnn_level: 0.316228
     linear_steps: 10000
     steps: 1000
     max_copies: 4

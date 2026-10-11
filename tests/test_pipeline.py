@@ -29,7 +29,7 @@ def test_pipeline_parses():
             'misc_train_linear_h2opt', 'misc_choose_hybrid_cnn_level',
             'misc_train_hybrid_h2opt',
             'image_simulation_all', 'img_simulate_images', 'img_choose_linear_h2opt_noise',
-            'img_train_linear_h2opt', 'img_choose_hybrid_cnn_level', 'img_train_hybrid_h2opt',
+            'img_train_linear_h2opt', 'img_fixed_cnn_level', 'img_train_hybrid_h2opt',
             'img_train_baselines', 'img_score_traits', 'img_plot_traits', 'img_build_helios',
             'img_render_helios',
             'arabidopsis_all', 'arabi_prepare_features',
