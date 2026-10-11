@@ -192,7 +192,8 @@ rule arabi_plot_heritability:
 
 # Figures of the paper (main.tex image names), from fold ARABI_PAPER_FOLD ("the first
 # cross-validation split") and the GWAS of that fold. Panel e of metabFig (pathway enrichment) is
-# not made: its input (the mummichog files) is missing. Run only on request, as the GWAS.
+# its own file, metabFig_e, made with pathwayAll from the tables of arabi_pathway_enrichment. Run
+# only on request, as the GWAS.
 ARABI_PAPER = ARABI_OUT / "figures" / "paper"
 ARABI_PAPER_FOLD = 0
 
@@ -208,9 +209,24 @@ def arabi_paper_gwas(treatment):
 rule arabidopsis_paper_figures:
     input:
         expand(str(ARABI_PAPER / "{stem}.pdf"),
-               stem=["metabFig", "ArabiHeritTrain"]
+               stem=["metabFig", "metabFig_e", "pathwayAll", "ArabiHeritTrain"]
                     + [f"coef_{t.removesuffix('d')}day" for t in ARABI["treatments"]]
                     + [f"metab{t}_GWAS" for t in ARABI["treatments"]]),
+
+
+rule arabi_paper_pathways:
+    input:
+        expand(str(ARABI_OUT / "{treatment}" / "enrichment" / "trait{k}_pathways.csv"),
+               treatment=ARABI["treatments"], k=range(1, ARABI["h2opt"]["traits"] + 1)),
+    output:
+        all=str(ARABI_PAPER / "pathwayAll.pdf"),
+        top=str(ARABI_PAPER / "metabFig_e.pdf"),
+    log:
+        str(ARABI_PAPER / "pathways.log"),
+    threads: 1
+    shell:
+        "python -u {ARABI_SCRIPTS}/plot_paper_pathways.py --treatments {ARABI[treatments]}"
+        " --tables {input} --out-all {output.all} --out-top {output.top} > {log} 2>&1"
 
 
 rule arabi_trait_coefficients:
