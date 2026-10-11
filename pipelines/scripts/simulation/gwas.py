@@ -1,8 +1,8 @@
 """GEMMA GWAS of the first three traits of one method on one simulation instance.
 
-The phenotype of a line is the mean of each standardized trait over its plants (all 836 lines
-have plants). The covariates are an intercept and the genotype PCs. Writes an .npz
-(gwas.summarize).
+The phenotype of a line is the mean of each standardized trait over its plants, rank-normal
+transformed (gwas.line_means; all 836 lines have plants). The covariates are an intercept and the
+genotype PCs. Writes an .npz (gwas.summarize).
 
     python pipelines/scripts/simulation/gwas.py --spectra spectra.npz --traits pch.npz \\
         --genotypes genotypes --pcs pcs.npy --out gwas_pch.npz --work work/pch \\

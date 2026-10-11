@@ -1,9 +1,9 @@
 """GEMMA GWAS of sorghum H2-opt traits on the 836 sequenced lines.
 
 The phenotype of a line is the mean of each standardized trait over the plants of all its
-accessions (gwas.line_means). Lines without plants are left out. The covariates are an intercept
-and the genotype PCs of genotype_pcs.py. Writes an .npz (gwas.summarize); GEMMA's own files go to
---work.
+accessions, rank-normal transformed (gwas.line_means). Lines without plants are left out. The
+covariates are an intercept and the genotype PCs of genotype_pcs.py. Writes an .npz
+(gwas.summarize); GEMMA's own files go to --work.
 
     python pipelines/scripts/sorghum/gwas.py --h2opt-traits fold0.npz --pcs genotype_pcs.npy \\
         --out paper_fold0.npz --work work/paper_fold0 --traits 5 --jobs 1 --threads 4

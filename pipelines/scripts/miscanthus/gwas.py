@@ -1,9 +1,9 @@
 """GEMMA GWAS of trait 1 of one Miscanthus date, one GWAS per fold's model.
 
-The phenotype of a genotyped plant is its standardized trait (gwas.line_means with one plant per
-line). Plants without genotypes are left out. The covariates are an intercept and the genotype PCs
-of genotypes.py. Writes an .npz (gwas.summarize; its rows are the folds); GEMMA's own files go to
---work.
+The phenotype of a genotyped plant is its standardized trait, rank-normal transformed
+(gwas.line_means with one plant per line). Plants without genotypes are left out. The covariates are
+an intercept and the genotype PCs of genotypes.py. Writes an .npz (gwas.summarize; its rows are the
+folds); GEMMA's own files go to --work.
 
     python pipelines/scripts/miscanthus/gwas.py --population central --h2opt-traits date2.npz \\
         --genotypes genotypes --pcs genotype_pcs.npy --out date2.npz --work work/date2 \\

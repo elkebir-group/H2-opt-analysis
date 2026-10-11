@@ -1,8 +1,9 @@
 """GEMMA GWAS of the H2-opt traits of one Arabidopsis treatment and fold.
 
 The phenotype of an accession is the mean of each standardized trait over its samples
-(gwas.line_means). Accessions without samples are left out. The covariates are an intercept and the
-genotype PCs of genotypes.py. Writes an .npz (gwas.summarize); GEMMA's own files go to --work.
+(gwas.line_means, rank-normal transformed). Accessions without samples are left out. The covariates
+are an intercept and the genotype PCs of genotypes.py. Writes an .npz (gwas.summarize); GEMMA's own
+files go to --work.
 
     python pipelines/scripts/arabidopsis/gwas.py --treatment 0d --h2opt-traits fold0.npz \\
         --genotypes genotypes --pcs genotype_pcs.npy --out fold0.npz --work work/fold0 \\

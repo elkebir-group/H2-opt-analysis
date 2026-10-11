@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from scipy import stats
 
 from h2opt_analysis import gwas
 
@@ -85,10 +86,24 @@ def test_run_gemma_matches_exact_lmm(tmp_path):
 def test_line_means():
     Y = np.array([[1.0, 0.0], [3.0, 2.0], [5.0, 4.0], [7.0, 6.0]])
     out = gwas.line_means(Y, [2, 2, -1, 0], n_lines=4)
-    Z = (Y - Y.mean(axis=0)) / Y.std(axis=0)  # standardized over all rows, line -1 included
-    np.testing.assert_allclose(out[0], Z[3])
-    np.testing.assert_allclose(out[2], Z[:2].mean(axis=0))
+    # line 2 (mean of rows 0, 1) is below line 0 (row 3) in both columns: ranks 1 and 2 of 2
+    low, high = stats.norm.ppf([(1 - 0.375) / 2.25, (2 - 0.375) / 2.25])
+    np.testing.assert_allclose(out[2], [low, low])
+    np.testing.assert_allclose(out[0], [high, high])
     assert np.isnan(out[[1, 3]]).all()
+
+
+def test_rank_normal_keeps_order_and_removes_outliers():
+    rng = np.random.default_rng(0)
+    P = rng.standard_normal((200, 2))
+    P[0, 0] = 50.0
+    P[5, 1] = np.nan
+    out = gwas.rank_normal(P)
+    assert np.isnan(out[5, 1]) and not np.isnan(out[:, 0]).any()
+    ok = ~np.isnan(P[:, 1])
+    np.testing.assert_array_equal(np.argsort(out[ok, 1]), np.argsort(P[ok, 1]))
+    assert out[0, 0] == pytest.approx(stats.norm.ppf((200 - 0.375) / 200.25))
+    assert abs(out[:, 0].mean()) < 1e-12
 
 
 def test_plink_set_rejects_wrong_fam(tmp_path):

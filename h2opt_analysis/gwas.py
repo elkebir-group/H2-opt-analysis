@@ -158,7 +158,8 @@ def write_snp_subset(prefix, snps, out_prefix, chunk=20000):
 
 
 def line_means(Y, line_of_row, n_lines):
-    """Phenotypes for GWAS: the mean of each standardized column of Y over the rows of each line.
+    """Phenotypes for GWAS: the mean of each standardized column of Y over the rows of each line,
+    rank-based inverse normal transformed over the lines (rank_normal).
 
     Y is standardized over all its rows. line_of_row is the .fam row of the line of each row of Y,
     -1 for a row of no line. Returns (n_lines, k) in .fam order; lines without rows get NaN.
@@ -171,7 +172,19 @@ def line_means(Y, line_of_row, n_lines):
     np.add.at(sums, line_of_row[on_line], Y[on_line])
     counts = np.bincount(line_of_row[on_line], minlength=n_lines)
     with np.errstate(invalid='ignore'):
-        return sums / counts[:, None]
+        return rank_normal(sums / counts[:, None])
+
+
+def rank_normal(P):
+    """Rank-based inverse normal transform of each column of P over its non-NaN rows (Blom offset:
+    the normal quantile of (rank - 3/8) / (n + 1/4)). H2-opt traits can have a few extreme lines
+    (overfitting on training lines); their rare alleles then give false GWAS hits, which the
+    permutation nulls showed. NaN stays NaN."""
+    P = np.array(P, dtype=np.float64)
+    for t in range(P.shape[1]):
+        ok = ~np.isnan(P[:, t])
+        P[ok, t] = stats.norm.ppf((stats.rankdata(P[ok, t]) - 0.375) / (ok.sum() + 0.25))
+    return P
 
 
 def run_gemma(prefix, phenotypes, workdir, covariates=None, intercept=True, jobs=1, threads=1,
