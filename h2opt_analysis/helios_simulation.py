@@ -3,7 +3,7 @@ and radiation simulator in place of hand-made images.
 
 The true traits, lines and test plants are those of image_simulation (the paper's three traits of
 the spectral simulation, standardized). They drive the same three plant traits:
-- greenness: leaf chlorophyll 40 exp(0.2 z) ug/cm2 (PROSPECT leaf optics, per plot);
+- greenness: leaf chlorophyll 40 exp(0.5 z) ug/cm2 (PROSPECT leaf optics, per plot);
 - size: leaf prototype scale 0.65 exp(0.3 z + 0.05 N) (sorghum default 0.65; N: a non-heritable
   stand effect);
 - tillers: shoots ~ Poisson(8 exp(0.8 z)), at least 1, uniform on a disk of radius
@@ -42,7 +42,7 @@ def plot_inputs(z_size, z_tillers, z_green, rng):
     n = len(z_size)
     shoots = np.maximum(rng.poisson(8 * np.exp(0.8 * z_tillers)), 1)
     leaf_scale = 0.65 * np.exp(0.3 * z_size + 0.05 * rng.standard_normal(n))
-    chlorophyll = 40 * np.exp(0.2 * z_green)
+    chlorophyll = 40 * np.exp(0.5 * z_green)
     senesced = rng.beta(2.0, 10.0, size=n)
     offset = rng.uniform(-8, 8, size=(n, 2)) * PLOT_M / PX
     soil_scale = np.exp(0.15 * rng.standard_normal(n))
