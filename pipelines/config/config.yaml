@@ -28,7 +28,8 @@ sorghum:
     device: cuda
     # The paper's penalty: total variation over wavelength, weight 1e-4 (PI; the paper's code
     # divides it by the spread of the trait, as h2opt.train does). Fold 0, 20k steps: test h2 0.710
-    # -> 0.736, roughness sum |dw| / sum |w| 0.47 -> 0.03 (1e-6: 0.713, 0.20).
+    # -> 0.736, roughness sum |dw| / sum |w| 0.47 -> 0.03 (1e-6: 0.713, 0.20). Training only: the
+    # noise level is chosen without it (choose_noise.py).
     penalty: [tv, 1.0e-4]
   # Baselines fitted once per fold (baseline.py) and evaluated against every source;
   # traits must be at least the traits of every source.
@@ -131,9 +132,10 @@ arabidopsis:
   traits: 10
   baselines: [pca, genetic_pca, pch, max_features]
   # H2-opt: h2opt.LinearModel with ANOVA heritability, Adam, normal input noise, no clipping, and
-  # the L1 penalty below. The level is one per fold for all traits, chosen by choose_noise.py on 20
-  # validation splits of the training accessions from h2opt.selection.NOISE_LEVELS (the highest
-  # level within one SE of the best held-out heritability of trait 1). steps is
+  # the L1 penalty below (training only). The level is one per fold for all traits, chosen by
+  # choose_noise.py on 20 validation splits of the training accessions from
+  # h2opt.selection.NOISE_LEVELS (the highest level within one SE of the best held-out heritability
+  # of trait 1). steps is
   # where doubling it changes the train heritability of traits 1-3 by at most about 0.01 (fold 0,
   # levels 0.01, 0.1 and 1, both treatments: 16k -> 32k steps changes it by at most 0.001; at
   # levels 0.01 and 0.1 the train heritability is 1.000 from about 8k steps).
@@ -144,7 +146,9 @@ arabidopsis:
     # L1 penalty (the paper's kind), weight 1e-6 (PI). The paper's 1e-4 is too strong when
     # training runs to convergence (the paper's code stopped after about 2,000 RMSprop steps): on
     # 6d fold 0 trait 1 it lowers held-out h2 (0.99 -> 0.87, 0.59 at 64k steps) and picks other
-    # masses. 1e-6 keeps h2 and gives about 150 nonzero MS1 coefficients (mean/max |w| 0.0002).
+    # masses. Training only: the noise level is chosen without it (with it, the rule picks almost
+    # no noise for trait 1, and 6d traits 2-10 fall below PCH). 6d fold 0, traits 1-5, chosen noise:
+    # test h2 sum 4.26 (none) -> 4.34, trait 1 MS1 mean/max |w| 0.0058 -> 0.0014 (paper < 0.002).
     penalty: [l1, 1.0e-6]
   # GEMMA LMM of the per-accession means of H2-opt traits, per treatment and fold.
   gwas:

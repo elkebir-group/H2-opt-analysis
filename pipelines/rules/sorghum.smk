@@ -74,14 +74,13 @@ rule sorghum_choose_linear_h2opt_noise:
         folds=" ".join(str(f) for f in SORGHUM_FOLDS),
         steps=SORGHUM["h2opt"]["steps"],
         device=SORGHUM["h2opt"]["device"],
-        penalty=" ".join(str(v) for v in SORGHUM["h2opt"]["penalty"]),
     threads: 1
     resources:
         gpu=lambda wc: 1 if SORGHUM["h2opt"]["device"] == "cuda" else 0,
     shell:
         "python -u {SORGHUM_SCRIPTS}/choose_noise.py --folds {params.folds} --out {output.noise}"
         " --out-traits {output.traits} --figure {output.pdf} --steps {params.steps}"
-        " --penalty {params.penalty} --device {params.device} > {log} 2>&1"
+        " --device {params.device} > {log} 2>&1"
 
 
 # All folds train in one job (h2opt.train_models), which is much faster than one job per fold.

@@ -1,8 +1,9 @@
 """Choose the noise level of Arabidopsis H2-opt in each accession fold, one for all traits.
 
 h2opt.selection.select_noise_level on the training samples of each fold of one treatment (all folds
-in one batch), with the linear model and the training settings of train_h2opt.py: 20 validation
-splits of the training accessions (4 partitions into 5 folds); the highest level whose held-out
+in one batch), with the linear model and the training settings of train_h2opt.py, without its
+penalty (the penalty is added in training only): 20 validation splits of the training accessions
+(4 partitions into 5 folds); the highest level whose held-out
 heritability of the first trait is within one standard error of the best
 (h2opt.selection.highest_level_within_one_se). The test samples of a fold never take part in its
 choice. Writes an .npz (folds; levels; chosen: one level per fold; noise_sd: the standard deviation
@@ -12,7 +13,7 @@ selection rules without training again; and a figure of the choices.
 
     python pipelines/scripts/arabidopsis/choose_noise.py --features features.npy --treatment 6d \\
         --folds 0 1 2 3 4 --out noise.npz --out-traits noise_traits.npz --figure noise.pdf \\
-        --steps 16000 --penalty l1 1e-6 --device cuda
+        --steps 16000 --device cuda
 """
 
 import argparse
@@ -34,19 +35,15 @@ def main():
     parser.add_argument('--out-traits', required=True)
     parser.add_argument('--figure', required=True)
     parser.add_argument('--steps', type=int, required=True, help='steps per training run')
-    parser.add_argument('--penalty', nargs=2, required=True, metavar=('KIND', 'WEIGHT'),
-                        help="penalty of h2opt.train: 'l1', 'l2' or 'tv', and its weight")
     parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
     args = parser.parse_args()
-    penalty = (args.penalty[0], float(args.penalty[1]))
 
     X, accessions, environment = arabidopsis.load(args.features, args.treatment)
     fold_of = arabidopsis.folds(accessions)
     is_train = np.array([fold_of != fold for fold in args.folds])
     noise_sd, scores, traits = select_noise_level(lambda: LinearModel(X.shape[1]), X, accessions,
                                                   environment, subsets=is_train,
-                                                  n_iter=args.steps, penalty=penalty,
-                                                  device=args.device)
+                                                  n_iter=args.steps, device=args.device)
     chosen = np.array([highest_level_within_one_se(NOISE_LEVELS, score) for score in scores])
     np.savez(args.out, folds=args.folds, levels=NOISE_LEVELS, chosen=chosen, noise_sd=noise_sd,
              scores=scores)
