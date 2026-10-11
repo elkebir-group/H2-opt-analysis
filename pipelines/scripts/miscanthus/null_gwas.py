@@ -7,7 +7,9 @@ its rep and its column stay with the images. On the permuted families: hybrid H2
 train_hybrid.py (the linear noise that choose_noise.py chose for fold 0 and the CNN level of
 choose_cnn_level.py; no new selection), Henderson3 heritability, and the GWAS of gwas.py (GEMMA of
 trait 1 with an intercept and the genotype PCs). No genotype-phenotype relation is left, so the
-GWAS hits measure what the pipeline makes from nothing. Writes an .npz (nulls.null_summary).
+GWAS hits measure what the pipeline makes from nothing. Writes an .npz: the source plant of each
+plant (the permutation), the traits, the GWAS phenotypes and the -log10 p of every SNP, so that a
+new GWAS step needs no new training, and the summary (nulls.null_summary).
 
     python pipelines/scripts/miscanthus/null_gwas.py --population central --images images.npy \\
         --noise noise.npz --cnn-level cnn_level.npz --date 2 --permutation 0 \\
@@ -74,8 +76,11 @@ def main():
     phenotypes = gwas.line_means(Y, rows, len(gwas.read_fam(args.genotypes)))
     result = gwas.run_gemma(args.genotypes, phenotypes, args.work, covariates=np.load(args.pcs),
                             jobs=1, threads=args.threads)
-    summary = nulls.null_summary(gwas.summarize(result), h2(train_test == 0), h2(train_test == 1))
-    np.savez(args.out, permutation=args.permutation, **summary)
+    scores = gwas.summarize(result)
+    summary = nulls.null_summary(scores, h2(train_test == 0), h2(train_test == 1))
+    np.savez(args.out, permutation=args.permutation, source=source, train_test=train_test,
+             traits=Y, phenotypes=phenotypes, chr=scores['chr'], ps=scores['ps'],
+             neg_log10_p=scores['neg_log10_p'], **summary)
     print(f'trait 1: h2 train {summary["h2_train"][0]:.3f} test {summary["h2_test"][0]:.3f}, '
           f'{summary["hits"][0]} Bonferroni hits, max -log10 p '
           f'{summary["max_neg_log10_p"][0]:.2f}, lambda GC {summary["lambda_gc"][0]:.3f}',

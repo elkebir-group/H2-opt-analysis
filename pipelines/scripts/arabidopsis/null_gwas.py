@@ -6,7 +6,8 @@ permuted labels: the accession folds, linear H2-opt on fold 0 as train_h2opt.py 
 choose_noise.py chose for fold 0 of the real data, and the config's penalty; no new selection),
 and the GWAS of gwas.py (accession means, GEMMA with an intercept and the genotype PCs). No
 genotype-phenotype relation is left, so the GWAS hits measure what the pipeline makes from
-nothing. Writes an .npz (nulls.null_summary).
+nothing. Writes an .npz: the permuted labels, the traits, the GWAS phenotypes and the -log10 p of
+every SNP, so that a new GWAS step needs no new training, and the summary (nulls.null_summary).
 
     python pipelines/scripts/arabidopsis/null_gwas.py --features features.npy --treatment 6d \\
         --permutation 0 --noise noise.npz --genotypes gwas/genotypes --pcs gwas/genotype_pcs.npy \\
@@ -57,8 +58,11 @@ def main():
     phenotypes = gwas.line_means(Y, rows, len(gwas.read_fam(args.genotypes)))
     result = gwas.run_gemma(args.genotypes, phenotypes, args.work, covariates=np.load(args.pcs),
                             jobs=args.jobs, threads=args.threads)
-    summary = nulls.null_summary(gwas.summarize(result), h2_train, h2_test)
-    np.savez(args.out, permutation=args.permutation, **summary)
+    scores = gwas.summarize(result)
+    summary = nulls.null_summary(scores, h2_train, h2_test)
+    np.savez(args.out, permutation=args.permutation, labels=permuted, train_test=train_test,
+             traits=Y, phenotypes=phenotypes, chr=scores['chr'], ps=scores['ps'],
+             neg_log10_p=scores['neg_log10_p'], **summary)
     for t in range(args.traits):
         print(f'trait {t + 1}: h2 train {summary["h2_train"][t]:.3f} test '
               f'{summary["h2_test"][t]:.3f}, {summary["hits"][t]} Bonferroni hits, max -log10 p '
