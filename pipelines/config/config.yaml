@@ -93,6 +93,11 @@ image_simulation:
     steps: 1000
     max_copies: 4
     device: cuda
+  # The images rendered with Helios (helios_simulation): the Helios commit that
+  # pipelines/helios/field_render is built against.
+  helios:
+    repository: https://github.com/PlantSimulationLab/Helios.git
+    commit: e9dccdd
 
 miscanthus:
   # Populations analyzed (h2opt_analysis.miscanthus.POPULATIONS).

@@ -1,50 +1,95 @@
-# Image simulation (h2opt_analysis.image_simulation): the paper's three true traits drive leaf
-# greenness, canopy size and tiller number of simulated plot images, 10 instances. The methods
-# are those of the spectral simulation, with the scripts of scripts/simulation: linear models
-# take the flattened pixels, and the CNN of the hybrid is h2opt.ImageConvModel.
+# Image simulation: the paper's three true traits drive leaf greenness, canopy size and tiller
+# number of simulated plot images, 10 instances, from two image sources:
+# - image_simulation: hand-made images (h2opt_analysis.image_simulation);
+# - helios_simulation: images rendered with the Helios 3D plant and radiation simulator
+#   (h2opt_analysis.helios_simulation, pipelines/helios/field_render).
+# The methods are those of the spectral simulation, with the scripts of scripts/simulation: linear
+# models take the flattened pixels, and the CNN of the hybrid is h2opt.ImageConvModel.
 #
-# Per instance, under image_simulation/instance{i}/: images.npz, truth.npz and one traits file
-# per method ({method}.npz, array 'traits').
+# Per instance, under {imgsim}/instance{i}/: images.npz, truth.npz and one traits file per method
+# ({method}.npz, array 'traits').
 
 IMG = config["image_simulation"]
-IMG_OUT = OUT_ROOT / "image_simulation"
 IMG_SCRIPTS = PIPELINE_DIR / "scripts" / "image_simulation"
 IMG_INSTANCES = IMG["instances"]
+IMG_SOURCES = ["image_simulation", "helios_simulation"]
+HELIOS_OUT = OUT_ROOT / "helios"
+
+wildcard_constraints:
+    imgsim="|".join(IMG_SOURCES),
 
 
-def img_file(instance, name):
-    return str(IMG_OUT / f"instance{instance}" / name)
+def img_file(imgsim, instance, name):
+    return str(OUT_ROOT / imgsim / f"instance{instance}" / name)
 
 
-def img_files(name, instances=IMG_INSTANCES):
-    return [img_file(i, name) for i in instances]
+def img_files(imgsim, name, instances=IMG_INSTANCES):
+    return [img_file(imgsim, i, name) for i in instances]
 
 
 rule image_simulation_all:
     input:
-        str(IMG_OUT / "evaluation.npz"),
-        str(IMG_OUT / "figures" / "heritability.pdf"),
+        [str(OUT_ROOT / s / "evaluation.npz") for s in IMG_SOURCES],
+        [str(OUT_ROOT / s / "figures" / "heritability.pdf") for s in IMG_SOURCES],
 
 
 rule img_simulate_images:
     output:
-        images=img_file("{instance}", "images.npz"),
-        truth=img_file("{instance}", "truth.npz"),
+        images=img_file("image_simulation", "{instance}", "images.npz"),
+        truth=img_file("image_simulation", "{instance}", "truth.npz"),
     log:
-        img_file("{instance}", "images.log"),
+        img_file("image_simulation", "{instance}", "images.log"),
     threads: 1
     shell:
         "python -u {IMG_SCRIPTS}/simulate.py --instance {wildcards.instance}"
         " --out-images {output.images} --out-truth {output.truth} > {log} 2>&1"
 
 
+rule img_build_helios:
+    input:
+        PIPELINE_DIR / "helios" / "field_render" / "main.cpp",
+        PIPELINE_DIR / "helios" / "field_render" / "CMakeLists.txt",
+    output:
+        str(HELIOS_OUT / "build" / "field_render"),
+    log:
+        str(HELIOS_OUT / "build.log"),
+    params:
+        repository=IMG["helios"]["repository"],
+        commit=IMG["helios"]["commit"],
+        source=PIPELINE_DIR / "helios" / "field_render",
+    threads: 8
+    shell:
+        "bash {IMG_SCRIPTS}/build_helios.sh {params.repository} {params.commit} {params.source}"
+        " {HELIOS_OUT} {threads} > {log} 2>&1"
+
+
+rule img_render_helios:
+    input:
+        str(HELIOS_OUT / "build" / "field_render"),
+    output:
+        images=img_file("helios_simulation", "{instance}", "images.npz"),
+        truth=img_file("helios_simulation", "{instance}", "truth.npz"),
+    log:
+        img_file("helios_simulation", "{instance}", "images.log"),
+    params:
+        workdir=lambda wc: str(HELIOS_OUT / "tiles" / f"instance{wc.instance}"),
+    threads: 2
+    # A tile of 196 plots holds about 1 GB of GPU memory while it renders.
+    resources:
+        gpu=2,
+    shell:
+        "python -u {IMG_SCRIPTS}/render_helios.py --instance {wildcards.instance}"
+        " --binary {input} --workdir {params.workdir} --out-images {output.images}"
+        " --out-truth {output.truth} > {log} 2>&1"
+
+
 rule img_choose_linear_h2opt_noise:
     input:
-        img_file("{instance}", "images.npz"),
+        img_file("{imgsim}", "{instance}", "images.npz"),
     output:
-        img_file("{instance}", "noise.npz"),
+        img_file("{imgsim}", "{instance}", "noise.npz"),
     log:
-        img_file("{instance}", "noise.log"),
+        img_file("{imgsim}", "{instance}", "noise.log"),
     params:
         steps=IMG["h2opt"]["steps"],
         device=IMG["h2opt"]["device"],
@@ -59,13 +104,13 @@ rule img_choose_linear_h2opt_noise:
 
 rule img_train_linear_h2opt:
     input:
-        measurements=img_file("{instance}", "images.npz"),
-        noise=img_file("{instance}", "noise.npz"),
+        measurements=img_file("{imgsim}", "{instance}", "images.npz"),
+        noise=img_file("{imgsim}", "{instance}", "noise.npz"),
     output:
-        traits=img_file("{instance}", "h2opt.npz"),
-        model=img_file("{instance}", "h2opt.pt"),
+        traits=img_file("{imgsim}", "{instance}", "h2opt.npz"),
+        model=img_file("{imgsim}", "{instance}", "h2opt.pt"),
     log:
-        img_file("{instance}", "h2opt.log"),
+        img_file("{imgsim}", "{instance}", "h2opt.log"),
     params:
         traits=IMG["traits"],
         steps=IMG["h2opt"]["steps"],
@@ -82,12 +127,12 @@ rule img_train_linear_h2opt:
 
 rule img_choose_hybrid_cnn_level:
     input:
-        measurements=img_file("{instance}", "images.npz"),
-        noise=img_file("{instance}", "noise.npz"),
+        measurements=img_file("{imgsim}", "{instance}", "images.npz"),
+        noise=img_file("{imgsim}", "{instance}", "noise.npz"),
     output:
-        img_file("{instance}", "cnn_level.npz"),
+        img_file("{imgsim}", "{instance}", "cnn_level.npz"),
     log:
-        img_file("{instance}", "cnn_level.log"),
+        img_file("{imgsim}", "{instance}", "cnn_level.log"),
     params:
         linear_steps=IMG["hybrid"]["linear_steps"],
         steps=IMG["hybrid"]["steps"],
@@ -107,14 +152,14 @@ rule img_choose_hybrid_cnn_level:
 
 rule img_train_hybrid_h2opt:
     input:
-        measurements=img_file("{instance}", "images.npz"),
-        noise=img_file("{instance}", "noise.npz"),
-        cnn_level=img_file("{instance}", "cnn_level.npz"),
+        measurements=img_file("{imgsim}", "{instance}", "images.npz"),
+        noise=img_file("{imgsim}", "{instance}", "noise.npz"),
+        cnn_level=img_file("{imgsim}", "{instance}", "cnn_level.npz"),
     output:
-        traits=img_file("{instance}", "h2opt_hybrid.npz"),
-        model=img_file("{instance}", "h2opt_hybrid.pt"),
+        traits=img_file("{imgsim}", "{instance}", "h2opt_hybrid.npz"),
+        model=img_file("{imgsim}", "{instance}", "h2opt_hybrid.pt"),
     log:
-        img_file("{instance}", "h2opt_hybrid.log"),
+        img_file("{imgsim}", "{instance}", "h2opt_hybrid.log"),
     params:
         traits=IMG["traits"],
         linear_steps=IMG["hybrid"]["linear_steps"],
@@ -135,11 +180,11 @@ rule img_train_hybrid_h2opt:
 
 rule img_train_baselines:
     input:
-        img_file("{instance}", "images.npz"),
+        img_file("{imgsim}", "{instance}", "images.npz"),
     output:
-        img_file("{instance}", "{baseline}.npz"),
+        img_file("{imgsim}", "{instance}", "{baseline}.npz"),
     log:
-        img_file("{instance}", "{baseline}.log"),
+        img_file("{imgsim}", "{instance}", "{baseline}.log"),
     params:
         traits=IMG["traits"],
     threads: 4
@@ -150,16 +195,16 @@ rule img_train_baselines:
 
 rule img_score_traits:
     input:
-        measurements=img_files("images.npz"),
-        truth=img_files("truth.npz"),
-        traits=[img_files(f"{m}.npz") for m in IMG["methods"]],
+        measurements=lambda wc: img_files(wc.imgsim, "images.npz"),
+        truth=lambda wc: img_files(wc.imgsim, "truth.npz"),
+        traits=lambda wc: [f for m in IMG["methods"] for f in img_files(wc.imgsim, f"{m}.npz")],
     output:
-        str(IMG_OUT / "evaluation.npz"),
+        str(OUT_ROOT / "{imgsim}" / "evaluation.npz"),
     log:
-        str(IMG_OUT / "evaluation.log"),
+        str(OUT_ROOT / "{imgsim}" / "evaluation.log"),
     params:
-        methods=" ".join(f"--method {m} " + " ".join(img_files(f"{m}.npz"))
-                         for m in IMG["methods"]),
+        methods=lambda wc: " ".join(f"--method {m} " + " ".join(img_files(wc.imgsim, f"{m}.npz"))
+                                    for m in IMG["methods"]),
     threads: 4
     shell:
         "python -u {SIM_SCRIPTS}/evaluate.py --measurements {input.measurements}"
@@ -168,14 +213,14 @@ rule img_score_traits:
 
 rule img_plot_traits:
     input:
-        str(IMG_OUT / "evaluation.npz"),
+        str(OUT_ROOT / "{imgsim}" / "evaluation.npz"),
     output:
-        str(IMG_OUT / "figures" / "heritability.pdf"),
-        str(IMG_OUT / "figures" / "correlation.pdf"),
+        str(OUT_ROOT / "{imgsim}" / "figures" / "heritability.pdf"),
+        str(OUT_ROOT / "{imgsim}" / "figures" / "correlation.pdf"),
     log:
-        str(IMG_OUT / "figures" / "plot_traits.log"),
+        str(OUT_ROOT / "{imgsim}" / "figures" / "plot_traits.log"),
     params:
-        out_dir=str(IMG_OUT / "figures"),
+        out_dir=lambda wc: str(OUT_ROOT / wc.imgsim / "figures"),
     threads: 1
     shell:
         "python -u {SIM_SCRIPTS}/plot_traits.py --evaluation {input}"
