@@ -2,13 +2,15 @@
 
 One linear model per trait, normal input noise of the standard deviation chosen by
 choose_noise.py, and no clipping (the paper's simulation setting).
-Trained with h2opt.train's default optimizer (Adam). Writes the model (.pt) and the traits of all
-plants, uncorrelated on the training plants (.npz, array 'traits').
+Trained with h2opt.train's default optimizer (Adam) on the plants outside --fold
+(simulation.line_folds; fold 0 are the test plants, folds 1 and 2 serve the cross-fitted traits).
+Writes the model (.pt) and the traits of all plants, uncorrelated on the training plants (.npz,
+array 'traits').
 
     python pipelines/scripts/simulation/train_h2opt.py --measurements spectra.npz \\
         --noise noise.npz \\
         --out-traits h2opt.npz --out-model h2opt.pt --traits 5 --steps 10000 \\
-        --seed 0 --device cuda
+        --seed 0 --instance 0 --fold 0 --device cuda
 """
 
 import argparse
@@ -16,6 +18,8 @@ import argparse
 import numpy as np
 import torch
 from h2opt import LinearModel, TraitModels, synthetic_traits, train
+
+from h2opt_analysis import simulation
 
 
 def main():
@@ -28,12 +32,16 @@ def main():
     parser.add_argument('--traits', type=int, required=True)
     parser.add_argument('--steps', type=int, required=True, help='steps per trait')
     parser.add_argument('--seed', type=int, required=True)
+    parser.add_argument('--instance', type=int, required=True)
+    parser.add_argument('--fold', type=int, choices=[0, 1, 2], required=True,
+                        help='held-out fold (simulation.line_folds); 0: the test plants')
     parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
     with np.load(args.measurements) as f:
-        X, names, test = f['X'], f['names'], f['test']
+        X, names = f['X'], f['names']
+    test = simulation.instance_folds(args.instance) == args.fold
     X = X.reshape((len(X), -1))
     with np.load(args.noise) as f:
         noise_sd = float(f['noise_sd'])

@@ -58,7 +58,8 @@ def main():
         for m, method in enumerate(args.method):
             with np.load(method[1 + i]) as f:
                 chromosome, position, score = f['chr'], f['ps'], f['neg_log10_p']
-            for t in range(n_t):
+            auc[len(score):, m, i] = np.nan  # a file of fewer traits (cross-fitted trait 1)
+            for t in range(min(n_t, len(score))):
                 values, truth = binned(chromosome, position, score[t], qtns[t], args.bin)
                 auc[t, m, i] = roc_auc_score(truth, values)
                 fpr_t, tpr_t, _ = roc_curve(truth, values)
@@ -67,7 +68,7 @@ def main():
     np.savez(args.out, methods=methods, auc=auc, fpr=grid, tpr=tpr)
     print('median AUC over instances (traits 1-3)')
     for m, method in enumerate(methods):
-        print(f'{LABELS[method]:16s} {np.median(auc[:, m], axis=1).round(3)}')
+        print(f'{LABELS.get(method, method):16s} {np.nanmedian(auc[:, m], axis=1).round(3)}')
 
 
 if __name__ == '__main__':

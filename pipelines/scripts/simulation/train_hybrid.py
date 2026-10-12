@@ -6,13 +6,15 @@ linear map warm started from each linear trait. The linear stage and the linear 
 noise of the standard deviation of linear H2-opt (choose_noise.py); the CNN branch gets normal input
 noise of standard deviation the level of choose_cnn_level.py x h2opt.selection.noise_scale of the
 training measurements. No
-clipping, Adam (h2opt.train's default). Writes the model (.pt) and the traits of all plants,
-uncorrelated on the training plants (.npz, array 'traits').
+clipping, Adam (h2opt.train's default). Trains on the plants outside --fold (as train_h2opt.py).
+Writes the model (.pt) and the traits of all plants, uncorrelated on the training plants (.npz,
+array 'traits').
 
     python pipelines/scripts/simulation/train_hybrid.py --measurements spectra.npz \\
         --noise noise.npz \\
         --cnn-level cnn_level.npz --out-traits h2opt_hybrid.npz --out-model h2opt_hybrid.pt \\
-        --traits 5 --linear-steps 10000 --steps 1000 --seed 0 --device cuda
+        --traits 5 --linear-steps 10000 --steps 1000 --seed 0 --instance 0 --fold 0 \\
+        --device cuda
 """
 
 import argparse
@@ -39,6 +41,9 @@ def main():
                         help='steps per trait of the linear stage')
     parser.add_argument('--steps', type=int, required=True, help='steps per trait of the hybrid')
     parser.add_argument('--seed', type=int, required=True)
+    parser.add_argument('--instance', type=int, required=True)
+    parser.add_argument('--fold', type=int, choices=[0, 1, 2], required=True,
+                        help='held-out fold (simulation.line_folds); 0: the test plants')
     parser.add_argument('--max-copies', type=int,
                         help='models trained at once (GPU memory)')
     parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
@@ -46,7 +51,8 @@ def main():
 
     torch.manual_seed(args.seed)
     with np.load(args.measurements) as f:
-        X, names, test = f['X'], f['names'], f['test']
+        X, names = f['X'], f['names']
+    test = simulation.instance_folds(args.instance) == args.fold
     with np.load(args.noise) as f:
         noise_sd = float(f['noise_sd'])
     with np.load(args.cnn_level) as f:

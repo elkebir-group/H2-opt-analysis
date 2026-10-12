@@ -103,7 +103,7 @@ rule img_train_linear_h2opt:
         "python -u {SIM_SCRIPTS}/train_h2opt.py --measurements {input.measurements}"
         " --noise {input.noise} --out-traits {output.traits} --out-model {output.model}"
         " --traits {params.traits} --steps {params.steps} --seed {wildcards.instance}"
-        " --device {params.device} > {log} 2>&1"
+        " --instance {wildcards.instance} --fold 0 --device {params.device} > {log} 2>&1"
 
 
 # One fixed linear level and one fixed CNN level for every instance of both image sources (PI: no
@@ -148,7 +148,7 @@ rule img_train_hybrid_h2opt:
         " --out-traits {output.traits} --out-model {output.model} --traits {params.traits}"
         " --linear-steps {params.linear_steps} --steps {params.steps}"
         " --max-copies {params.max_copies} --seed {wildcards.instance}"
-        " --device {params.device} > {log} 2>&1"
+        " --instance {wildcards.instance} --fold 0 --device {params.device} > {log} 2>&1"
 
 
 rule img_train_baselines:
@@ -223,7 +223,7 @@ rule img_run_gwas:
     log:
         img_file("{imgsim}", "{instance}", "gwas/{method}.log"),
     wildcard_constraints:
-        method="|".join(IMG_GWAS_METHODS),
+        method="|".join(IMG_GWAS_METHODS + ["h2opt_hybrid_crossfit"]),
     params:
         prefix=lambda wc: sim_file(wc.instance, "genotypes"),
         work=lambda wc: img_file(wc.imgsim, wc.instance, f"gwas/work/{wc.method}"),
@@ -280,3 +280,112 @@ rule img_plot_gwas:
         "python -u {SIM_SCRIPTS}/plot_gwas.py --roc {input.roc}"
         " --gwas-example {input.example} --example-name {params.name}"
         " --example-label '{params.label}' --out-dir {params.out_dir} > {log} 2>&1"
+
+
+# Cross-fitted trait 1 of the hybrid and the permutation null, as for the spectral simulation
+# (simulation_null_gwas_all). Helios only; run only on request.
+rule image_simulation_null_gwas_all:
+    input:
+        str(OUT_ROOT / "helios_simulation" / "roc_crossfit.npz"),
+        [img_file("helios_simulation", SIM_NULL["null_instance"], f"null/perm{k}.npz")
+         for k in range(SIM_NULL["permutations"])],
+
+
+rule img_train_hybrid_fold:
+    input:
+        measurements=img_file("{imgsim}", "{instance}", "images.npz"),
+        noise=img_file("{imgsim}", "{instance}", "noise.npz"),
+        cnn_level=img_file("{imgsim}", "{instance}", "cnn_level.npz"),
+    output:
+        traits=img_file("{imgsim}", "{instance}", "h2opt_hybrid_fold{fold}.npz"),
+        model=img_file("{imgsim}", "{instance}", "h2opt_hybrid_fold{fold}.pt"),
+    log:
+        img_file("{imgsim}", "{instance}", "h2opt_hybrid_fold{fold}.log"),
+    wildcard_constraints:
+        fold="1|2",
+    params:
+        traits=IMG["traits"],
+        linear_steps=IMG["hybrid"]["linear_steps"],
+        steps=IMG["hybrid"]["steps"],
+        max_copies=IMG["hybrid"]["max_copies"],
+        device=IMG["hybrid"]["device"],
+    threads: 1
+    resources:
+        gpu=lambda wc: 4 if IMG["hybrid"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {SIM_SCRIPTS}/train_hybrid.py --measurements {input.measurements}"
+        " --noise {input.noise} --cnn-level {input.cnn_level}"
+        " --out-traits {output.traits} --out-model {output.model} --traits {params.traits}"
+        " --linear-steps {params.linear_steps} --steps {params.steps}"
+        " --max-copies {params.max_copies} --seed {wildcards.instance}"
+        " --instance {wildcards.instance} --fold {wildcards.fold}"
+        " --device {params.device} > {log} 2>&1"
+
+
+rule img_cross_fit_traits:
+    input:
+        img_file("{imgsim}", "{instance}", "h2opt_hybrid.npz"),
+        img_file("{imgsim}", "{instance}", "h2opt_hybrid_fold1.npz"),
+        img_file("{imgsim}", "{instance}", "h2opt_hybrid_fold2.npz"),
+    output:
+        img_file("{imgsim}", "{instance}", "h2opt_hybrid_crossfit.npz"),
+    log:
+        img_file("{imgsim}", "{instance}", "h2opt_hybrid_crossfit.log"),
+    threads: 1
+    shell:
+        "python -u {PIPELINE_DIR}/scripts/shared/cross_fit_traits.py --dataset simulation"
+        " --instance {wildcards.instance} --traits {input} --out {output} > {log} 2>&1"
+
+
+IMG_CROSSFIT_METHODS = ["truth", "h2opt_hybrid", "h2opt_hybrid_crossfit"]
+
+
+rule img_score_crossfit_gwas:
+    input:
+        lambda wc: [f for m in IMG_CROSSFIT_METHODS for f in img_gwas_files(wc.imgsim, m)],
+    output:
+        str(OUT_ROOT / "{imgsim}" / "roc_crossfit.npz"),
+    log:
+        str(OUT_ROOT / "{imgsim}" / "roc_crossfit.log"),
+    params:
+        instances=" ".join(str(i) for i in IMG_INSTANCES),
+        methods=lambda wc: " ".join(f"--method {m} " + " ".join(img_gwas_files(wc.imgsim, m))
+                                    for m in IMG_CROSSFIT_METHODS),
+    threads: 2
+    shell:
+        "python -u {SIM_SCRIPTS}/roc.py --instances {params.instances} {params.methods}"
+        " --out {output} > {log} 2>&1"
+
+
+rule img_null_gwas:
+    input:
+        measurements=img_file("{imgsim}", "{instance}", "images.npz"),
+        lines=sim_file("{instance}", "spectra.npz"),
+        noise=img_file("{imgsim}", "{instance}", "noise.npz"),
+        cnn_level=img_file("{imgsim}", "{instance}", "cnn_level.npz"),
+        genotypes=multiext(sim_file("{instance}", "genotypes"), ".bed", ".bim", ".fam"),
+        pcs=sim_file("{instance}", "genotype_pcs.npy"),
+    output:
+        img_file("{imgsim}", "{instance}", "null/perm{k}.npz"),
+    log:
+        img_file("{imgsim}", "{instance}", "null/perm{k}.log"),
+    params:
+        prefix=lambda wc: sim_file(wc.instance, "genotypes"),
+        work=lambda wc: img_file(wc.imgsim, wc.instance, f"null/work/perm{wc.k}"),
+        linear_steps=IMG["hybrid"]["linear_steps"],
+        steps=IMG["hybrid"]["steps"],
+        max_copies=IMG["hybrid"]["max_copies"],
+        device=IMG["hybrid"]["device"],
+        jobs=SIM["gwas"]["jobs"],
+        threads=SIM["gwas"]["threads"],
+    threads: SIM["gwas"]["jobs"] * SIM["gwas"]["threads"]
+    resources:
+        gpu=lambda wc: 4 if IMG["hybrid"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {IMG_SCRIPTS}/null_gwas.py --measurements {input.measurements}"
+        " --lines {input.lines} --noise {input.noise} --cnn-level {input.cnn_level}"
+        " --instance {wildcards.instance} --permutation {wildcards.k}"
+        " --genotypes {params.prefix} --pcs {input.pcs} --out {output} --work {params.work}"
+        " --linear-steps {params.linear_steps} --steps {params.steps}"
+        " --max-copies {params.max_copies} --device {params.device}"
+        " --jobs {params.jobs} --threads {params.threads} > {log} 2>&1"

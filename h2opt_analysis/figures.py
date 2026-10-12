@@ -6,7 +6,8 @@ import numpy as np
 from .methods import LABELS
 
 COLORS = {'truth': 'tab:red', 'h2opt_paper': 'tab:blue', 'h2opt': 'tab:blue',
-          'h2opt_hybrid': 'tab:cyan',
+          'h2opt_hybrid': 'tab:cyan', 'h2opt_crossfit': 'tab:olive',
+          'h2opt_hybrid_crossfit': 'tab:gray',
           'pca': 'tab:orange', 'genetic_pca': 'tab:purple',
           'pch': 'tab:pink', 'max_features': 'tab:green'}
 

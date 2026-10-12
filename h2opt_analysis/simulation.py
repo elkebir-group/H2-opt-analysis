@@ -141,9 +141,20 @@ def encode_instances(truths, autoencoder, reference, seed=0):
     return out
 
 
-def test_lines(names_per_instance, seed=0):
-    """Test plants of each instance, as in the paper: one random stream over the instances, a third
-    of the lines (value 0 of randint(3) per line) are test lines."""
+def line_folds(names_per_instance, seed=0):
+    """Fold (0, 1 or 2) of each plant of each instance, as in the paper: one random stream over the
+    instances, randint(3) per line. Fold 0 are the test lines (test_lines); the cross-fitted
+    traits also hold out folds 1 and 2."""
     rng = np.random.RandomState(seed)
-    return [per_group(names, lambda c: rng.randint(3, size=c) == 0)
-            for names in names_per_instance]
+    return [per_group(names, lambda c: rng.randint(3, size=c)) for names in names_per_instance]
+
+
+def test_lines(names_per_instance, seed=0):
+    """Test plants of each instance, as in the paper: a third of the lines (fold 0 of
+    line_folds)."""
+    return [folds == 0 for folds in line_folds(names_per_instance, seed)]
+
+
+def instance_folds(instance):
+    """line_folds of one instance (the stream runs over all instances)."""
+    return line_folds([load_truth(i)[0] for i in range(N_INSTANCES)])[instance]
