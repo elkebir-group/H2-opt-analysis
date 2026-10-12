@@ -1,20 +1,27 @@
 """The simulation figures of the paper, from the saved results.
 
---out-figure (paper Fig. 3, simFig): a test heritability of the true traits and of synthetic
-traits 1-5; b |r| of true trait t with synthetic trait t; c QQ and Manhattan plots of the GWAS of
-trait 1 of one method on one instance; d mean ROC curves of trait 1, each with a band from the
-25th to the 75th percentile of the curves of the instances; e AUC of traits 1-3.
---out-compare (paper Fig. S2, simCompareSNP): mean ROC curves of traits 2 and 3. Each figure is
-also saved as a .png next to its .pdf. The panels use the functions of plot_traits.py and
-plot_gwas.py, which make the same panels as separate files.
+--out-figure (paper Fig. 3, simFig): one row per simulation (--row), each with four panels: test
+heritability of the true traits and of synthetic traits 1-5; |r| of true trait t with synthetic
+trait t; mean ROC curves of trait 1, each with a band from the 25th to the 75th percentile of the
+curves of the instances; AUC of traits 1-3. A panel has the same y-axis in all rows. The letters
+go down the columns (a, b in column 1).
+--out-compare (paper Fig. S2, simCompareSNP): mean ROC curves of traits 2 and 3 of --compare-roc,
+with the same bands.
+--out-example (simGWASexample): QQ and Manhattan plots of the GWAS of trait 1 of one method on one
+instance (--gwas-example).
+Each figure is also saved as a .png next to its .pdf. The panels use the functions of
+plot_traits.py and plot_gwas.py, which make the same panels as separate files.
 
 The figures show the ground truth, one H2-opt variant (--h2opt) and the baselines (--baselines).
 The H2-opt variant gets the label and the color of H2-opt.
 
-    python pipelines/scripts/simulation/plot_paper.py --evaluation evaluation.npz \\
-        --roc roc.npz --h2opt h2opt_hybrid --baselines pca genetic_pca pch max_features \\
-        --gwas-example instance0/gwas/h2opt_hybrid.npz \\
-        --out-figure figures/paper/simFig.pdf --out-compare figures/paper/simCompareSNP.pdf
+    python pipelines/scripts/simulation/plot_paper.py \\
+        --row Hyperspectral simulation/evaluation.npz simulation/roc.npz \\
+        --row Images helios_simulation/evaluation.npz helios_simulation/roc.npz \\
+        --h2opt h2opt_hybrid --baselines pca genetic_pca pch max_features \\
+        --compare-roc simulation/roc.npz --gwas-example instance0/gwas/h2opt_hybrid.npz \\
+        --out-figure figures/paper/simFig.pdf --out-compare figures/paper/simCompareSNP.pdf \\
+        --out-example figures/paper/simGWASexample.pdf
 """
 
 import argparse
@@ -98,8 +105,17 @@ def roc_bands(ax, roc, t):
         ax.fill_between(roc['fpr'], low, high, color=COLORS[m], alpha=0.15, linewidth=0)
 
 
-def letter(ax, text, x=-0.14):
-    ax.text(x, 1.02, text, transform=ax.transAxes, fontsize=12, fontweight='bold', va='bottom')
+def letter(ax, text):
+    ax.text(-0.3, 1.04, text, transform=ax.transAxes, fontsize=11, fontweight='bold',
+            va='bottom')
+
+
+def share_y(axes):
+    """Give the axes the union of their y ranges."""
+    low = min(ax.get_ylim()[0] for ax in axes)
+    high = max(ax.get_ylim()[1] for ax in axes)
+    for ax in axes:
+        ax.set_ylim(low, high)
 
 
 def save(fig, path):
@@ -110,75 +126,88 @@ def save(fig, path):
     plt.close(fig)
 
 
+def simulation_row(axes, ev, roc, last):
+    """The four panels of one simulation; the x labels only in the last row. Returns the slugs of
+    the heritability panel (all methods shown)."""
+    slugs, values, n_traits = heritability_values(ev)
+    boxplot_panel(axes[0], n_traits, slugs, values, 'test heritability')
+    axes[0].axhline(0, color='0.3', linewidth=1, linestyle=':')
+    cor_slugs, values = correlation_values(ev)
+    boxplot_panel(axes[1], len(next(iter(values.values()))), cor_slugs, values,
+                  '|r| with true trait')
+    roc_bands(axes[2], roc, 0)
+    plot_roc(axes[2], roc, 0)
+    axes[2].get_legend().remove()
+    axes[2].set_ylabel('true positive rate (trait 1)')
+    auc_slugs, values = auc_values(roc)
+    boxplot_panel(axes[3], len(next(iter(values.values()))), auc_slugs, values,
+                  'AUC of causal 100 kb bins')
+    if not last:
+        for ax in axes:
+            ax.set_xlabel('')
+    return slugs
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--evaluation', required=True)
-    parser.add_argument('--roc', required=True)
+    parser.add_argument('--row', nargs=3, action='append', required=True,
+                        metavar=('LABEL', 'EVALUATION', 'ROC'),
+                        help='one row of simFig: label, evaluate.py result, roc.py result')
     parser.add_argument('--h2opt', required=True,
                         help='slug of the H2-opt variant shown as H2-opt')
     parser.add_argument('--baselines', nargs='+', required=True, help='slugs of the baselines')
+    parser.add_argument('--compare-roc', required=True, help='roc.py result of simCompareSNP')
     parser.add_argument('--gwas-example', required=True,
                         help='gwas.summarize result of the example (trait 1 is shown)')
     parser.add_argument('--out-figure', required=True, help='simFig .pdf')
     parser.add_argument('--out-compare', required=True, help='simCompareSNP .pdf')
+    parser.add_argument('--out-example', required=True, help='simGWASexample .pdf')
     args = parser.parse_args()
     plt.rcParams.update({'font.size': FONT_SIZE, 'axes.labelsize': FONT_SIZE,
                          'xtick.labelsize': FONT_SIZE - 1, 'ytick.labelsize': FONT_SIZE - 1})
     shown = [args.h2opt] + args.baselines
-    ev = select_methods(np.load(args.evaluation), {'herit': 0, 'cor': 0}, shown, args.h2opt)
-    roc = select_methods(np.load(args.roc), {'auc': 1, 'tpr': 1, 'tpr_instances': 1},
-                         ['truth'] + shown, args.h2opt)
-    summary = np.load(args.gwas_example)
+    roc_axes = {'auc': 1, 'tpr': 1, 'tpr_instances': 1}
 
-    fig = plt.figure(figsize=(7.2, 5.6))
-    grid = fig.add_gridspec(2, 1, height_ratios=[1, 1.05], hspace=0.45)
-    top = grid[0].subgridspec(1, 2, width_ratios=[1.5, 1], wspace=0.25)
-    bottom = grid[1].subgridspec(1, 3, width_ratios=[1.2, 1, 1], wspace=0.45)
-
-    ax = fig.add_subplot(top[0])
-    slugs, values, n_traits = heritability_values(ev)
-    boxplot_panel(ax, n_traits, slugs, values, 'test heritability')
-    ax.axhline(0, color='0.3', linewidth=1, linestyle=':')
-    letter(ax, 'a', -0.1)
-    all_slugs = slugs
-
-    ax = fig.add_subplot(top[1])
-    slugs, values = correlation_values(ev)
-    boxplot_panel(ax, len(next(iter(values.values()))), slugs, values, '|r| with true trait')
-    letter(ax, 'b')
-
-    c = bottom[0].subgridspec(2, 1, hspace=0.65)
-    ax = fig.add_subplot(c[0])
-    qq(ax, summary, 0)
-    letter(ax, 'c', -0.3)
-    manhattan(fig.add_subplot(c[1]), summary, 0)
-
-    ax = fig.add_subplot(bottom[1])
-    roc_bands(ax, roc, 0)
-    plot_roc(ax, roc, 0)
-    ax.legend(loc='lower right', fontsize=FONT_SIZE - 2.5, frameon=True, framealpha=0.9,
-              edgecolor='none', borderpad=0.2, handlelength=1.2)
-    letter(ax, 'd', -0.22)
-
-    ax = fig.add_subplot(bottom[2])
-    slugs, values = auc_values(roc)
-    boxplot_panel(ax, len(next(iter(values.values()))), slugs, values, 'AUC of causal 100 kb bins')
-    letter(ax, 'e', -0.24)
-
-    handles = [plt.Rectangle((0, 0), 1, 1, color=COLORS[s]) for s in all_slugs]
-    fig.legend(handles, [LABELS[s] for s in all_slugs], loc='upper center', ncol=len(all_slugs),
+    n_rows = len(args.row)
+    fig, axes = plt.subplots(n_rows, 4, figsize=(7.2, 0.4 + 2.3 * n_rows), squeeze=False,
+                             gridspec_kw={'width_ratios': [1.7, 1, 1, 1]})
+    for r, (label, evaluation, roc) in enumerate(args.row):
+        ev = select_methods(np.load(evaluation), {'herit': 0, 'cor': 0}, shown, args.h2opt)
+        roc = select_methods(np.load(roc), roc_axes, ['truth'] + shown, args.h2opt)
+        slugs = simulation_row(axes[r], ev, roc, r == n_rows - 1)
+        for c, ax in enumerate(axes[r]):
+            letter(ax, 'abcdefghijklmnop'[n_rows * c + r])
+        axes[r, 0].annotate(label, xy=(0, 0.5), xycoords='axes fraction', xytext=(-38, 0),
+                            textcoords='offset points', rotation=90, ha='right', va='center',
+                            fontsize=FONT_SIZE + 1, fontweight='bold')
+    for c in range(4):
+        share_y(axes[:, c])
+    handles = [plt.Rectangle((0, 0), 1, 1, color=COLORS[s]) for s in slugs]
+    fig.legend(handles, [LABELS[s] for s in slugs], loc='upper center', ncol=len(slugs),
                frameon=False, fontsize=FONT_SIZE - 1, handlelength=1.2, columnspacing=1)
-    fig.subplots_adjust(left=0.09, right=0.99, top=0.9, bottom=0.08)
+    fig.subplots_adjust(left=0.12, right=0.99, top=1 - 0.45 / fig.get_figheight(), bottom=0.09,
+                        wspace=0.55, hspace=0.3)
     save(fig, args.out_figure)
 
+    roc = select_methods(np.load(args.compare_roc), roc_axes, ['truth'] + shown, args.h2opt)
     fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.2))
     for t, ax in zip((1, 2), axes, strict=True):
+        roc_bands(ax, roc, t)
         plot_roc(ax, roc, t)
         ax.legend(loc='lower right', fontsize=FONT_SIZE - 1, frameon=True, framealpha=0.9,
                   edgecolor='none')
         ax.set_title(f'trait {t + 1}', fontsize=FONT_SIZE + 1)
     fig.tight_layout()
     save(fig, args.out_compare)
+
+    summary = np.load(args.gwas_example)
+    fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.6), gridspec_kw={'width_ratios': [1, 2]})
+    qq(axes[0], summary, 0)
+    manhattan(axes[1], summary, 0)
+    for ax, text in zip(axes, 'ab', strict=True):
+        letter(ax, text)
+    fig.tight_layout()
+    save(fig, args.out_example)
 
 
 if __name__ == '__main__':

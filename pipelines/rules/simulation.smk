@@ -329,20 +329,24 @@ rule sim_plot_gwas:
 
 
 # The simulation figures of the paper (file stems as in the paper's images/), from the saved
-# results. They need the GWAS outputs, so they are not part of simulation_all.
+# results. They need the GWAS outputs, so they are not part of simulation_all. simFig has one row
+# per simulation of simulation.paper_figures.rows; simCompareSNP and simGWASexample show the
+# spectral simulation.
 SIM_PAPER = SIM_OUT / "figures" / "paper"
+SIM_PAPER_ROWS = SIM["paper_figures"]["rows"]
 
 
 rule simulation_paper_figures:
     input:
-        [str(SIM_PAPER / f"{stem}.{ext}") for stem in ["simFig", "simCompareSNP"]
+        [str(SIM_PAPER / f"{stem}.{ext}") for stem in ["simFig", "simCompareSNP", "simGWASexample"]
          for ext in ["pdf", "png"]],
 
 
 rule sim_plot_paper_figures:
     input:
-        evaluation=str(SIM_OUT / "evaluation.npz"),
-        roc=str(SIM_OUT / "roc.npz"),
+        evaluations=[str(OUT_ROOT / s / "evaluation.npz") for s in SIM_PAPER_ROWS],
+        rocs=[str(OUT_ROOT / s / "roc.npz") for s in SIM_PAPER_ROWS],
+        compare=str(SIM_OUT / "roc.npz"),
         example=sim_file(SIM["example"]["instance"],
                          f"gwas/{SIM['paper_figures']['h2opt']}.npz"),
     output:
@@ -350,17 +354,23 @@ rule sim_plot_paper_figures:
         figure_png=str(SIM_PAPER / "simFig.png"),
         compare=str(SIM_PAPER / "simCompareSNP.pdf"),
         compare_png=str(SIM_PAPER / "simCompareSNP.png"),
+        example=str(SIM_PAPER / "simGWASexample.pdf"),
+        example_png=str(SIM_PAPER / "simGWASexample.png"),
     log:
         str(SIM_PAPER / "plot_paper.log"),
     params:
         h2opt=SIM["paper_figures"]["h2opt"],
         baselines=" ".join(SIM["paper_figures"]["baselines"]),
+        rows=lambda wc, input: " ".join(
+            f"--row '{label}' {ev} {roc}" for label, ev, roc in
+            zip(SIM_PAPER_ROWS.values(), input.evaluations, input.rocs, strict=True)),
     threads: 1
     shell:
-        "python -u {SIM_SCRIPTS}/plot_paper.py --evaluation {input.evaluation} --roc {input.roc}"
+        "python -u {SIM_SCRIPTS}/plot_paper.py {params.rows}"
         " --h2opt {params.h2opt} --baselines {params.baselines}"
-        " --gwas-example {input.example}"
-        " --out-figure {output.figure} --out-compare {output.compare} > {log} 2>&1"
+        " --compare-roc {input.compare} --gwas-example {input.example}"
+        " --out-figure {output.figure} --out-compare {output.compare}"
+        " --out-example {output.example} > {log} 2>&1"
 
 
 # Cross-fitted trait 1 and the permutation null, as for the real datasets. Run only on request.

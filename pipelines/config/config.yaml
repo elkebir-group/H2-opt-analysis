@@ -83,8 +83,12 @@ simulation:
   # The GWAS shown as Manhattan and QQ plots (plot_gwas.py). The paper figures use its instance.
   example: {instance: 0, method: h2opt}
   # The paper figures (plot_paper.py): the H2-opt variant they show, with the label and color of
-  # H2-opt, and the baselines. The ground truth is always shown.
-  paper_figures: {h2opt: h2opt_hybrid, baselines: [pca, genetic_pca, pch, max_features]}
+  # H2-opt, and the baselines. The ground truth is always shown. rows: the simulations of the rows
+  # of simFig (output directory: row label), top to bottom.
+  paper_figures:
+    h2opt: h2opt_hybrid
+    baselines: [pca, genetic_pca, pch, max_features]
+    rows: {simulation: Hyperspectral, helios_simulation: Images}
 
 image_simulation:
   instances: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
