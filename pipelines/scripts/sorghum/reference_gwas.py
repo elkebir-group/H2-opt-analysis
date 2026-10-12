@@ -4,8 +4,9 @@ The reference traits show which loci known traits find with the GWAS of gwas.py.
 output of ndvi.py) is a value per plant, as the H2-opt traits. A measured trait (Ferguson et al.
 2021, Supplemental Table S12; sorghum.measured_traits) is a genotype mean. The phenotype of a line
 is the mean over its plants or genotypes, rank-normal transformed (gwas.line_means). Lines without
-a value are left out. The covariates are an intercept and the genotype PCs of genotype_pcs.py.
-Writes an .npz (gwas.summarize); GEMMA's own files go to --work.
+a value are left out, and so are lines without plants, as in gwas.py. The covariates are an
+intercept and the genotype PCs of genotype_pcs.py. Writes an .npz (gwas.summarize); GEMMA's own
+files go to --work.
 
     python pipelines/scripts/sorghum/reference_gwas.py --trait ndvi --ndvi ndvi.npz \\
         --pcs genotype_pcs.npy --out reference/ndvi.npz --work work/reference_ndvi --threads 1
@@ -29,16 +30,19 @@ def main():
     parser.add_argument('--threads', type=int, required=True, help='OpenBLAS threads')
     args = parser.parse_args()
 
+    _, plant_genotypes, _ = sorghum.load()
     if args.trait == 'ndvi':
-        _, genotypes, _ = sorghum.load()
+        genotypes = plant_genotypes
         with np.load(args.ndvi) as f:
             values = f['ndvi']
     else:
         names, genotypes, measured = sorghum.measured_traits()
         values = measured[:, [sorghum.trait_slug(n) for n in names].index(args.trait)]
+    line = sorghum.line_of_plant(genotypes)
+    line[~np.isin(line, sorghum.line_of_plant(plant_genotypes))] = -1  # lines without plants
     known = ~np.isnan(values)
     n_lines = len(gwas.read_fam(sorghum.GENOTYPES))
-    phenotypes = gwas.line_means(values[known], sorghum.line_of_plant(genotypes[known]), n_lines)
+    phenotypes = gwas.line_means(values[known], line[known], n_lines)
     print(f'{args.trait}: {np.sum(~np.isnan(phenotypes))} lines with a value', flush=True)
     result = gwas.run_gemma(sorghum.GENOTYPES, phenotypes, args.work, covariates=np.load(args.pcs),
                             threads=args.threads)
