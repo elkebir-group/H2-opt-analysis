@@ -47,7 +47,7 @@ from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 # in the style of the simulation figures. Positions are in inches: the bottom and the top of the
 # panels, and the left and the width of each panel (a: the frame of the stack; d: the heatmap,
 # then its colorbar).
-FIG_SIZE = (6.5, 2.4)
+FIG_SIZE = (6.5, 2.55)
 BOTTOM = 0.34
 TOP = FIG_SIZE[1] - 0.16
 PANELS = {'a': (0.0, 1.15), 'b': (1.52, 1.15), 'c': (3.2, 1.05), 'd': (5.0, 1.05),
@@ -59,8 +59,22 @@ LETTERS = {'a': 0.0, 'b': 1.2, 'c': 2.8, 'd': 4.3}
 # cards and the position of the last card, and the room above the last card for its label.
 STACK = {'x0': 0.39, 'y0': BOTTOM, 'width': 0.56, 'offset': (0.03, 0.032), 'near': 4, 'far': 6.5,
          'top_room': 0.13}
-# Panel c: height of the room above each coefficient axes for its title.
-TITLE_ROOM = 0.16
+# Panel c: gap between the coefficient axes of two traits, and room above the top axes for the
+# labels of the absorption features (two lines).
+ROW_GAP = 0.12
+FEATURE_ROOM = 0.25
+# Leaf absorption features of panel c, in nm, after Curran (1989), Remote Sens. Environ. 30:271-278,
+# Table 1 and text: (name, shade of the band, bands as (start, end), marks at single wavelengths,
+# labels as (text, nm, line; line 0 is next to the axes)). Bands are drawn behind the coefficients
+# of every trait; marks are short ticks above the first trait; labels are above them.
+ABSORPTION = [
+    ('chlorophyll', '0.88', [(400, 700)], [], [('chl.', 550, 0)]),
+    ('red edge', '0.72', [(700, 750)], [], [('RE', 725, 1)]),
+    ('water', '0.88', [(955, 985), (1185, 1215), (1380, 1470), (1925, 1955)], [],
+     [('H$_2$O', 1085, 1), ('H$_2$O', 1425, 0), ('H$_2$O', 1940, 0)]),
+    ('protein and nitrogen', None, [], [1510, 1690, 2060, 2180, 2300],
+     [('N', 1600, 1), ('N', 2180, 1)]),
+]
 # Panel titles and annotations at the text size of the figure.
 RC = {**SIM_FIG_RC, **MATH_RC, 'axes.titlesize': 'medium'}
 
@@ -203,24 +217,39 @@ def main():
     ax.spines[['top', 'right']].set_visible(False)
     order = np.arange(1, k + 1)
 
-    # c: wavelength coefficients of the traits of one fold
+    # c: wavelength coefficients of the traits of one fold, over the absorption features
     left, width = PANELS['c']
-    step = (TOP - BOTTOM + TITLE_ROOM) / k
+    panels['c'] = axes_at(fig, left, BOTTOM, width, TOP - BOTTOM)  # for the panel letter
+    panels['c'].set_axis_off()
+    top_c = TOP - FEATURE_ROOM
+    step = (top_c - BOTTOM + ROW_GAP) / k
     for t in range(k):
-        ax = axes_at(fig, left, TOP - (t + 1) * step + TITLE_ROOM, width, step - TITLE_ROOM)
-        if t == 0:
-            panels['c'] = ax
+        ax = axes_at(fig, left, top_c - (t + 1) * step + ROW_GAP, width, step - ROW_GAP)
+        for _, shade, bands, marks, labels in ABSORPTION:
+            for start, end in bands:
+                ax.axvspan(start, end, color=shade, lw=0, zorder=0)
+            if t == 0:
+                for nm in marks:
+                    ax.axvline(nm, ymin=1, ymax=1.08, color='black', lw=0.6, clip_on=False)
+                for text, nm, line in labels:
+                    ax.annotate(text, (nm, 1), xycoords=ax.get_xaxis_transform(),
+                                xytext=(0, 3 + 6.5 * line), textcoords='offset points',
+                                ha='center', va='bottom', fontsize=small)
         top = np.abs(coefficients[:, t]).max()
         ax.plot(wavelengths, coefficients[:, t], lw=0.6, color=COLORS['h2opt'])
-        ax.axhline(0, color='0.7', lw=0.5)
+        ax.axhline(0, color='0.6', lw=0.5)
+        ax.set_xlim(wavelengths[0], wavelengths[-1])
         ax.set_ylim(-1.1 * top, 1.1 * top)
         ax.yaxis.set_major_locator(MaxNLocator(nbins=2, symmetric=True))
-        ax.set_title(f'trait {t + 1}', loc='left', pad=1.5)
+        # the trait at the top right, to keep the visible features free
+        ax.text(0.99, 0.95, f'trait {t + 1}', transform=ax.transAxes, ha='right', va='top',
+                fontsize=small, bbox=dict(facecolor='white', edgecolor='none', alpha=0.8,
+                                          pad=0.4))
         ax.spines[['top', 'right']].set_visible(False)
         if t < k - 1:
             ax.tick_params(axis='x', length=0, labelbottom=False)
     ax.set_xlabel('wavelength (nm)')
-    fig.text((left - 0.36) / FIG_SIZE[0], (BOTTOM + TOP) / 2 / FIG_SIZE[1],
+    fig.text((left - 0.36) / FIG_SIZE[0], (BOTTOM + top_c) / 2 / FIG_SIZE[1],
              'coefficient', rotation=90, ha='center', va='center')
 
     # d: |r| of genotype means with the measured traits, median over the folds
@@ -260,6 +289,9 @@ def main():
         print(f'  {"":16s} 75th  ', np.round(np.percentile(values, 75, axis=0), 3))
         print(f'  {"":16s} mean  ', np.round(values.mean(axis=0), 3))
     print(f'  NDVI median test heritability over the folds {ndvi:.3f}')
+    print('c: absorption features (Curran 1989, Table 1 and text), nm')
+    for name, _, bands, marks, _ in ABSORPTION:
+        print(f'  {name}: bands {bands}, marks {marks}')
     print('d: median |r| over folds (rows: measured traits; columns: synthetic traits)')
     for label, row in zip(labels, median, strict=True):
         print(f'  {label:24s}', np.round(row, 2))
