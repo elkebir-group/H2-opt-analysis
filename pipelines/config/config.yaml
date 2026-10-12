@@ -84,16 +84,21 @@ image_simulation:
   # Methods compared with the true traits (slugs of h2opt_analysis.methods.LABELS).
   methods: [h2opt, h2opt_hybrid, pca, genetic_pca, pch, max_features]
   traits: 5
-  # As in the spectral simulation; linear models take the flattened pixels.
+  # As in the spectral simulation; linear models take the flattened pixels. The noise levels are
+  # fixed for every instance, not selected (PI, 2026-10-11), chosen by the true traits on Helios:
+  # with selection the linear level went to the top of the grid on 7 of 10 instances and the hybrid
+  # started from a size-and-shoots trait. With linear 17.8 and CNN 1, median |r| of trait k with
+  # true trait k 0.71 0.50 0.37 (selected levels 0.24 0.18 0.15; PCH 0.08 0.09 0.22).
   h2opt:
+    noise_level: 17.7828
     steps: 10000
     device: cuda
   # The hybrid with h2opt.ImageConvModel. max_copies: models trained at once (GPU memory); the
   # copies of one split train together and share every noise draw.
   hybrid:
-    # One CNN level for all instances, not selected (PI, 2026-10-11): 0.316, the median of the
-    # levels selection chose below the top of the grid (toy 0.316, Helios about 0.44).
-    cnn_level: 0.316228
+    # Fixed for all instances (see h2opt.noise_level). Helios sweep of 0.0316-3.16 with linear
+    # levels as selected: 1 best (mean median |r| 0.197), 3.16 worst (0.155).
+    cnn_level: 1.0
     linear_steps: 10000
     steps: 1000
     max_copies: 4

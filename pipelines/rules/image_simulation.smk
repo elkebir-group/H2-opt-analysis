@@ -83,25 +83,6 @@ rule img_render_helios:
         " --out-truth {output.truth} > {log} 2>&1"
 
 
-rule img_choose_linear_h2opt_noise:
-    input:
-        img_file("{imgsim}", "{instance}", "images.npz"),
-    output:
-        img_file("{imgsim}", "{instance}", "noise.npz"),
-    log:
-        img_file("{imgsim}", "{instance}", "noise.log"),
-    params:
-        steps=IMG["h2opt"]["steps"],
-        device=IMG["h2opt"]["device"],
-    threads: 1
-    resources:
-        gpu=lambda wc: 1 if IMG["h2opt"]["device"] == "cuda" else 0,
-    shell:
-        "python -u {SIM_SCRIPTS}/choose_noise.py --measurements {input} --out {output}"
-        " --steps {params.steps} --seed {wildcards.instance} --device {params.device}"
-        " > {log} 2>&1"
-
-
 rule img_train_linear_h2opt:
     input:
         measurements=img_file("{imgsim}", "{instance}", "images.npz"),
@@ -125,17 +106,21 @@ rule img_train_linear_h2opt:
         " --device {params.device} > {log} 2>&1"
 
 
-# One fixed CNN level for every instance of both image sources (PI: no selection of the CNN level
-# here; config image_simulation.hybrid.cnn_level).
-rule img_fixed_cnn_level:
+# One fixed linear level and one fixed CNN level for every instance of both image sources (PI: no
+# selection here; config image_simulation.h2opt.noise_level and image_simulation.hybrid.cnn_level).
+rule img_fixed_levels:
+    input:
+        img_file("{imgsim}", "{instance}", "images.npz"),
     output:
-        img_file("{imgsim}", "{instance}", "cnn_level.npz"),
+        noise=img_file("{imgsim}", "{instance}", "noise.npz"),
+        cnn_level=img_file("{imgsim}", "{instance}", "cnn_level.npz"),
     log:
-        img_file("{imgsim}", "{instance}", "cnn_level.log"),
+        img_file("{imgsim}", "{instance}", "levels.log"),
     threads: 1
     shell:
-        "python -u {IMG_SCRIPTS}/fixed_cnn_level.py --level {IMG[hybrid][cnn_level]}"
-        " --out {output} > {log} 2>&1"
+        "python -u {IMG_SCRIPTS}/fixed_levels.py --measurements {input}"
+        " --linear-level {IMG[h2opt][noise_level]} --cnn-level {IMG[hybrid][cnn_level]}"
+        " --out-noise {output.noise} --out-cnn-level {output.cnn_level} > {log} 2>&1"
 
 
 rule img_train_hybrid_h2opt:
