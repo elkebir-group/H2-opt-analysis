@@ -339,7 +339,7 @@ SIM_PAPER_ROWS = SIM["paper_figures"]["rows"]
 rule simulation_paper_figures:
     input:
         [str(SIM_PAPER / f"{stem}.{ext}")
-         for stem in ["simFig", "simCompareSNP", "simGWASexample", "simNull"]
+         for stem in ["simFig", "simCompareSNP", "simGWASexample", "simNull", "simLinear"]
          for ext in ["pdf", "png"]],
 
 
@@ -407,6 +407,27 @@ rule sim_plot_paper_null:
     threads: 1
     shell:
         "python -u {SIM_SCRIPTS}/plot_paper_null.py {params.rows} --instance {params.instance}"
+        " --out {output.figure} > {log} 2>&1"
+
+
+# simLinear: per simulation of simulation.paper_figures.rows, the hybrid and the linear H2-opt
+# against PCH and the ground truth: test heritability, |r| with the true traits and AUC.
+rule sim_plot_paper_linear:
+    input:
+        evaluations=[str(OUT_ROOT / s / "evaluation.npz") for s in SIM_PAPER_ROWS],
+        rocs=[str(OUT_ROOT / s / "roc.npz") for s in SIM_PAPER_ROWS],
+    output:
+        figure=str(SIM_PAPER / "simLinear.pdf"),
+        figure_png=str(SIM_PAPER / "simLinear.png"),
+    log:
+        str(SIM_PAPER / "plot_paper_linear.log"),
+    params:
+        rows=lambda wc, input: " ".join(
+            f"--row '{label}' {ev} {roc}" for label, ev, roc in
+            zip(SIM_PAPER_ROWS.values(), input.evaluations, input.rocs, strict=True)),
+    threads: 1
+    shell:
+        "python -u {SIM_SCRIPTS}/plot_paper_linear.py {params.rows}"
         " --out {output.figure} > {log} 2>&1"
 
 

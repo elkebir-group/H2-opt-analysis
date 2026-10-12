@@ -104,9 +104,10 @@ def qq(ax, summary, row):
     ax.spines[['top', 'right']].set_visible(False)
 
 
-def boxplot_panel(ax, n_traits, slugs, values, ylabel):
-    """Boxplots of values[slug][trait] side by side within each trait. The boxes of one trait span
-    GROUP_SPAN of the unit between traits, which leaves a clear gap between traits."""
+def boxplot_panel(ax, n_traits, slugs, values, ylabel, colors=COLORS):
+    """Boxplots of values[slug][trait] side by side within each trait, in colors[slug]. The boxes
+    of one trait span GROUP_SPAN of the unit between traits, which leaves a clear gap between
+    traits."""
     step = GROUP_SPAN / len(slugs)
     for s, slug in enumerate(slugs):
         keep = [t for t in range(n_traits) if len(values[slug].get(t, []))]
@@ -117,9 +118,9 @@ def boxplot_panel(ax, n_traits, slugs, values, ylabel):
                            whiskerprops={'linewidth': 0.7}, capprops={'linewidth': 0.7},
                            boxprops={'linewidth': 0.5})
         for box in boxes['boxes']:
-            box.set(facecolor=COLORS[slug], edgecolor=COLORS[slug], alpha=0.85)
+            box.set(facecolor=colors[slug], edgecolor=colors[slug], alpha=0.85)
         for line in boxes['whiskers'] + boxes['caps']:
-            line.set_color(COLORS[slug])
+            line.set_color(colors[slug])
     ax.set_xticks(range(n_traits), [str(t + 1) for t in range(n_traits)])
     ax.set_xlim(-0.5, n_traits - 0.5)
     ax.spines[['top', 'right']].set_visible(False)
@@ -171,11 +172,11 @@ def share_y(axes):
         ax.set_ylim(low, high)
 
 
-def top_legend(fig, slugs, top):
-    """One legend for the figure, in one line above the panels; top is the top of the panels in
-    figure coordinates."""
-    handles = [plt.Rectangle((0, 0), 1, 1, color=COLORS[s]) for s in slugs]
-    fig.legend(handles, [LABELS[s] for s in slugs], loc='lower center',
+def top_legend(fig, slugs, top, labels=LABELS, colors=COLORS):
+    """One legend for the figure, in one line above the panels, with labels[slug] in
+    colors[slug]; top is the top of the panels in figure coordinates."""
+    handles = [plt.Rectangle((0, 0), 1, 1, color=colors[s]) for s in slugs]
+    fig.legend(handles, [labels[s] for s in slugs], loc='lower center',
                bbox_to_anchor=(0.5, top + LEGEND_GAP / fig.get_figheight()), borderaxespad=0,
                ncol=len(slugs), frameon=False,
                handlelength=1.2, handletextpad=0.5, columnspacing=1.4)
