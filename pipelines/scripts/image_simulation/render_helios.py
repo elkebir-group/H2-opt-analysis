@@ -1,6 +1,6 @@
 """Render the plot images of one image-simulation instance with Helios
-(h2opt_analysis.helios_simulation). Same truth, lines, test plants and output format as
-simulate.py.
+(h2opt_analysis.helios_simulation). Writes the images (.npz with X, names, test) and the true
+traits (.npz with traits).
 
     python pipelines/scripts/image_simulation/render_helios.py --instance 0 \\
         --binary helios/build/field_render --workdir helios_tiles/instance0 \\

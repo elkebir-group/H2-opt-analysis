@@ -29,7 +29,7 @@ def test_pipeline_parses():
             'misc_plot_heritability', 'misc_choose_linear_h2opt_noise',
             'misc_train_linear_h2opt', 'misc_choose_hybrid_cnn_level',
             'misc_train_hybrid_h2opt',
-            'image_simulation_all', 'img_simulate_images', 
+            'image_simulation_all',
             'img_train_linear_h2opt', 'img_fixed_levels', 'img_train_hybrid_h2opt',
             'image_simulation_gwas_all', 'img_run_gwas', 'img_score_gwas', 'img_plot_gwas',
             'image_simulation_null_gwas_all', 'img_null_gwas', 'simulation_null_gwas_all',

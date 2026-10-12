@@ -1,8 +1,7 @@
-"""Image simulation rendered with Helios: the plot images of image_simulation, made by a 3D plant
-and radiation simulator in place of hand-made images.
+"""Image simulation rendered with Helios: plot images made by a 3D plant and radiation simulator.
 
-The true traits, lines and test plants are those of image_simulation (the paper's three traits of
-the spectral simulation, standardized). They drive the same three plant traits:
+The true traits, lines and test plants are those of the spectral simulation (the paper's three
+traits, standardized; simulation.test_lines). They drive three plant traits:
 - greenness: leaf chlorophyll 40 exp(0.5 z) ug/cm2 (PROSPECT leaf optics, per plot);
 - size: leaf prototype scale 0.65 exp(0.3 z + 0.05 N) (sorghum default 0.65; N: a non-heritable
   stand effect);

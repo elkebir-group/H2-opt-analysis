@@ -112,20 +112,22 @@ the lines) and everything after are rebuilt here. All outputs are under `data/de
 
 ### Image simulation
 
-Simulated top-down plot images (`h2opt_analysis/image_simulation.py`): the true traits of the
-spectral simulation drive leaf greenness, canopy size and tiller number of images with the shape
-and scaling of the Miscanthus images, with non-heritable plot effects (position offset, soil,
-pixel noise, senesced patches). Same 10 instances and test lines. The methods are those of the
-spectral simulation (scripts of `scripts/simulation`): linear models take the flattened pixels,
-and the CNN of the hybrid is `h2opt.ImageConvModel` (global average pooling). All outputs are
-under `data/derived/image_simulation/`.
+Simulated top-down plot images rendered with the Helios 3D plant and radiation simulator
+(`h2opt_analysis/helios_simulation.py`, `pipelines/helios/field_render`): the true traits of the
+spectral simulation drive leaf greenness, canopy size and tiller number of sorghum clumps, with
+non-heritable plot effects (position offset, soil, senescence, render noise). The images have the
+shape and scaling of the Miscanthus images. Same 10 instances and test lines. The methods are
+those of the spectral simulation (scripts of `scripts/simulation`): linear models take the
+flattened pixels, and the CNN of the hybrid is `h2opt.ImageConvModel`. The noise levels are fixed
+for every instance (config `image_simulation`), not selected. All outputs are under
+`data/derived/helios_simulation/`.
 
 | Rule | Output | Content |
 |---|---|---|
-| `img_simulate_images` | `instance{i}/{images,truth}.npz` | simulated images, test plants, line of each plant, true traits |
-| `img_choose_linear_h2opt_noise` | `instance{i}/noise.npz` | as `sim_choose_linear_h2opt_noise` |
+| `img_build_helios` | `data/derived/helios/build/field_render` | the Helios renderer, built at the config commit |
+| `img_render_helios` | `instance{i}/{images,truth}.npz` | rendered images, test plants, line of each plant, true traits |
+| `img_fixed_levels` | `instance{i}/{noise,cnn_level}.npz` | the fixed linear and CNN levels |
 | `img_train_linear_h2opt` | `instance{i}/h2opt.{npz,pt}` | as `sim_train_linear_h2opt` |
-| `img_choose_hybrid_cnn_level` | `instance{i}/cnn_level.npz` | as `sim_choose_hybrid_cnn_level`, with `h2opt.ImageConvModel` |
 | `img_train_hybrid_h2opt` | `instance{i}/h2opt_hybrid.{npz,pt}` | as `sim_train_hybrid_h2opt`, with `h2opt.ImageConvModel` |
 | `img_train_baselines` | `instance{i}/{pca,genetic_pca,pch,max_features}.npz` | as `sim_train_baselines` |
 | `img_score_traits` | `evaluation.npz` | correlation with the true traits, train/test heritability |
