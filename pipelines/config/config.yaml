@@ -46,6 +46,10 @@ sorghum:
     # Permutation null of the whole pipeline (null_gwas.py): permutations, each fold 0 and the
     # GWAS traits.
     permutations: 10
+    # Loci of the H2-opt hits (reference_gwas_summary.py): hits at most locus_merge bp apart form
+    # one locus; the reference traits are scored within locus_window bp of it.
+    locus_merge: 1000000
+    locus_window: 250000
 
 simulation:
   instances: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]

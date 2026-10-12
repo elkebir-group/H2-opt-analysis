@@ -8,7 +8,6 @@
 
 from h2opt_analysis import sorghum
 from h2opt_analysis.methods import BASELINES
-import h2opt_analysis.paths
 
 SORGHUM = config["sorghum"]
 SORGHUM_OUT = OUT_ROOT / "sorghum"
@@ -16,8 +15,9 @@ SORGHUM_SCRIPTS = PIPELINE_DIR / "scripts" / "sorghum"
 SORGHUM_FOLDS = SORGHUM["folds"]
 SORGHUM_PAPER_FIGURES = SORGHUM_OUT / "figures" / "paper"
 # Genotype means of the measured traits (Ferguson et al. 2021, Supplemental Table S12).
-SORGHUM_MEASURED_TRAITS = h2opt_analysis.paths.data(
-    "plant", "processed", "traits", "SorgumTraits.tsv")
+SORGHUM_MEASURED_TRAITS = sorghum.MEASURED_TRAITS
+# Reference traits of the GWAS: NDVI and every measured trait.
+SORGHUM_REFERENCE_TRAITS = ["ndvi"] + [sorghum.trait_slug(n) for n in sorghum.measured_traits()[0]]
 # Method slug (h2opt_analysis.methods.LABELS) of each trait source.
 SORGHUM_SOURCES = {"paper": "h2opt_paper", "h2opt": "h2opt"}
 assert all(SORGHUM[s]["traits"] <= SORGHUM["baselines"]["traits"] for s in SORGHUM_SOURCES), \
@@ -62,6 +62,13 @@ rule sorghum_gwas_all:
     input:
         expand(str(SORGHUM_OUT / "gwas" / "{source}_fold{fold}.npz"),
                source=["paper", "h2opt"], fold=SORGHUM_FOLDS),
+
+
+# The GWAS of the reference traits (NDVI and the measured traits) at the loci of the H2-opt traits.
+# Run only on request.
+rule sorghum_reference_gwas_all:
+    input:
+        str(SORGHUM_OUT / "gwas" / "reference" / "summary.tsv"),
 
 
 # The permutation null of the whole H2-opt -> GWAS pipeline, and the GWAS of the cross-fitted
@@ -232,6 +239,44 @@ rule sorghum_run_gwas:
         " --out {output} --work {params.work} --traits {params.traits}"
         " --jobs {params.jobs} --threads {params.threads}"
         " > {log} 2>&1"
+
+
+rule sorghum_reference_gwas:
+    input:
+        ndvi=str(SORGHUM_OUT / "ndvi.npz"),
+        pcs=str(SORGHUM_OUT / "genotype_pcs.npy"),
+    output:
+        str(SORGHUM_OUT / "gwas" / "reference" / "{trait}.npz"),
+    log:
+        str(SORGHUM_OUT / "gwas" / "reference" / "{trait}.log"),
+    wildcard_constraints:
+        trait="|".join(SORGHUM_REFERENCE_TRAITS),
+    params:
+        work=lambda wc: str(SORGHUM_OUT / "gwas" / "work" / f"reference_{wc.trait}"),
+    threads: SORGHUM["gwas"]["threads"]
+    shell:
+        "python -u {SORGHUM_SCRIPTS}/reference_gwas.py --trait {wildcards.trait}"
+        " --ndvi {input.ndvi} --pcs {input.pcs} --out {output} --work {params.work}"
+        " --threads {SORGHUM[gwas][threads]} > {log} 2>&1"
+
+
+rule sorghum_reference_gwas_summary:
+    input:
+        h2opt=[str(SORGHUM_OUT / "gwas" / f"h2opt_fold{f}.npz") for f in SORGHUM_FOLDS],
+        reference=expand(str(SORGHUM_OUT / "gwas" / "reference" / "{trait}.npz"),
+                         trait=SORGHUM_REFERENCE_TRAITS),
+    output:
+        str(SORGHUM_OUT / "gwas" / "reference" / "summary.tsv"),
+    log:
+        str(SORGHUM_OUT / "gwas" / "reference" / "summary.log"),
+    params:
+        merge=SORGHUM["gwas"]["locus_merge"],
+        window=SORGHUM["gwas"]["locus_window"],
+    threads: 1
+    shell:
+        "python -u {SORGHUM_SCRIPTS}/reference_gwas_summary.py --h2opt {input.h2opt}"
+        " --reference {input.reference} --merge {params.merge} --window {params.window}"
+        " --out {output} > {log} 2>&1"
 
 
 # The figures of the paper, made from the h2opt source (linear H2-opt retrained here). They need

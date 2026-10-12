@@ -60,4 +60,5 @@ def test_pipeline_parses():
             'sorghum_crossfit_gwas', 'arabidopsis_null_gwas_all', 'arabi_null_gwas',
             'arabi_cross_fit_traits', 'arabi_crossfit_gwas', 'miscanthus_null_gwas_all',
             'misc_null_gwas', 'misc_cross_fit_traits', 'misc_crossfit_gwas',
-            'sorghum_score_ndvi'} <= rules
+            'sorghum_score_ndvi', 'sorghum_reference_gwas_all', 'sorghum_reference_gwas',
+            'sorghum_reference_gwas_summary'} <= rules
