@@ -198,3 +198,85 @@ rule img_plot_traits:
     shell:
         "python -u {SIM_SCRIPTS}/plot_traits.py --evaluation {input}"
         " --out-dir {params.out_dir} > {log} 2>&1"
+
+
+# GWAS of the image simulations, as the spectral simulation's (simulation.smk): the instances have
+# the plants, lines and true traits of the spectral instances, so the genotypes, the plant lines
+# (spectra.npz 'lines') and the GWAS of the true traits come from there. Run only on request.
+IMG_GWAS_METHODS = IMG["methods"]
+
+
+rule image_simulation_gwas_all:
+    input:
+        str(OUT_ROOT / "helios_simulation" / "roc.npz"),
+        str(OUT_ROOT / "helios_simulation" / "figures" / "auc.pdf"),
+
+
+rule img_run_gwas:
+    input:
+        lines=sim_file("{instance}", "spectra.npz"),
+        traits=img_file("{imgsim}", "{instance}", "{method}.npz"),
+        genotypes=multiext(sim_file("{instance}", "genotypes"), ".bed", ".bim", ".fam"),
+        pcs=sim_file("{instance}", "genotype_pcs.npy"),
+    output:
+        img_file("{imgsim}", "{instance}", "gwas/{method}.npz"),
+    log:
+        img_file("{imgsim}", "{instance}", "gwas/{method}.log"),
+    wildcard_constraints:
+        method="|".join(IMG_GWAS_METHODS),
+    params:
+        prefix=lambda wc: sim_file(wc.instance, "genotypes"),
+        work=lambda wc: img_file(wc.imgsim, wc.instance, f"gwas/work/{wc.method}"),
+        jobs=SIM["gwas"]["jobs"],
+        threads=SIM["gwas"]["threads"],
+    threads: SIM["gwas"]["jobs"] * SIM["gwas"]["threads"]
+    shell:
+        "python -u {SIM_SCRIPTS}/gwas.py --spectra {input.lines} --traits {input.traits}"
+        " --genotypes {params.prefix} --pcs {input.pcs} --out {output} --work {params.work}"
+        " --jobs {params.jobs} --threads {params.threads} > {log} 2>&1"
+
+
+def img_gwas_files(imgsim, method):
+    if method == "truth":
+        return sim_files("gwas/truth.npz", IMG_INSTANCES)
+    return img_files(imgsim, f"gwas/{method}.npz")
+
+
+rule img_score_gwas:
+    input:
+        lambda wc: [f for m in ["truth"] + IMG_GWAS_METHODS for f in img_gwas_files(wc.imgsim, m)],
+    output:
+        str(OUT_ROOT / "{imgsim}" / "roc.npz"),
+    log:
+        str(OUT_ROOT / "{imgsim}" / "roc.log"),
+    params:
+        instances=" ".join(str(i) for i in IMG_INSTANCES),
+        methods=lambda wc: " ".join(f"--method {m} " + " ".join(img_gwas_files(wc.imgsim, m))
+                                    for m in ["truth"] + IMG_GWAS_METHODS),
+    threads: 2
+    shell:
+        "python -u {SIM_SCRIPTS}/roc.py --instances {params.instances} {params.methods}"
+        " --out {output} > {log} 2>&1"
+
+
+rule img_plot_gwas:
+    input:
+        roc=str(OUT_ROOT / "{imgsim}" / "roc.npz"),
+        example=img_file("{imgsim}", IMG["example"]["instance"],
+                         f"gwas/{IMG['example']['method']}.npz"),
+    output:
+        [str(OUT_ROOT / "{imgsim}" / "figures" / name) for name in
+         ["auc.pdf", "roc_trait1.pdf", "roc_trait2.pdf", "roc_trait3.pdf",
+          f"gwas_{IMG['example']['method']}_instance{IMG['example']['instance']}.png"]],
+    log:
+        str(OUT_ROOT / "{imgsim}" / "figures" / "plot_gwas.log"),
+    params:
+        out_dir=lambda wc: str(OUT_ROOT / wc.imgsim / "figures"),
+        name=f"{IMG['example']['method']}_instance{IMG['example']['instance']}",
+        label=(f"{LABELS[IMG['example']['method']]}, "
+               f"instance {IMG['example']['instance']}"),
+    threads: 1
+    shell:
+        "python -u {SIM_SCRIPTS}/plot_gwas.py --roc {input.roc}"
+        " --gwas-example {input.example} --example-name {params.name}"
+        " --example-label '{params.label}' --out-dir {params.out_dir} > {log} 2>&1"

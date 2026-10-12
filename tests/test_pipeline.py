@@ -30,6 +30,7 @@ def test_pipeline_parses():
             'misc_train_hybrid_h2opt',
             'image_simulation_all', 'img_simulate_images', 
             'img_train_linear_h2opt', 'img_fixed_levels', 'img_train_hybrid_h2opt',
+            'image_simulation_gwas_all', 'img_run_gwas', 'img_score_gwas', 'img_plot_gwas',
             'img_train_baselines', 'img_score_traits', 'img_plot_traits', 'img_build_helios',
             'img_render_helios',
             'arabidopsis_all', 'arabi_prepare_features',
