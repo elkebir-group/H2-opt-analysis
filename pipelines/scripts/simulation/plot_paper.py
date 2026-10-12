@@ -262,15 +262,17 @@ def main():
         save(fig, args.out_figure)
 
     roc = select_methods(np.load(args.compare_roc), roc_axes, ['truth'] + shown, args.h2opt)
-    fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.2))
-    for t, ax in zip((1, 2), axes, strict=True):
-        roc_bands(ax, roc, t, 0.15)
-        plot_roc(ax, roc, t)
-        ax.legend(loc='lower right', fontsize=7, frameon=True, framealpha=0.9,
-                  edgecolor='none')
-        ax.set_title(f'trait {t + 1}', fontsize=9)
-    fig.tight_layout()
-    save(fig, args.out_compare)
+    # Drawn at the text width in the style of simFig, so that LaTeX does not scale it.
+    with plt.rc_context(SIM_FIG_RC):
+        fig, axes = plt.subplots(1, 2, figsize=(6.5, 3.0))
+        for t, ax in zip((1, 2), axes, strict=True):
+            roc_bands(ax, roc, t, 0.25)
+            plot_roc(ax, roc, t)
+            ax.legend(loc='lower right', fontsize=6, frameon=True, framealpha=0.9,
+                      edgecolor='none')
+            ax.set_title(f'trait {t + 1}', fontsize=7)
+        fig.tight_layout()
+        save(fig, args.out_compare)
 
     summary = np.load(args.gwas_example)
     fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.6), gridspec_kw={'width_ratios': [1, 2]})
