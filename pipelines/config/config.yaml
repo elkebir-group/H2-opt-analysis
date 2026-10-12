@@ -89,6 +89,8 @@ simulation:
     h2opt: h2opt_hybrid
     baselines: [pca, genetic_pca, pch, max_features]
     rows: {simulation: Hyperspectral, helios_simulation: Images}
+    # simNull: the real H2-opt of each simulation, as in its null (spectra linear, images hybrid).
+    null_methods: {simulation: h2opt, helios_simulation: h2opt_hybrid}
 
 image_simulation:
   instances: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]

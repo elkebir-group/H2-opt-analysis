@@ -338,7 +338,8 @@ SIM_PAPER_ROWS = SIM["paper_figures"]["rows"]
 
 rule simulation_paper_figures:
     input:
-        [str(SIM_PAPER / f"{stem}.{ext}") for stem in ["simFig", "simCompareSNP", "simGWASexample"]
+        [str(SIM_PAPER / f"{stem}.{ext}")
+         for stem in ["simFig", "simCompareSNP", "simGWASexample", "simNull"]
          for ext in ["pdf", "png"]],
 
 
@@ -371,6 +372,42 @@ rule sim_plot_paper_figures:
         " --compare-roc {input.compare} --gwas-example {input.example}"
         " --out-figure {output.figure} --out-compare {output.compare}"
         " --out-example {output.example} > {log} 2>&1"
+
+
+# simNull: per simulation of simulation.paper_figures.rows, the real H2-opt traits of the null
+# instance (simulation.paper_figures.null_methods) against the permutation null (sim_null_gwas,
+# img_null_gwas): test heritability, QQ plot of trait 1 and lambda GC of traits 1-3.
+SIM_NULL_SLUGS = SIM["paper_figures"]["null_methods"]
+
+
+def sim_null_files(sim, name):
+    return str(OUT_ROOT / sim / f"instance{SIM['gwas']['null_instance']}" / name)
+
+
+def sim_null_perms(sim):
+    return [sim_null_files(sim, f"null/perm{k}.npz") for k in range(SIM["gwas"]["permutations"])]
+
+
+rule sim_plot_paper_null:
+    input:
+        evaluations=[str(OUT_ROOT / s / "evaluation.npz") for s in SIM_PAPER_ROWS],
+        gwas=[sim_null_files(s, f"gwas/{SIM_NULL_SLUGS[s]}.npz") for s in SIM_PAPER_ROWS],
+        nulls=[f for s in SIM_PAPER_ROWS for f in sim_null_perms(s)],
+    output:
+        figure=str(SIM_PAPER / "simNull.pdf"),
+        figure_png=str(SIM_PAPER / "simNull.png"),
+    log:
+        str(SIM_PAPER / "plot_paper_null.log"),
+    params:
+        rows=" ".join(
+            f"--row '{label}' {SIM_NULL_SLUGS[s]} {OUT_ROOT / s / 'evaluation.npz'} "
+            f"{sim_null_files(s, f'gwas/{SIM_NULL_SLUGS[s]}.npz')} " + " ".join(sim_null_perms(s))
+            for s, label in SIM_PAPER_ROWS.items()),
+        instance=SIM["gwas"]["null_instance"],
+    threads: 1
+    shell:
+        "python -u {SIM_SCRIPTS}/plot_paper_null.py {params.rows} --instance {params.instance}"
+        " --out {output.figure} > {log} 2>&1"
 
 
 # Cross-fitted trait 1 and the permutation null, as for the real datasets. Run only on request.
