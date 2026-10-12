@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 from h2opt_analysis.figures import grouped_boxplot, legend  # noqa: E402
+from h2opt_analysis.methods import ordered  # noqa: E402
 
 
 def main():
@@ -33,17 +34,19 @@ def main():
     for row, (treatment, path) in enumerate(zip(args.treatments, args.heritability,
                                                 strict=True)):
         results = np.load(path)
-        methods = list(results['methods'])
+        saved = list(results['methods'])
+        methods = ordered(saved)
         for ax, split in zip(axes[row], ('train', 'test'), strict=True):
             values = results[split]  # methods x folds x traits
             boxes = {m: {t: values[i, :, t] for t in range(values.shape[2])}
-                     for i, m in enumerate(methods)}
+                     for i, m in enumerate(saved)}
             grouped_boxplot(ax, [str(t + 1) for t in range(values.shape[2])], methods, boxes)
             ax.set_title(f'{treatment.removesuffix("d")} day, {split}', fontsize=10)
             ax.set_xlabel('trait')
             ax.set_ylim(-0.02, 1.02)
             print(treatment, split, 'mean over folds per trait:')
-            for i, m in enumerate(methods):
+            for m in methods:
+                i = saved.index(m)
                 print(f'  {m:13s}', np.round(values[i].mean(axis=0), 3).tolist(),
                       f'mean {values[i].mean():.3f}')
         axes[row, 0].set_ylabel('heritability (ANOVA)')

@@ -20,21 +20,23 @@ import numpy as np  # noqa: E402
 
 from h2opt_analysis import simulation  # noqa: E402
 from h2opt_analysis.figures import COLORS, plot_gwas, save_trait_boxplots  # noqa: E402
-from h2opt_analysis.methods import LABELS  # noqa: E402
+from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 
 
 def auc_values(roc):
-    """AUC per method and trait of a roc.py result: the slugs and the values (values[slug][t] is
-    an array over the instances)."""
+    """AUC per method and trait of a roc.py result: the slugs (in figure order) and the values
+    (values[slug][t] is an array over the instances)."""
     methods = list(roc['methods'])
-    return methods, {m: {t: roc['auc'][t, j] for t in range(simulation.N_TRAITS)}
-                     for j, m in enumerate(methods)}
+    return ordered(methods), {m: {t: roc['auc'][t, j] for t in range(simulation.N_TRAITS)}
+                              for j, m in enumerate(methods)}
 
 
 def plot_roc(ax, roc, t):
-    """Mean ROC curves of trait t (0-based) for each method of a roc.py result, with the median
-    AUC over the instances in the legend."""
-    for j, m in enumerate(roc['methods']):
+    """Mean ROC curves of trait t (0-based) for each method of a roc.py result, in figure order,
+    with the median AUC over the instances in the legend."""
+    methods = list(roc['methods'])
+    for m in ordered(methods):
+        j = methods.index(m)
         median = np.median(roc['auc'][t, j])
         ax.plot(roc['fpr'], roc['tpr'][t, j], color=COLORS[m],
                 label=f'{LABELS[m]}: AUC {median:.3f}')

@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 from h2opt_analysis.figures import COLORS  # noqa: E402
-from h2opt_analysis.methods import LABELS  # noqa: E402
+from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 
 
 def main():
@@ -28,10 +28,12 @@ def main():
     args = parser.parse_args()
 
     results = np.load(args.heritability)
-    methods = list(results['methods'])
+    saved = list(results['methods'])
+    methods = ordered(saved)
+    index = [saved.index(m) for m in methods]  # rows of the saved arrays in figure order
     fig, axes = plt.subplots(1, 2, figsize=(7, 2.8), sharey=True)
     for ax, split in zip(axes, ['train', 'test'], strict=True):
-        values = results[split][:, :, args.trait - 1]  # methods x folds
+        values = results[split][index, :, args.trait - 1]  # methods x folds
         boxes = ax.boxplot(values.T, patch_artist=True, widths=0.6,
                            medianprops={'color': 'black'})
         for box, method in zip(boxes['boxes'], methods, strict=True):
@@ -47,7 +49,7 @@ def main():
     out = Path(args.out)
     fig.savefig(out)
     fig.savefig(out.with_suffix('.png'), dpi=150)
-    for m, method in enumerate(methods):
+    for m, method in zip(index, methods, strict=True):
         print(f'{LABELS[method]:16s} train {results["train"][m, :, args.trait - 1].mean():.3f}  '
               f'test {results["test"][m, :, args.trait - 1].mean():.3f}')
 

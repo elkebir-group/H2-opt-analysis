@@ -17,29 +17,32 @@ import numpy as np  # noqa: E402
 
 from h2opt_analysis import simulation  # noqa: E402
 from h2opt_analysis.figures import save_trait_boxplots  # noqa: E402
+from h2opt_analysis.methods import ordered  # noqa: E402
 
 
 def heritability_values(ev):
     """Test heritability (clipped at 0) of the true traits and of each method's traits.
 
-    ev: an evaluate.py result. Returns the slugs ('truth' first), the values (values[slug][t] is
-    an array over the instances) and the number of synthetic traits."""
+    ev: an evaluate.py result. Returns the slugs ('truth' first, then the methods in figure order),
+    the values (values[slug][t] is an array over the instances) and the number of synthetic
+    traits."""
     methods = list(ev['methods'])
     herit = np.clip(ev['herit'][:, :, 1], 0, None)  # methods x instances x traits, test plants
     values = {'truth': {t: np.clip(ev['herit_truth'][:, 1, t], 0, None)
                         for t in range(simulation.N_TRAITS)}}
     values.update({m: {t: herit[j, :, t] for t in range(herit.shape[2])}
                    for j, m in enumerate(methods)})
-    return ['truth'] + methods, values, herit.shape[2]
+    return ['truth'] + ordered(methods), values, herit.shape[2]
 
 
 def correlation_values(ev):
-    """|r| of true trait t with synthetic trait t of each method: the slugs and the values
-    (values[slug][t] is an array over the instances)."""
+    """|r| of true trait t with synthetic trait t of each method: the slugs (in figure order) and
+    the values (values[slug][t] is an array over the instances)."""
     methods = list(ev['methods'])
     n_t = simulation.N_TRAITS
     diagonal = np.abs(ev['cor'][:, :, np.arange(n_t), np.arange(n_t)])
-    return methods, {m: {t: diagonal[j, :, t] for t in range(n_t)} for j, m in enumerate(methods)}
+    return ordered(methods), {m: {t: diagonal[j, :, t] for t in range(n_t)}
+                              for j, m in enumerate(methods)}
 
 
 def main():

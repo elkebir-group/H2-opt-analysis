@@ -33,7 +33,7 @@ from matplotlib.gridspec import GridSpecFromSubplotSpec  # noqa: E402
 
 from h2opt_analysis import sorghum  # noqa: E402
 from h2opt_analysis.figures import COLORS  # noqa: E402
-from h2opt_analysis.methods import LABELS  # noqa: E402
+from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 
 # Short labels of the measured traits (column names of Supplemental Table S12).
 MEASURED_LABELS = {'gs': '$g_s$', 'AN': '$A_N$', 'ci/ca': '$c_i/c_a$'}
@@ -113,7 +113,8 @@ def main():
     test = results['test'][:, :, :k].mean(axis=1)  # methods x traits
     ax = fig.add_subplot(grid[1])
     order = np.arange(1, k + 1)
-    for m, method in enumerate(methods):
+    for method in ordered(methods):
+        m = methods.index(method)
         on_top = method == 'h2opt'  # PCH is close to H2-opt; draw H2-opt over it
         ax.plot(order, test[m], 'o-', color=COLORS[method], ms=4 if on_top else 3,
                 lw=2 if on_top else 1, zorder=3 if on_top else 2, label=LABELS[method])
@@ -185,8 +186,8 @@ def main():
     fig.savefig(out.with_suffix('.png'), dpi=150, bbox_inches='tight')
 
     print(f'b: mean test heritability, traits 1-{k}')
-    for m, method in enumerate(methods):
-        print(f'  {LABELS[method]:16s}', np.round(test[m], 3))
+    for method in ordered(methods):
+        print(f'  {LABELS[method]:16s}', np.round(test[methods.index(method)], 3))
     print('d: median |r| over folds (rows: measured traits; columns: synthetic traits)')
     for label, row in zip(labels, median, strict=True):
         print(f'  {label:24s}', np.round(row, 2))

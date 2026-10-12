@@ -17,6 +17,31 @@ LABELS = {
     'max_features': 'single trait',
 }
 
+# Order of the methods in every figure: H2-opt first, then the baselines from the most to the
+# least genetic information.
+ORDER = ['h2opt_hybrid', 'h2opt', 'pch', 'genetic_pca', 'max_features', 'pca']
+# A variant of a method comes right after the method: variant slug -> (method, rank of variant).
+VARIANTS = {'h2opt_paper': ('h2opt', 1), 'h2opt_crossfit': ('h2opt', 2),
+            'h2opt_hybrid_crossfit': ('h2opt_hybrid', 1)}
+
+
+def ordered(slugs):
+    """The slugs as a list, with the methods of ORDER and their VARIANTS in figure order.
+
+    The methods move only among their own positions. Other entries (such as 'truth' or 'ndvi')
+    keep their positions."""
+    slugs = list(slugs)
+    slots = [i for i, s in enumerate(slugs) if s in ORDER or s in VARIANTS]
+
+    def key(slug):
+        method, rank = VARIANTS.get(slug, (slug, 0))
+        return ORDER.index(method), rank
+
+    for i, slug in zip(slots, sorted((slugs[i] for i in slots), key=key), strict=True):
+        slugs[i] = slug
+    return slugs
+
+
 BASELINES = {'pca': baselines.PCA, 'genetic_pca': baselines.GeneticPCA, 'pch': baselines.PCH,
              'max_features': baselines.MaxHeritabilityFeatures}
 

@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from h2opt_analysis.figures import COLORS
-from h2opt_analysis.methods import LABELS
+from h2opt_analysis.methods import LABELS, ordered
 
 
 def main():
@@ -29,8 +29,9 @@ def main():
     x = np.arange(len(dates))
     fig, (left, right) = plt.subplots(1, 2, figsize=(11, 3.6), gridspec_kw={'width_ratios': [3, 2]})
     width = 0.8 / len(methods)
-    for m, method in enumerate(methods):
-        offset = (m - (len(methods) - 1) / 2) * width
+    for p, method in enumerate(ordered(methods)):
+        m = methods.index(method)
+        offset = (p - (len(methods) - 1) / 2) * width
         left.bar(x + offset, narrow[m].mean(axis=1), width, color=COLORS[method],
                  label=LABELS[method])
         for f in range(narrow.shape[2]):

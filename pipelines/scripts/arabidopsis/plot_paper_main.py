@@ -26,7 +26,7 @@ from matplotlib.colors import LogNorm  # noqa: E402
 
 from h2opt_analysis import arabidopsis  # noqa: E402
 from h2opt_analysis.figures import COLORS  # noqa: E402
-from h2opt_analysis.methods import LABELS  # noqa: E402
+from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 
 # Minutes per retention-time bin.
 RT_BIN = 0.5
@@ -106,7 +106,9 @@ def main():
         ax = fig.add_subplot(grid[row, 1])
         test = results['test']  # methods x folds x traits
         traits = np.arange(1, test.shape[2] + 1)
-        for m, method in enumerate(results['methods']):
+        methods = list(results['methods'])
+        for method in ordered(methods):
+            m = methods.index(method)
             ax.plot(traits, test[m].mean(axis=0), '-o', ms=2, lw=1.2, color=COLORS[method],
                     label=LABELS[method], zorder=3 if method == 'h2opt' else 2)
         ax.set_ylim(0, 1.02)
@@ -165,11 +167,12 @@ def main():
 
     for treatment, path, count in zip(args.treatments, args.heritability, counts, strict=True):
         results = np.load(path)
-        means = {m: results['test'][i].mean() for i, m in enumerate(results['methods'])}
+        methods = list(results['methods'])
+        means = {m: results['test'][methods.index(m)].mean() for m in ordered(methods)}
         print(treatment, 'mean test heritability over folds and traits:',
               ', '.join(f'{LABELS[m]} {v:.3f}' for m, v in means.items()),
               '| lowest H2-opt trait (fold mean):',
-              f'{results["test"][list(results["methods"]).index("h2opt")].mean(0).min():.3f}',
+              f'{results["test"][methods.index("h2opt")].mean(0).min():.3f}',
               '| significant SNPs per trait:', count.tolist())
 
 

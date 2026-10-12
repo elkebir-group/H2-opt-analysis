@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 from h2opt_analysis.figures import COLORS  # noqa: E402
-from h2opt_analysis.methods import LABELS  # noqa: E402
+from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 
 
 def main():
@@ -37,7 +37,8 @@ def main():
     for ax, split in zip(axes, ['train', 'test'], strict=True):
         mean = results[split][:, :, :args.traits].mean(axis=1)  # methods x traits
         print(f'mean {split} heritability, traits 1-{args.traits}')
-        for m, method in enumerate(methods):
+        for method in ordered(methods):
+            m = methods.index(method)
             on_top = method == 'h2opt'  # PCH is close to H2-opt; draw H2-opt over it
             ax.plot(order, mean[m], 'o-', color=COLORS[method], ms=4 if on_top else 3,
                     lw=2 if on_top else 1, zorder=3 if on_top else 2, label=LABELS[method])

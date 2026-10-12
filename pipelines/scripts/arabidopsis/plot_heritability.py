@@ -16,6 +16,7 @@ matplotlib.use('Agg')
 import numpy as np  # noqa: E402
 
 from h2opt_analysis.figures import save_trait_boxplots  # noqa: E402
+from h2opt_analysis.methods import ordered  # noqa: E402
 
 
 def main():
@@ -26,12 +27,12 @@ def main():
     args = parser.parse_args()
 
     results = np.load(args.heritability)
-    methods = list(results['methods'])
+    saved = list(results['methods'])
     for split, path in (('test', args.out_test), ('train', args.out_train)):
         values = results[split]  # methods x folds x traits
         boxes = {m: {t: values[i, :, t] for t in range(values.shape[2])}
-                 for i, m in enumerate(methods)}
-        save_trait_boxplots(path, values.shape[2], methods, boxes,
+                 for i, m in enumerate(saved)}
+        save_trait_boxplots(path, values.shape[2], ordered(saved), boxes,
                             f'{split} heritability (ANOVA)', width=7)
 
 

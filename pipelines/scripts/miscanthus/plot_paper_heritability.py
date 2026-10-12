@@ -24,12 +24,11 @@ import numpy as np  # noqa: E402
 
 from h2opt_analysis import miscanthus  # noqa: E402
 from h2opt_analysis.figures import COLORS  # noqa: E402
-from h2opt_analysis.methods import LABELS  # noqa: E402
+from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 
 FONT_SIZE = 8
 # The paper's H2-opt on Miscanthus is the hybrid; linear H2-opt is shown as such.
 PAPER_LABELS = {**LABELS, 'h2opt_hybrid': 'H2-opt', 'h2opt': 'linear H2-opt'}
-METHOD_ORDER = ('h2opt_hybrid', 'h2opt', 'pch', 'max_features', 'pca', 'genetic_pca')
 NDVI_COLOR = 'black'
 # Markers tell apart curves that overlap (linear H2-opt and PCH give near-equal values).
 MARKERS = {'h2opt_hybrid': 'o', 'h2opt': 'D', 'pch': 's', 'max_features': '^', 'pca': 'v',
@@ -43,10 +42,10 @@ def narrow(values):
 
 def load_heritability(path, split):
     """{method: narrow-sense heritability of trait 1, dates x folds} of split 'train' or 'test',
-    in METHOD_ORDER."""
+    in figure order."""
     with np.load(path) as f:
         values = dict(zip(f['methods'], narrow(f[split][..., 0]), strict=True))
-    return {m: values[m] for m in METHOD_ORDER if m in values}
+    return {m: values[m] for m in ordered(values)}
 
 
 def plot_dates(ax, curves, colors, labels, dates=miscanthus.DATES):
