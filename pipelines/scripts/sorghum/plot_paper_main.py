@@ -214,6 +214,8 @@ def main():
         ax.plot(wavelengths, coefficients[:, t], lw=0.6, color=COLORS['h2opt'])
         ax.axhline(0, color='0.7', lw=0.5)
         ax.set_ylim(-1.1 * top, 1.1 * top)
+        ax.set_xlim(wavelengths[0], wavelengths[-1])
+        ax.set_xticks(range(500, 2501, 500))
         ax.yaxis.set_major_locator(MaxNLocator(nbins=2, symmetric=True))
         ax.set_title(f'trait {t + 1}', loc='left', pad=1.5)
         ax.spines[['top', 'right']].set_visible(False)
