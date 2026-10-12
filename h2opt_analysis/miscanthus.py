@@ -53,9 +53,7 @@ def design(population):
     families, plots, environment and fold of the kept plants. environment is (n, 2): rep and
     field column (plot number % 130), the fixed effects of the heritability (Henderson3, with
     families as groups and plots as subgroups). fold (0-4) is the paper's fold of each plant:
-    np.random.seed(1), randint(5) over all 3,900 plants. The folds split plants, not families:
-    the heritability removes 130 field column effects, and the plants of a few held-out families
-    cover too few plots per column to estimate it."""
+    np.random.seed(1), randint(5) over all 3,900 plants."""
     table = np.loadtxt(plant_table(population), delimiter='\t', dtype=str, skiprows=1)
     family, plot, rep = np.char.strip(table[:, 7]), table[:, 2], table[:, 4]
     keep = half_sib(family)
