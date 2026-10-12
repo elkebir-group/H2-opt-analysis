@@ -86,8 +86,8 @@ def qq_panel(ax, real, nulls):
     ax.set_xlim(0, None)
     ax.set_ylim(0, None)
     ax.spines[['top', 'right']].set_visible(False)
-    ax.set_xlabel('expected -log10 p')
-    ax.set_ylabel('observed -log10 p (trait 1)')
+    ax.set_xlabel(r'expected $-\log_{10} p$')
+    ax.set_ylabel(r'observed $-\log_{10} p$ (trait 1)')
 
 
 def main():
@@ -103,7 +103,10 @@ def main():
     letters = 'abcdefghijklmnop'
     n_rows = len(args.row)
 
-    with plt.rc_context(SIM_FIG_RC):
+    # Math labels in the text font of the figure.
+    math_rc = {'mathtext.fontset': 'custom', 'mathtext.rm': 'Liberation Sans',
+               'mathtext.it': 'Liberation Sans:italic', 'mathtext.bf': 'Liberation Sans:bold'}
+    with plt.rc_context({**SIM_FIG_RC, **math_rc}):
         fig, axes = plt.subplots(n_rows, 3, figsize=FIG_SIZE, squeeze=False,
                                  gridspec_kw={'width_ratios': WIDTH_RATIOS})
         for r, (label, slug, evaluation, real_gwas, *null_files) in enumerate(args.row):
@@ -126,7 +129,7 @@ def main():
             real_vs_null(axes[r, 0], real_h2, null_h2, 'test heritability')
             axes[r, 0].axhline(0, color='0.3', linewidth=0.8, linestyle=':')
             qq_panel(axes[r, 1], real_score, [n['neg_log10_p'][0] for n in nulls])
-            real_vs_null(axes[r, 2], real_lambda, null_lambda, 'lambda GC')
+            real_vs_null(axes[r, 2], real_lambda, null_lambda, r'$\lambda_\mathrm{GC}$')
             axes[r, 2].axhline(1, color='0.3', linewidth=0.8, linestyle=':')
         for c in range(3):
             share_y(axes[:, c])
