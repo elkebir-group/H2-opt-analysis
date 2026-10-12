@@ -3,8 +3,9 @@
 --out-figure (paper Fig. 3, simFig): one row per simulation (--row), each with four panels: test
 heritability of the true traits and of synthetic traits 1-5; |r| of true trait t with synthetic
 trait t; mean ROC curves of trait 1, each with a band from the 25th to the 75th percentile of the
-curves of the instances; AUC of traits 1-3. A panel has the same y-axis in all rows. The letters
-go down the columns (a, b in column 1).
+curves of the instances and the median AUC over the instances in the legend; AUC of traits 1-3. A
+panel has the same y-axis in all rows. The letters go down the columns (a, b in column 1). The
+row labels are at the right of the rows.
 --out-compare (paper Fig. S2, simCompareSNP): mean ROC curves of traits 2 and 3 of --compare-roc,
 with the same bands (lighter).
 --out-example (simGWASexample): QQ and Manhattan plots of the GWAS of trait 1 of one method on one
@@ -39,19 +40,30 @@ from plot_traits import correlation_values, heritability_values  # noqa: E402
 from h2opt_analysis.figures import COLORS  # noqa: E402
 from h2opt_analysis.methods import LABELS  # noqa: E402
 
-# simFig is drawn at the text width of the paper (6.5 in), so that LaTeX does not scale it.
+# simFig is drawn at the text width of the paper (6.5 in), so that LaTeX does not scale it. Its
+# text is Liberation Sans (the metrics of Arial): 6.5 pt labels and legend, 6 pt ticks.
 # simCompareSNP and simGWASexample keep their earlier sizes and font sizes (7 to 11 pt).
-FONT_SIZE = 8.5
-TICK_SIZE = 7.5
-SIM_FIG_SIZE = (6.5, 4.5)
-SIM_FIG_RC = {'font.size': FONT_SIZE, 'axes.labelsize': FONT_SIZE, 'xtick.labelsize': TICK_SIZE,
-              'ytick.labelsize': TICK_SIZE, 'legend.fontsize': FONT_SIZE, 'axes.linewidth': 0.7,
-              'xtick.major.width': 0.7, 'ytick.major.width': 0.7, 'xtick.major.size': 2.5,
-              'ytick.major.size': 2.5, 'lines.linewidth': 1.2}
+FONT_SIZE = 6.5
+TICK_SIZE = 6
+ROC_LEGEND_SIZE = 5.5
+ROW_LABEL_SIZE = 7.5
+LETTER_SIZE = 8.5
+SIM_FIG_SIZE = (6.5, 3.7)
+SIM_FIG_RC = {'font.family': 'sans-serif', 'font.sans-serif': ['Liberation Sans'],
+              'pdf.fonttype': 42, 'font.size': FONT_SIZE, 'axes.labelsize': FONT_SIZE,
+              'xtick.labelsize': TICK_SIZE, 'ytick.labelsize': TICK_SIZE,
+              'legend.fontsize': FONT_SIZE, 'axes.linewidth': 0.6, 'xtick.major.width': 0.6,
+              'ytick.major.width': 0.6, 'xtick.major.size': 2.5, 'ytick.major.size': 2.5,
+              'lines.linewidth': 1.0}
 # simFig columns: heritability (traits 1-5), |r| (traits 1-3), ROC, AUC (traits 1-3).
-WIDTH_RATIOS = [5, 3, 2.4, 3]
+WIDTH_RATIOS = [4.6, 3, 3.6, 3]
 # x of the panel letters, in axes coordinates of each column.
-LETTER_X = [-0.21, -0.4, -0.5, -0.42]
+LETTER_X = [-0.21, -0.33, -0.28, -0.37]
+# simFig margins in inches: above the panels (legend and letters) and below them (x labels);
+# LEGEND_GAP is between the top of the panels and the bottom of the legend.
+TOP_MARGIN = 0.31
+BOTTOM_MARGIN = 0.32
+LEGEND_GAP = 0.11
 # Part of the unit between two traits that the boxes of one trait span.
 GROUP_SPAN = 0.72
 
@@ -140,15 +152,15 @@ def roc_bands(ax, roc, t, alpha):
 
 
 def letter(ax, text, x):
-    ax.text(x, 1.0, text, transform=ax.transAxes, fontsize=FONT_SIZE + 2, fontweight='bold',
+    ax.text(x, 1.0, text, transform=ax.transAxes, fontsize=LETTER_SIZE, fontweight='bold',
             va='bottom', ha='left')
 
 
 def row_label(fig, ax, text):
-    """Label of a row of panels, at the left edge of the figure."""
+    """Label of a row of panels, rotated, just to the right of the last panel ax of the row."""
     box = ax.get_position()
-    fig.text(0.004, (box.y0 + box.y1) / 2, text, rotation=90, ha='left', va='center',
-             fontsize=FONT_SIZE + 1, fontweight='bold')
+    fig.text(box.x1 + 0.04 / fig.get_figwidth(), (box.y0 + box.y1) / 2, text, rotation=-90,
+             ha='left', va='center', fontsize=ROW_LABEL_SIZE, fontweight='bold')
 
 
 def share_y(axes):
@@ -164,7 +176,8 @@ def top_legend(fig, slugs, top):
     figure coordinates."""
     handles = [plt.Rectangle((0, 0), 1, 1, color=COLORS[s]) for s in slugs]
     fig.legend(handles, [LABELS[s] for s in slugs], loc='lower center',
-               bbox_to_anchor=(0.5, top + 0.02), borderaxespad=0, ncol=len(slugs), frameon=False,
+               bbox_to_anchor=(0.5, top + LEGEND_GAP / fig.get_figheight()), borderaxespad=0,
+               ncol=len(slugs), frameon=False,
                handlelength=1.2, handletextpad=0.5, columnspacing=1.4)
 
 
@@ -187,8 +200,10 @@ def simulation_row(axes, ev, roc):
                   '|r| with true trait')
     roc_bands(axes[2], roc, 0, 0.25)
     plot_roc(axes[2], roc, 0)
-    axes[2].get_legend().remove()
-    axes[2].set_ylabel('true positive rate (trait 1)')
+    axes[2].legend(loc='lower right', fontsize=ROC_LEGEND_SIZE, frameon=True, framealpha=0.8,
+                   edgecolor='none', borderpad=0.2, borderaxespad=0.2, handlelength=1,
+                   handletextpad=0.4, labelspacing=0.15)
+    axes[2].set_ylabel('true positive rate')
     axes[2].set_xlabel('false positive rate')
     axes[2].set_xlim(0, 1)
     axes[2].set_ylim(0, 1)
@@ -238,12 +253,12 @@ def main():
                 letter(axes[r, c], letters[n_rows * c + r], LETTER_X[c])
                 if r < n_rows - 1:
                     axes[r, c].set_xlabel('')
-        top = 1 - 0.42 / SIM_FIG_SIZE[1]
-        fig.subplots_adjust(left=0.105, right=0.995, top=top, bottom=0.085, wspace=0.55,
-                            hspace=0.2)
+        top = 1 - TOP_MARGIN / SIM_FIG_SIZE[1]
+        fig.subplots_adjust(left=0.055, right=0.975, top=top,
+                            bottom=BOTTOM_MARGIN / SIM_FIG_SIZE[1], wspace=0.35, hspace=0.27)
         top_legend(fig, slugs, top)
         for r, (label, _, _) in enumerate(args.row):
-            row_label(fig, axes[r, 0], label)
+            row_label(fig, axes[r, -1], label)
         save(fig, args.out_figure)
 
     roc = select_methods(np.load(args.compare_roc), roc_axes, ['truth'] + shown, args.h2opt)
