@@ -6,7 +6,7 @@ trait t; mean ROC curves of trait 1, each with a band from the 25th to the 75th 
 curves of the instances; AUC of traits 1-3. A panel has the same y-axis in all rows. The letters
 go down the columns (a, b in column 1).
 --out-compare (paper Fig. S2, simCompareSNP): mean ROC curves of traits 2 and 3 of --compare-roc,
-with the same bands.
+with the same bands (lighter).
 --out-example (simGWASexample): QQ and Manhattan plots of the GWAS of trait 1 of one method on one
 instance (--gwas-example).
 Each figure is also saved as a .png next to its .pdf. The panels use the functions of
@@ -32,13 +32,28 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
+from matplotlib.ticker import MaxNLocator  # noqa: E402
 from plot_gwas import auc_values, plot_roc  # noqa: E402
 from plot_traits import correlation_values, heritability_values  # noqa: E402
 
-from h2opt_analysis.figures import COLORS, grouped_boxplot  # noqa: E402
+from h2opt_analysis.figures import COLORS  # noqa: E402
 from h2opt_analysis.methods import LABELS  # noqa: E402
 
-FONT_SIZE = 8
+# simFig is drawn at the text width of the paper (6.5 in), so that LaTeX does not scale it.
+# simCompareSNP and simGWASexample keep their earlier sizes and font sizes (7 to 11 pt).
+FONT_SIZE = 8.5
+TICK_SIZE = 7.5
+SIM_FIG_SIZE = (6.5, 4.5)
+SIM_FIG_RC = {'font.size': FONT_SIZE, 'axes.labelsize': FONT_SIZE, 'xtick.labelsize': TICK_SIZE,
+              'ytick.labelsize': TICK_SIZE, 'legend.fontsize': FONT_SIZE, 'axes.linewidth': 0.7,
+              'xtick.major.width': 0.7, 'ytick.major.width': 0.7, 'xtick.major.size': 2.5,
+              'ytick.major.size': 2.5, 'lines.linewidth': 1.2}
+# simFig columns: heritability (traits 1-5), |r| (traits 1-3), ROC, AUC (traits 1-3).
+WIDTH_RATIOS = [5, 3, 2.4, 3]
+# x of the panel letters, in axes coordinates of each column.
+LETTER_X = [-0.21, -0.4, -0.5, -0.42]
+# Part of the unit between two traits that the boxes of one trait span.
+GROUP_SPAN = 0.72
 
 
 def manhattan(ax, summary, row):
@@ -71,14 +86,33 @@ def qq(ax, summary, row):
     top = min(expected.max(), observed.max())
     ax.plot([0, top], [0, top], 'r--', linewidth=1)
     ax.text(0.03, 0.95, f'lambda GC {summary["lambda_gc"][row]:.3f}', transform=ax.transAxes,
-            va='top', fontsize=FONT_SIZE - 1)
+            va='top', fontsize=7)
     ax.set_xlabel('expected -log10 p')
     ax.set_ylabel('observed -log10 p')
     ax.spines[['top', 'right']].set_visible(False)
 
 
 def boxplot_panel(ax, n_traits, slugs, values, ylabel):
-    grouped_boxplot(ax, [str(t + 1) for t in range(n_traits)], slugs, values)
+    """Boxplots of values[slug][trait] side by side within each trait. The boxes of one trait span
+    GROUP_SPAN of the unit between traits, which leaves a clear gap between traits."""
+    step = GROUP_SPAN / len(slugs)
+    for s, slug in enumerate(slugs):
+        keep = [t for t in range(n_traits) if len(values[slug].get(t, []))]
+        boxes = ax.boxplot([values[slug][t] for t in keep],
+                           positions=[t + (s - (len(slugs) - 1) / 2) * step for t in keep],
+                           widths=step * 0.75, patch_artist=True, showfliers=False,
+                           medianprops={'color': 'black', 'linewidth': 0.8},
+                           whiskerprops={'linewidth': 0.7}, capprops={'linewidth': 0.7},
+                           boxprops={'linewidth': 0.5})
+        for box in boxes['boxes']:
+            box.set(facecolor=COLORS[slug], edgecolor=COLORS[slug], alpha=0.85)
+        for line in boxes['whiskers'] + boxes['caps']:
+            line.set_color(COLORS[slug])
+    ax.set_xticks(range(n_traits), [str(t + 1) for t in range(n_traits)])
+    ax.set_xlim(-0.5, n_traits - 0.5)
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.grid(axis='y', color='0.9', linewidth=0.6)
+    ax.set_axisbelow(True)
     ax.set_xlabel('trait')
     ax.set_ylabel(ylabel)
 
@@ -97,17 +131,24 @@ def select_methods(result, axes, shown, h2opt):
     return selected
 
 
-def roc_bands(ax, roc, t):
+def roc_bands(ax, roc, t, alpha):
     """Band from the 25th to the 75th percentile over the instances of the ROC curves of trait t
     (0-based) of each method, in the color of the method."""
     for j, m in enumerate(roc['methods']):
         low, high = np.percentile(roc['tpr_instances'][t, j], [25, 75], axis=0)
-        ax.fill_between(roc['fpr'], low, high, color=COLORS[m], alpha=0.15, linewidth=0)
+        ax.fill_between(roc['fpr'], low, high, color=COLORS[m], alpha=alpha, linewidth=0)
 
 
-def letter(ax, text):
-    ax.text(-0.3, 1.04, text, transform=ax.transAxes, fontsize=11, fontweight='bold',
-            va='bottom')
+def letter(ax, text, x):
+    ax.text(x, 1.0, text, transform=ax.transAxes, fontsize=FONT_SIZE + 2, fontweight='bold',
+            va='bottom', ha='left')
+
+
+def row_label(fig, ax, text):
+    """Label of a row of panels, at the left edge of the figure."""
+    box = ax.get_position()
+    fig.text(0.004, (box.y0 + box.y1) / 2, text, rotation=90, ha='left', va='center',
+             fontsize=FONT_SIZE + 1, fontweight='bold')
 
 
 def share_y(axes):
@@ -118,6 +159,15 @@ def share_y(axes):
         ax.set_ylim(low, high)
 
 
+def top_legend(fig, slugs, top):
+    """One legend for the figure, in one line above the panels; top is the top of the panels in
+    figure coordinates."""
+    handles = [plt.Rectangle((0, 0), 1, 1, color=COLORS[s]) for s in slugs]
+    fig.legend(handles, [LABELS[s] for s in slugs], loc='lower center',
+               bbox_to_anchor=(0.5, top + 0.02), borderaxespad=0, ncol=len(slugs), frameon=False,
+               handlelength=1.2, handletextpad=0.5, columnspacing=1.4)
+
+
 def save(fig, path):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -126,25 +176,27 @@ def save(fig, path):
     plt.close(fig)
 
 
-def simulation_row(axes, ev, roc, last):
-    """The four panels of one simulation; the x labels only in the last row. Returns the slugs of
-    the heritability panel (all methods shown)."""
+def simulation_row(axes, ev, roc):
+    """The four panels of one simulation. Returns the slugs of the heritability panel (all
+    methods shown)."""
     slugs, values, n_traits = heritability_values(ev)
     boxplot_panel(axes[0], n_traits, slugs, values, 'test heritability')
-    axes[0].axhline(0, color='0.3', linewidth=1, linestyle=':')
+    axes[0].axhline(0, color='0.3', linewidth=0.8, linestyle=':')
     cor_slugs, values = correlation_values(ev)
     boxplot_panel(axes[1], len(next(iter(values.values()))), cor_slugs, values,
                   '|r| with true trait')
-    roc_bands(axes[2], roc, 0)
+    roc_bands(axes[2], roc, 0, 0.25)
     plot_roc(axes[2], roc, 0)
     axes[2].get_legend().remove()
     axes[2].set_ylabel('true positive rate (trait 1)')
+    axes[2].set_xlabel('false positive rate')
+    axes[2].set_xlim(0, 1)
+    axes[2].set_ylim(0, 1)
+    axes[2].set_xticks([0, 0.5, 1], ['0', '0.5', '1'])
+    axes[2].set_yticks([0, 0.5, 1], ['0', '0.5', '1'])
     auc_slugs, values = auc_values(roc)
     boxplot_panel(axes[3], len(next(iter(values.values()))), auc_slugs, values,
                   'AUC of causal 100 kb bins')
-    if not last:
-        for ax in axes:
-            ax.set_xlabel('')
     return slugs
 
 
@@ -163,40 +215,45 @@ def main():
     parser.add_argument('--out-compare', required=True, help='simCompareSNP .pdf')
     parser.add_argument('--out-example', required=True, help='simGWASexample .pdf')
     args = parser.parse_args()
-    plt.rcParams.update({'font.size': FONT_SIZE, 'axes.labelsize': FONT_SIZE,
-                         'xtick.labelsize': FONT_SIZE - 1, 'ytick.labelsize': FONT_SIZE - 1})
+    plt.rcParams.update({'font.size': 8, 'axes.labelsize': 8, 'xtick.labelsize': 7,
+                         'ytick.labelsize': 7})
     shown = [args.h2opt] + args.baselines
     roc_axes = {'auc': 1, 'tpr': 1, 'tpr_instances': 1}
-
+    letters = 'abcdefghijklmnop'
     n_rows = len(args.row)
-    fig, axes = plt.subplots(n_rows, 4, figsize=(7.2, 0.4 + 2.3 * n_rows), squeeze=False,
-                             gridspec_kw={'width_ratios': [1.7, 1, 1, 1]})
-    for r, (label, evaluation, roc) in enumerate(args.row):
-        ev = select_methods(np.load(evaluation), {'herit': 0, 'cor': 0}, shown, args.h2opt)
-        roc = select_methods(np.load(roc), roc_axes, ['truth'] + shown, args.h2opt)
-        slugs = simulation_row(axes[r], ev, roc, r == n_rows - 1)
-        for c, ax in enumerate(axes[r]):
-            letter(ax, 'abcdefghijklmnop'[n_rows * c + r])
-        axes[r, 0].annotate(label, xy=(0, 0.5), xycoords='axes fraction', xytext=(-38, 0),
-                            textcoords='offset points', rotation=90, ha='right', va='center',
-                            fontsize=FONT_SIZE + 1, fontweight='bold')
-    for c in range(4):
-        share_y(axes[:, c])
-    handles = [plt.Rectangle((0, 0), 1, 1, color=COLORS[s]) for s in slugs]
-    fig.legend(handles, [LABELS[s] for s in slugs], loc='upper center', ncol=len(slugs),
-               frameon=False, fontsize=FONT_SIZE - 1, handlelength=1.2, columnspacing=1)
-    fig.subplots_adjust(left=0.12, right=0.99, top=1 - 0.45 / fig.get_figheight(), bottom=0.09,
-                        wspace=0.55, hspace=0.3)
-    save(fig, args.out_figure)
+
+    with plt.rc_context(SIM_FIG_RC):
+        fig, axes = plt.subplots(n_rows, 4, figsize=SIM_FIG_SIZE, squeeze=False,
+                                 gridspec_kw={'width_ratios': WIDTH_RATIOS})
+        for r, (_, evaluation, roc) in enumerate(args.row):
+            ev = select_methods(np.load(evaluation), {'herit': 0, 'cor': 0}, shown, args.h2opt)
+            roc = select_methods(np.load(roc), roc_axes, ['truth'] + shown, args.h2opt)
+            slugs = simulation_row(axes[r], ev, roc)
+        for c in range(4):
+            share_y(axes[:, c])
+            if c != 2:
+                for ax in axes[:, c]:
+                    ax.yaxis.set_major_locator(MaxNLocator(nbins=5, steps=[1, 2, 5, 10]))
+            for r in range(n_rows):
+                letter(axes[r, c], letters[n_rows * c + r], LETTER_X[c])
+                if r < n_rows - 1:
+                    axes[r, c].set_xlabel('')
+        top = 1 - 0.42 / SIM_FIG_SIZE[1]
+        fig.subplots_adjust(left=0.105, right=0.995, top=top, bottom=0.085, wspace=0.55,
+                            hspace=0.2)
+        top_legend(fig, slugs, top)
+        for r, (label, _, _) in enumerate(args.row):
+            row_label(fig, axes[r, 0], label)
+        save(fig, args.out_figure)
 
     roc = select_methods(np.load(args.compare_roc), roc_axes, ['truth'] + shown, args.h2opt)
     fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.2))
     for t, ax in zip((1, 2), axes, strict=True):
-        roc_bands(ax, roc, t)
+        roc_bands(ax, roc, t, 0.15)
         plot_roc(ax, roc, t)
-        ax.legend(loc='lower right', fontsize=FONT_SIZE - 1, frameon=True, framealpha=0.9,
+        ax.legend(loc='lower right', fontsize=7, frameon=True, framealpha=0.9,
                   edgecolor='none')
-        ax.set_title(f'trait {t + 1}', fontsize=FONT_SIZE + 1)
+        ax.set_title(f'trait {t + 1}', fontsize=9)
     fig.tight_layout()
     save(fig, args.out_compare)
 
@@ -205,7 +262,8 @@ def main():
     qq(axes[0], summary, 0)
     manhattan(axes[1], summary, 0)
     for ax, text in zip(axes, 'ab', strict=True):
-        letter(ax, text)
+        ax.text(-0.3, 1.04, text, transform=ax.transAxes, fontsize=11, fontweight='bold',
+                va='bottom')
     fig.tight_layout()
     save(fig, args.out_example)
 
