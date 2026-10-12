@@ -54,6 +54,7 @@ rule sorghum_all:
         expand(str(SORGHUM_OUT / "figures" / "top_trait_heritability_{source}.pdf"),
                source=SORGHUM_SOURCES),
         str(SORGHUM_OUT / "figures" / "noise.pdf"),
+        str(SORGHUM_OUT / "ndvi.npz"),
 
 
 rule sorghum_gwas_all:
@@ -148,6 +149,19 @@ rule sorghum_score_heritability:
     shell:
         "python -u {SORGHUM_SCRIPTS}/evaluate_heritability.py --folds {params.folds}"
         " {params.methods} --out {output} --traits {params.traits} > {log} 2>&1"
+
+
+# NDVI is a fixed index: its heritability on the training and the test plants of each fold.
+rule sorghum_score_ndvi:
+    output:
+        str(SORGHUM_OUT / "ndvi.npz"),
+    log:
+        str(SORGHUM_OUT / "ndvi.log"),
+    params:
+        folds=" ".join(str(f) for f in SORGHUM_FOLDS),
+    threads: 1
+    shell:
+        "python -u {SORGHUM_SCRIPTS}/ndvi.py --folds {params.folds} --out {output} > {log} 2>&1"
 
 
 rule sorghum_plot_heritability:
