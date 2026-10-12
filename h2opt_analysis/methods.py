@@ -9,8 +9,6 @@ LABELS = {
     'h2opt_paper': 'H2-opt (paper)',
     'h2opt': 'H2-opt',
     'h2opt_hybrid': 'H2-opt hybrid',
-    'h2opt_crossfit': 'H2-opt cross-fit',
-    'h2opt_hybrid_crossfit': 'H2-opt hybrid cross-fit',
     'pca': 'PCA',
     'genetic_pca': 'genetic PCA',
     'pch': 'PCH',
@@ -21,8 +19,7 @@ LABELS = {
 # least genetic information.
 ORDER = ['h2opt_hybrid', 'h2opt', 'pch', 'genetic_pca', 'max_features', 'pca']
 # A variant of a method comes right after the method: variant slug -> (method, rank of variant).
-VARIANTS = {'h2opt_paper': ('h2opt', 1), 'h2opt_crossfit': ('h2opt', 2),
-            'h2opt_hybrid_crossfit': ('h2opt_hybrid', 1)}
+VARIANTS = {'h2opt_paper': ('h2opt', 1)}
 
 
 def ordered(slugs):

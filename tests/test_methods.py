@@ -12,7 +12,7 @@ def test_ordered_saved_orders():
 
 
 def test_ordered_variants_and_other_entries():
-    assert ordered(['truth', 'h2opt_crossfit', 'pca', 'h2opt']) == [
-        'truth', 'h2opt', 'h2opt_crossfit', 'pca']
-    assert ordered(['h2opt_hybrid_crossfit', 'h2opt', 'h2opt_hybrid', 'ndvi']) == [
-        'h2opt_hybrid', 'h2opt_hybrid_crossfit', 'h2opt', 'ndvi']
+    assert ordered(['truth', 'h2opt_paper', 'pca', 'h2opt']) == [
+        'truth', 'h2opt', 'h2opt_paper', 'pca']
+    assert ordered(['h2opt_paper', 'h2opt', 'h2opt_hybrid', 'ndvi']) == [
+        'h2opt_hybrid', 'h2opt', 'h2opt_paper', 'ndvi']

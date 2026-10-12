@@ -54,15 +54,13 @@ def main():
     grid = np.linspace(0, 1, 101)
     auc = np.zeros((n_t, len(methods), n_i))
     tpr = np.zeros((n_t, len(methods), len(grid)))
-    tpr_instances = np.full((n_t, len(methods), n_i, len(grid)), np.nan)
+    tpr_instances = np.zeros((n_t, len(methods), n_i, len(grid)))
     for i, instance in enumerate(args.instances):
         qtns = simulation.qtns(instance)
         for m, method in enumerate(args.method):
             with np.load(method[1 + i]) as f:
                 chromosome, position, score = f['chr'], f['ps'], f['neg_log10_p']
-            auc[len(score):, m, i] = np.nan  # a file of fewer traits (cross-fitted trait 1)
-            tpr[len(score):, m] = np.nan
-            for t in range(min(n_t, len(score))):
+            for t in range(n_t):
                 values, truth = binned(chromosome, position, score[t], qtns[t], args.bin)
                 auc[t, m, i] = roc_auc_score(truth, values)
                 fpr_t, tpr_t, _ = roc_curve(truth, values)
@@ -73,7 +71,7 @@ def main():
              tpr_instances=tpr_instances)
     print('median AUC over instances (traits 1-3)')
     for m, method in enumerate(methods):
-        print(f'{LABELS.get(method, method):16s} {np.nanmedian(auc[:, m], axis=1).round(3)}')
+        print(f'{LABELS[method]:16s} {np.median(auc[:, m], axis=1).round(3)}')
 
 
 if __name__ == '__main__':

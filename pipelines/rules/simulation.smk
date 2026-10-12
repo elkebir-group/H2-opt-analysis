@@ -89,7 +89,7 @@ rule sim_train_linear_h2opt:
         "python -u {SIM_SCRIPTS}/train_h2opt.py --measurements {input.spectra} --noise {input.noise}"
         " --out-traits {output.traits} --out-model {output.model} --traits {params.traits}"
         " --steps {params.steps} --seed {wildcards.instance} --instance {wildcards.instance}"
-        " --fold 0 --device {params.device} > {log} 2>&1"
+        " --device {params.device} > {log} 2>&1"
 
 
 rule sim_choose_linear_h2opt_noise:
@@ -158,7 +158,7 @@ rule sim_train_hybrid_h2opt:
         " --cnn-level {input.cnn_level}"
         " --out-traits {output.traits} --out-model {output.model} --traits {params.traits}"
         " --linear-steps {params.linear_steps} --steps {params.steps}"
-        " --seed {wildcards.instance} --instance {wildcards.instance} --fold 0"
+        " --seed {wildcards.instance} --instance {wildcards.instance}"
         " --device {params.device} > {log} 2>&1"
 
 
@@ -431,74 +431,14 @@ rule sim_plot_paper_linear:
         " --out {output.figure} > {log} 2>&1"
 
 
-# Cross-fitted trait 1 and the permutation null, as for the real datasets. Run only on request.
-# Cross-fit: linear H2-opt also on folds 1 and 2 (simulation.line_folds; fold 0 are the test
-# plants, h2opt.npz), each plant's trait 1 from the model that held it out, its GWAS and ROC.
+# The permutation null of the GWAS (sim_null_gwas). Run only on request.
 SIM_NULL = SIM["gwas"]
 
 
 rule simulation_null_gwas_all:
     input:
-        str(SIM_OUT / "roc_crossfit.npz"),
         [sim_file(SIM_NULL["null_instance"], f"null/perm{k}.npz")
          for k in range(SIM_NULL["permutations"])],
-
-
-rule sim_train_linear_h2opt_fold:
-    input:
-        spectra=sim_file("{instance}", "spectra.npz"),
-        noise=sim_file("{instance}", "noise.npz"),
-    output:
-        traits=sim_file("{instance}", "h2opt_fold{fold}.npz"),
-        model=sim_file("{instance}", "h2opt_fold{fold}.pt"),
-    log:
-        sim_file("{instance}", "h2opt_fold{fold}.log"),
-    wildcard_constraints:
-        fold="1|2",
-    params:
-        traits=SIM["traits"],
-        steps=SIM["h2opt"]["steps"],
-        device=SIM["h2opt"]["device"],
-    threads: 1
-    resources:
-        gpu=lambda wc: 1 if SIM["h2opt"]["device"] == "cuda" else 0,
-    shell:
-        "python -u {SIM_SCRIPTS}/train_h2opt.py --measurements {input.spectra} --noise {input.noise}"
-        " --out-traits {output.traits} --out-model {output.model} --traits {params.traits}"
-        " --steps {params.steps} --seed {wildcards.instance} --instance {wildcards.instance}"
-        " --fold {wildcards.fold} --device {params.device} > {log} 2>&1"
-
-
-rule sim_cross_fit_traits:
-    input:
-        sim_file("{instance}", "h2opt.npz"),
-        sim_file("{instance}", "h2opt_fold1.npz"),
-        sim_file("{instance}", "h2opt_fold2.npz"),
-    output:
-        sim_file("{instance}", "h2opt_crossfit.npz"),
-    log:
-        sim_file("{instance}", "h2opt_crossfit.log"),
-    threads: 1
-    shell:
-        "python -u {PIPELINE_DIR}/scripts/shared/cross_fit_traits.py --dataset simulation"
-        " --instance {wildcards.instance} --traits {input} --out {output} > {log} 2>&1"
-
-
-rule sim_score_crossfit_gwas:
-    input:
-        [sim_files(f"gwas/{m}.npz") for m in ["truth", "h2opt", "h2opt_crossfit"]],
-    output:
-        str(SIM_OUT / "roc_crossfit.npz"),
-    log:
-        str(SIM_OUT / "roc_crossfit.log"),
-    params:
-        instances=" ".join(str(i) for i in SIM_INSTANCES),
-        methods=" ".join(f"--method {m} " + " ".join(sim_files(f"gwas/{m}.npz"))
-                         for m in ["truth", "h2opt", "h2opt_crossfit"]),
-    threads: 2
-    shell:
-        "python -u {SIM_SCRIPTS}/roc.py --instances {params.instances} {params.methods}"
-        " --out {output} > {log} 2>&1"
 
 
 rule sim_null_gwas:

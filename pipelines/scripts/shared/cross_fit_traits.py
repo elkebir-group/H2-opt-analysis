@@ -1,7 +1,7 @@
 """Cross-fitted trait 1 of H2-opt: each individual's value from the fold model that held it out
 (h2opt_analysis.gwas.cross_fit), so no GWAS phenotype comes from a model that trained on that
 individual. Trait 1 only: later traits need not match across folds. Writes an .npz with 'traits'
-in the layout that the dataset's gwas.py reads (sorghum, Arabidopsis, simulations: individuals x 1;
+in the layout that the dataset's gwas.py reads (sorghum, Arabidopsis: individuals x 1;
 Miscanthus: 1 x plants x 1, one "fold") and 'agreement', the |r| of each fold's trait 1 with fold
 0's.
 
@@ -11,24 +11,21 @@ Miscanthus: 1 x plants x 1, one "fold") and 'agreement', the |r| of each fold's 
         --traits fold0.npz ... fold4.npz --out crossfit.npz
     python pipelines/scripts/shared/cross_fit_traits.py --dataset miscanthus \\
         --population central --traits date2.npz --out crossfit_date2.npz
-    python pipelines/scripts/shared/cross_fit_traits.py --dataset simulation --instance 0 \\
-        --traits h2opt.npz h2opt_fold1.npz h2opt_fold2.npz --out crossfit.npz
 """
 
 import argparse
 
 import numpy as np
 
-from h2opt_analysis import arabidopsis, gwas, miscanthus, simulation, sorghum
+from h2opt_analysis import arabidopsis, gwas, miscanthus, sorghum
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset', choices=['sorghum', 'arabidopsis', 'miscanthus', 'simulation'],
+    parser.add_argument('--dataset', choices=['sorghum', 'arabidopsis', 'miscanthus'],
                         required=True)
     parser.add_argument('--treatment', choices=arabidopsis.TREATMENTS, help='Arabidopsis')
     parser.add_argument('--population', choices=miscanthus.POPULATIONS, help='Miscanthus')
-    parser.add_argument('--instance', type=int, help='simulation (spectral or image)')
     parser.add_argument('--traits', nargs='+', required=True,
                         help='the fold files in fold order (Miscanthus: the one date file)')
     parser.add_argument('--out', required=True)
@@ -41,9 +38,6 @@ def main():
     elif args.dataset == 'arabidopsis':
         _, accessions, _ = arabidopsis.design(args.treatment)
         fold_of = arabidopsis.folds(accessions)
-        traits = [np.load(path)['traits'][:, 0] for path in args.traits]
-    elif args.dataset == 'simulation':
-        fold_of = simulation.instance_folds(args.instance)
         traits = [np.load(path)['traits'][:, 0] for path in args.traits]
     else:
         fold_of = miscanthus.design(args.population).fold

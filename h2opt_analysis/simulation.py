@@ -143,8 +143,7 @@ def encode_instances(truths, autoencoder, reference, seed=0):
 
 def line_folds(names_per_instance, seed=0):
     """Fold (0, 1 or 2) of each plant of each instance, as in the paper: one random stream over the
-    instances, randint(3) per line. Fold 0 are the test lines (test_lines); the cross-fitted
-    traits also hold out folds 1 and 2."""
+    instances, randint(3) per line. Fold 0 are the test lines (test_lines)."""
     rng = np.random.RandomState(seed)
     return [per_group(names, lambda c: rng.randint(3, size=c)) for names in names_per_instance]
 
