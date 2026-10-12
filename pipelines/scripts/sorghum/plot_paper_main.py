@@ -5,14 +5,14 @@ Panels: a, the input as a stack of cards, one spectrum per plant (the front card
 the spectrum of the first plant), with the numbers of plants and of genotypes; b,
 test heritability of every trait of each method of --heritability (evaluate_heritability.py): the
 median over the folds and a band from the 25th to the 75th percentile, and a dotted line at the
-mean test heritability of NDVI (--ndvi, ndvi.py); c, wavelength coefficients of traits 1 to
---traits of the linear H2-opt model of one fold (--model, train_h2opt.py), for the traits as saved
-(uncorrelated on the fold's training plants; the script checks them against --fold-traits); d,
-median over the folds of |Pearson r| between the genotype means (over all plants) of the H2-opt
-traits (--traits-files, one per fold) and the measured genotype means of --measured-traits
-(Ferguson et al. 2021, Supplemental Table S12); e, Bonferroni-significant SNPs (0.05 / SNPs) of
-each trait of the GWAS of one fold (--gwas, gwas.py). Writes the figure as .pdf and, beside it,
-.png, and prints the numbers of each panel.
+median over the folds of the test heritability of NDVI (--ndvi, ndvi.py); c, wavelength
+coefficients of traits 1 to --traits of the linear H2-opt model of one fold (--model,
+train_h2opt.py), for the traits as saved (uncorrelated on the fold's training plants; the
+script checks them against --fold-traits); d, median over the folds of |Pearson r| between the
+genotype means (over all plants) of the H2-opt traits (--traits-files, one per fold) and the
+measured genotype means of --measured-traits (Ferguson et al. 2021, Supplemental Table S12); e,
+Bonferroni-significant SNPs (0.05 / SNPs) of each trait of the GWAS of one fold (--gwas,
+gwas.py). Writes the figure as .pdf and, beside it, .png, and prints the numbers of each panel.
 
     python pipelines/scripts/sorghum/plot_paper_main.py --heritability heritability_h2opt.npz \\
         --model h2opt/fold0.pt --fold-traits h2opt/fold0.npz --fold 0 \\
@@ -36,7 +36,7 @@ from matplotlib.gridspec import GridSpecFromSubplotSpec  # noqa: E402
 from matplotlib.patches import Rectangle  # noqa: E402
 
 from h2opt_analysis import sorghum  # noqa: E402
-from h2opt_analysis.figures import COLORS  # noqa: E402
+from h2opt_analysis.figures import COLORS, median_bands, ordered_legend  # noqa: E402
 from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 
 # Short labels of the measured traits (column names of Supplemental Table S12).
@@ -148,24 +148,17 @@ def main():
     spectra_stack(fig.add_subplot(grid[0]), wavelengths, X, n_plants, n_genotypes)
 
     # b: test heritability of every trait: median over the folds and band from the 25th to the
-    # 75th percentile; NDVI's mean test heritability as a dotted line
+    # 75th percentile; NDVI's median test heritability over the folds as a dotted line
     results = np.load(args.heritability)
     methods = list(results['methods'])
     test = results['test']  # methods x folds x traits
-    ndvi = np.load(args.ndvi)['test'].mean()
+    ndvi = np.median(np.load(args.ndvi)['test'])
     all_traits = np.arange(1, test.shape[2] + 1)
     ax = fig.add_subplot(grid[1])
-    for method in ordered(methods)[::-1]:  # H2-opt last, on top
-        m = methods.index(method)
-        low, median, high = np.percentile(test[m], [25, 50, 75], axis=0)
-        ax.fill_between(all_traits, low, high, color=COLORS[method], alpha=0.25, linewidth=0)
-        ax.plot(all_traits, median, 'o-', color=COLORS[method], ms=3, lw=1.2,
-                label=LABELS[method])
+    median_bands(ax, all_traits, test, methods)
     ax.axhline(ndvi, color='0.3', ls=':', lw=1.2, label='NDVI')
-    handles, names = ax.get_legend_handles_labels()
-    legend_order = [names.index(LABELS[m]) for m in ordered(methods)] + [names.index('NDVI')]
-    ax.legend([handles[i] for i in legend_order], [names[i] for i in legend_order],
-              frameon=False, fontsize=6)
+    ordered_legend(ax, [LABELS[m] for m in ordered(methods)] + ['NDVI'], frameon=False,
+                   fontsize=6)
     ax.set_xticks(all_traits)
     ax.set_xlabel('synthetic trait')
     ax.set_ylabel('test heritability')
@@ -239,7 +232,7 @@ def main():
         print(f'  {"":16s} 25th  ', np.round(np.percentile(values, 25, axis=0), 3))
         print(f'  {"":16s} 75th  ', np.round(np.percentile(values, 75, axis=0), 3))
         print(f'  {"":16s} mean  ', np.round(values.mean(axis=0), 3))
-    print(f'  NDVI mean test heritability {ndvi:.3f}')
+    print(f'  NDVI median test heritability over the folds {ndvi:.3f}')
     print('d: median |r| over folds (rows: measured traits; columns: synthetic traits)')
     for label, row in zip(labels, median, strict=True):
         print(f'  {label:24s}', np.round(row, 2))

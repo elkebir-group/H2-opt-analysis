@@ -1,9 +1,10 @@
-"""Shared plotting helpers: method colors, grouped boxplots, Manhattan and QQ plots."""
+"""Shared plotting helpers: method colors, grouped boxplots, median bands, Manhattan and QQ
+plots."""
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .methods import LABELS
+from .methods import LABELS, ordered
 
 COLORS = {'truth': 'tab:red', 'h2opt_paper': 'tab:blue', 'h2opt': 'tab:blue',
           'h2opt_hybrid': 'tab:cyan',
@@ -27,6 +28,24 @@ def grouped_boxplot(ax, groups, slugs, values):
     ax.spines[['top', 'right']].set_visible(False)
     ax.grid(axis='y', color='0.9')
     ax.set_axisbelow(True)
+
+
+def median_bands(ax, x, values, slugs):
+    """Per method, a line through the median over the folds and a band from the 25th to the 75th
+    percentile. values: (slugs, folds, len(x)). The methods are drawn in the reverse figure order,
+    so the first method of the figure order (H2-opt) is on top."""
+    slugs = list(slugs)
+    for slug in ordered(slugs)[::-1]:
+        low, median, high = np.percentile(values[slugs.index(slug)], [25, 50, 75], axis=0)
+        ax.fill_between(x, low, high, color=COLORS[slug], alpha=0.25, linewidth=0)
+        ax.plot(x, median, 'o-', color=COLORS[slug], ms=3, lw=1.2, label=LABELS[slug])
+
+
+def ordered_legend(ax, labels, **kwargs):
+    """Legend of the artists of ax with the given labels, in the order of labels."""
+    handles, names = ax.get_legend_handles_labels()
+    keep = [names.index(label) for label in labels]
+    ax.legend([handles[i] for i in keep], [names[i] for i in keep], **kwargs)
 
 
 def legend(fig, slugs):

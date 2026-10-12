@@ -1,9 +1,9 @@
-"""Train and test heritability of traits 1 to --traits of each method, mean over the folds
-(paper figure multiTraitHerit_all).
+"""Train and test heritability of traits 1 to --traits of each method: median over the folds and
+a band from the 25th to the 75th percentile (paper figure multiTraitHerit_all).
 
 Reads the .npz of evaluate_heritability.py; method labels and colors come from the slugs saved
 with the values. Left panel: train genotypes; right panel: test genotypes. Writes the figure as
-.pdf and, beside it, .png, and prints the means.
+.pdf and, beside it, .png, and prints the median, 25th and 75th percentiles and mean per method.
 
     python pipelines/scripts/sorghum/plot_paper_heritability.py \\
         --heritability heritability_h2opt.npz --out figures/paper/multiTraitHerit_all.pdf \\
@@ -19,7 +19,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
-from h2opt_analysis.figures import COLORS  # noqa: E402
+from h2opt_analysis.figures import median_bands, ordered_legend  # noqa: E402
 from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 
 
@@ -35,23 +35,25 @@ def main():
     order = np.arange(1, args.traits + 1)
     fig, axes = plt.subplots(1, 2, figsize=(8, 3), sharey=True)
     for ax, split in zip(axes, ['train', 'test'], strict=True):
-        mean = results[split][:, :, :args.traits].mean(axis=1)  # methods x traits
-        print(f'mean {split} heritability, traits 1-{args.traits}')
+        values = results[split][:, :, :args.traits]  # methods x folds x traits
+        median_bands(ax, order, values, methods)
+        print(f'{split} heritability over the folds, traits 1-{args.traits} '
+              '(median, 25th and 75th percentile, mean)')
         for method in ordered(methods):
-            m = methods.index(method)
-            on_top = method == 'h2opt'  # PCH is close to H2-opt; draw H2-opt over it
-            ax.plot(order, mean[m], 'o-', color=COLORS[method], ms=4 if on_top else 3,
-                    lw=2 if on_top else 1, zorder=3 if on_top else 2, label=LABELS[method])
-            print(f'  {LABELS[method]:16s}', np.round(mean[m], 3))
+            v = values[methods.index(method)]
+            print(f'  {LABELS[method]:16s} median', np.round(np.median(v, axis=0), 3))
+            print(f'  {"":16s} 25th  ', np.round(np.percentile(v, 25, axis=0), 3))
+            print(f'  {"":16s} 75th  ', np.round(np.percentile(v, 75, axis=0), 3))
+            print(f'  {"":16s} mean  ', np.round(v.mean(axis=0), 3))
         ax.set_xticks(order)
         ax.set_xlabel('synthetic trait')
         ax.set_title(f'{split} genotypes', fontsize=10)
         ax.grid(axis='y', color='0.9')
         ax.set_axisbelow(True)
         ax.spines[['top', 'right']].set_visible(False)
-    axes[0].set_ylabel('heritability (mean over folds)')
+    axes[0].set_ylabel('heritability (median over folds)')
     axes[0].set_ylim(0, None)
-    axes[1].legend(frameon=False, fontsize=7)
+    ordered_legend(axes[1], [LABELS[m] for m in ordered(methods)], frameon=False, fontsize=7)
     fig.tight_layout()
     out = Path(args.out)
     fig.savefig(out)
