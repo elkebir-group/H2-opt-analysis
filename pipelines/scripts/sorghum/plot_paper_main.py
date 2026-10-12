@@ -1,9 +1,12 @@
 """Main sorghum figure of the paper (sorFig): input, heritability, coefficients, measured traits,
 GWAS hits.
 
-Panels: a, example spectra; b, mean test heritability over the folds of traits 1 to --traits, of
-each method of --heritability (evaluate_heritability.py); c, wavelength coefficients of these
-traits of the linear H2-opt model of one fold (--model, train_h2opt.py), for the traits as saved
+Panels: a, the input as a stack of cards, one spectrum per plant (the front card shows
+the spectrum of the first plant), with the numbers of plants and of genotypes; b,
+test heritability of every trait of each method of --heritability (evaluate_heritability.py): the
+median over the folds and a band from the 25th to the 75th percentile, and a dotted line at the
+mean test heritability of NDVI (--ndvi, ndvi.py); c, wavelength coefficients of traits 1 to
+--traits of the linear H2-opt model of one fold (--model, train_h2opt.py), for the traits as saved
 (uncorrelated on the fold's training plants; the script checks them against --fold-traits); d,
 median over the folds of |Pearson r| between the genotype means (over all plants) of the H2-opt
 traits (--traits-files, one per fold) and the measured genotype means of --measured-traits
@@ -14,7 +17,7 @@ each trait of the GWAS of one fold (--gwas, gwas.py). Writes the figure as .pdf 
     python pipelines/scripts/sorghum/plot_paper_main.py --heritability heritability_h2opt.npz \\
         --model h2opt/fold0.pt --fold-traits h2opt/fold0.npz --fold 0 \\
         --traits-files h2opt/fold0.npz ... h2opt/fold9.npz \\
-        --measured-traits SorgumTraits.tsv --gwas gwas/h2opt_fold0.npz \\
+        --measured-traits SorgumTraits.tsv --gwas gwas/h2opt_fold0.npz --ndvi ndvi.npz \\
         --out figures/paper/sorFig.pdf --traits 4
 """
 
@@ -30,6 +33,7 @@ import numpy as np  # noqa: E402
 import torch  # noqa: E402
 from h2opt.decorrelation import Decorrelation  # noqa: E402
 from matplotlib.gridspec import GridSpecFromSubplotSpec  # noqa: E402
+from matplotlib.patches import Rectangle  # noqa: E402
 
 from h2opt_analysis import sorghum  # noqa: E402
 from h2opt_analysis.figures import COLORS  # noqa: E402
@@ -72,6 +76,45 @@ def model_coefficients(model_path, X, is_train):
     return weights @ decorrelation.components_, decorrelation.transform(raw)
 
 
+def spectra_stack(frame, wavelengths, X, n_plants, n_genotypes):
+    """Draw the input as a stack of cards in the axes frame: the front card is an axes with the
+    spectrum of the first plant, the cards behind it are offset up and to the right, and the last
+    card shows part of the spectrum of the second plant. The depth of the stack is labeled with
+    the number of plants, its top with the number of genotypes (clones)."""
+    frame.set_axis_off()
+    frame.set_xlim(0, 1)
+    frame.set_ylim(0, 1)
+    x0, y0, width, height = 0.16, 0.0, 0.58, 0.72  # the front card
+    dx, dy = 0.035, 0.04  # offset of each card behind the one before it
+    near, far = 4, 6.5  # the near cards, then a gap (dots) to the last card
+    card = dict(facecolor='white', edgecolor='black', linewidth=0.8, clip_on=False)
+    # the last card, with part of a spectrum
+    bx, by = x0 + far * dx, y0 + far * dy
+    frame.add_patch(Rectangle((bx, by), width, height, zorder=1, **card))
+    low, high = X[:2].min(), X[:2].max()
+    xs = bx + 0.08 * width + 0.85 * width * (wavelengths - wavelengths[0]) / np.ptp(wavelengths)
+    ys = by + 0.08 * height + 0.85 * height * (X[1] - low) / (high - low)
+    frame.plot(xs, ys, color=COLORS['h2opt'], lw=1, zorder=1.5)
+    for i in range(near, 0, -1):
+        frame.add_patch(Rectangle((x0 + i * dx, y0 + i * dy), width, height, zorder=2, **card))
+    # the dots between the near cards and the last card, at the top-left and bottom-right corners
+    angle = np.degrees(np.arctan2(dy * frame.bbox.height, dx * frame.bbox.width))
+    middle = (near + far) / 2
+    for corner_x, corner_y in [(x0, y0 + height), (x0 + width, y0)]:
+        frame.text(corner_x + middle * dx, corner_y + middle * dy, r'$\cdots$', rotation=angle,
+                   rotation_mode='anchor', ha='center', va='center', fontsize=12)
+    frame.text(x0 - 0.03, y0 + height + 0.07, f'$n = {n_plants}$', rotation=angle,
+               rotation_mode='anchor', ha='left', va='bottom', fontsize=9)
+    frame.text(bx + 0.05, by + height + 0.03, f'$c = {n_genotypes}$   clones', ha='left',
+               va='bottom', fontsize=9)
+    # the front card
+    ax = frame.inset_axes([x0, y0, width, height], zorder=3)
+    ax.plot(wavelengths, X[0], color=COLORS['h2opt'], lw=1)
+    ax.set_xlabel('wavelength (nm)', fontsize=7)
+    ax.set_ylabel('intensity', fontsize=7)
+    ax.tick_params(labelsize=6)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--heritability', required=True)
@@ -82,6 +125,7 @@ def main():
     parser.add_argument('--measured-traits', required=True, help='Supplemental Table S12 (.tsv)')
     parser.add_argument('--gwas', required=True, help='GWAS of --fold (gwas.py .npz)')
     parser.add_argument('--out', required=True, help='.pdf; a .png is written beside it')
+    parser.add_argument('--ndvi', required=True, help='heritability of NDVI (ndvi.py .npz)')
     parser.add_argument('--traits', type=int, required=True)
     args = parser.parse_args()
     k = args.traits
@@ -94,36 +138,39 @@ def main():
     # float32 outputs (saved) vs float64 (here)
     assert error.max() < 1e-2, f'model and saved traits differ (relative error {error})'
 
-    fig = plt.figure(figsize=(15, 3.4))
-    grid = fig.add_gridspec(1, 5, width_ratios=[1, 1.1, 1.4, 1.4, 0.6], wspace=0.7)
+    fig = plt.figure(figsize=(16.5, 3.4))
+    grid = fig.add_gridspec(1, 5, width_ratios=[1, 1.7, 1.4, 1.4, 0.6], wspace=0.7)
 
-    # a: example spectra
-    ax = fig.add_subplot(grid[0])
+    # a: the input, a stack of cards with one spectrum per plant
     wavelengths = sorghum.FIRST_WAVELENGTH + np.arange(X.shape[1])
-    for i in range(3):
-        ax.plot(wavelengths, X[i], lw=0.8)
-    ax.set_xlabel('wavelength (nm)')
-    ax.set_ylabel('reflectance')
-    ax.set_title(f'n = {len(X)} plants, {len(np.unique(genotypes))} genotypes', fontsize=8)
-    ax.spines[['top', 'right']].set_visible(False)
+    n_plants, n_genotypes = len(X), len(np.unique(genotypes))
+    assert (n_plants, n_genotypes) == (1920, 854), (n_plants, n_genotypes)
+    spectra_stack(fig.add_subplot(grid[0]), wavelengths, X, n_plants, n_genotypes)
 
-    # b: mean test heritability per trait
+    # b: test heritability of every trait: median over the folds and band from the 25th to the
+    # 75th percentile; NDVI's mean test heritability as a dotted line
     results = np.load(args.heritability)
     methods = list(results['methods'])
-    test = results['test'][:, :, :k].mean(axis=1)  # methods x traits
+    test = results['test']  # methods x folds x traits
+    ndvi = np.load(args.ndvi)['test'].mean()
+    all_traits = np.arange(1, test.shape[2] + 1)
     ax = fig.add_subplot(grid[1])
-    order = np.arange(1, k + 1)
-    for method in ordered(methods):
+    for method in ordered(methods)[::-1]:  # H2-opt last, on top
         m = methods.index(method)
-        on_top = method == 'h2opt'  # PCH is close to H2-opt; draw H2-opt over it
-        ax.plot(order, test[m], 'o-', color=COLORS[method], ms=4 if on_top else 3,
-                lw=2 if on_top else 1, zorder=3 if on_top else 2, label=LABELS[method])
-    ax.set_xticks(order)
+        low, median, high = np.percentile(test[m], [25, 50, 75], axis=0)
+        ax.fill_between(all_traits, low, high, color=COLORS[method], alpha=0.25, linewidth=0)
+        ax.plot(all_traits, median, 'o-', color=COLORS[method], ms=3, lw=1.2,
+                label=LABELS[method])
+    ax.axhline(ndvi, color='0.3', ls=':', lw=1.2, label='NDVI')
+    handles, names = ax.get_legend_handles_labels()
+    legend_order = [names.index(LABELS[m]) for m in ordered(methods)] + [names.index('NDVI')]
+    ax.legend([handles[i] for i in legend_order], [names[i] for i in legend_order],
+              frameon=False, fontsize=6)
+    ax.set_xticks(all_traits)
     ax.set_xlabel('synthetic trait')
-    ax.set_ylabel('mean test heritability')
-    ax.set_ylim(0, None)
-    ax.legend(frameon=False, fontsize=6)
+    ax.set_ylabel('test heritability')
     ax.spines[['top', 'right']].set_visible(False)
+    order = np.arange(1, k + 1)
 
     # c: wavelength coefficients of the traits of one fold
     inner = GridSpecFromSubplotSpec(k, 1, grid[2], hspace=0.6)
@@ -185,9 +232,14 @@ def main():
     fig.savefig(out, bbox_inches='tight')
     fig.savefig(out.with_suffix('.png'), dpi=150, bbox_inches='tight')
 
-    print(f'b: mean test heritability, traits 1-{k}')
+    print('b: test heritability per trait over the folds (25th, 50th, 75th percentile; mean)')
     for method in ordered(methods):
-        print(f'  {LABELS[method]:16s}', np.round(test[methods.index(method)], 3))
+        values = test[methods.index(method)]
+        print(f'  {LABELS[method]:16s} median', np.round(np.median(values, axis=0), 3))
+        print(f'  {"":16s} 25th  ', np.round(np.percentile(values, 25, axis=0), 3))
+        print(f'  {"":16s} 75th  ', np.round(np.percentile(values, 75, axis=0), 3))
+        print(f'  {"":16s} mean  ', np.round(values.mean(axis=0), 3))
+    print(f'  NDVI mean test heritability {ndvi:.3f}')
     print('d: median |r| over folds (rows: measured traits; columns: synthetic traits)')
     for label, row in zip(labels, median, strict=True):
         print(f'  {label:24s}', np.round(row, 2))

@@ -229,6 +229,7 @@ rule sorghum_plot_paper_main:
         traits=[sorghum_traits("h2opt", f) for f in SORGHUM_FOLDS],
         measured=str(SORGHUM_MEASURED_TRAITS),
         gwas=str(SORGHUM_OUT / "gwas" / f"h2opt_fold{SORGHUM_FOLDS[0]}.npz"),
+        ndvi=str(SORGHUM_OUT / "ndvi.npz"),
     output:
         pdf=str(SORGHUM_PAPER_FIGURES / "sorFig.pdf"),
         png=str(SORGHUM_PAPER_FIGURES / "sorFig.png"),
@@ -242,7 +243,7 @@ rule sorghum_plot_paper_main:
         "python -u {SORGHUM_SCRIPTS}/plot_paper_main.py --heritability {input.heritability}"
         " --model {input.model} --fold-traits {params.fold_traits} --fold {params.fold}"
         " --traits-files {input.traits} --measured-traits {input.measured} --gwas {input.gwas}"
-        " --out {output.pdf} --traits 4 > {log} 2>&1"
+        " --ndvi {input.ndvi} --out {output.pdf} --traits 4 > {log} 2>&1"
 
 
 rule sorghum_plot_paper_heritability:
