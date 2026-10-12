@@ -55,6 +55,7 @@ rule sorghum_all:
                source=SORGHUM_SOURCES),
         str(SORGHUM_OUT / "figures" / "noise.pdf"),
         str(SORGHUM_OUT / "ndvi.npz"),
+        expand(str(SORGHUM_OUT / "pch_coefficients" / "fold{fold}.npz"), fold=SORGHUM_FOLDS),
 
 
 rule sorghum_gwas_all:
@@ -131,6 +132,25 @@ rule sorghum_train_baselines:
     shell:
         "python -u {SORGHUM_SCRIPTS}/baseline.py --fold {wildcards.fold}"
         " --method {wildcards.baseline} --out {output} --traits {params.traits} > {log} 2>&1"
+
+
+# Wavelength coefficients of PCH (refitted at the saved ridge) and of linear H2-opt per fold, and
+# their smoothness (total variation over the sum of magnitudes). All folds in one job.
+rule sorghum_pch_coefficients:
+    input:
+        pch=[sorghum_baseline("pch", f) for f in SORGHUM_FOLDS],
+        models=[str(SORGHUM_OUT / "h2opt" / f"fold{f}.pt") for f in SORGHUM_FOLDS],
+        traits=[sorghum_traits("h2opt", f) for f in SORGHUM_FOLDS],
+    output:
+        [str(SORGHUM_OUT / "pch_coefficients" / f"fold{f}.npz") for f in SORGHUM_FOLDS],
+    log:
+        str(SORGHUM_OUT / "pch_coefficients" / "coefficients.log"),
+    params:
+        folds=" ".join(str(f) for f in SORGHUM_FOLDS),
+    threads: 2
+    shell:
+        "python -u {SORGHUM_SCRIPTS}/pch_coefficients.py --folds {params.folds} --pch {input.pch}"
+        " --h2opt {input.models} --h2opt-traits {input.traits} --out {output} > {log} 2>&1"
 
 
 rule sorghum_score_heritability:

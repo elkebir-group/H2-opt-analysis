@@ -24,6 +24,7 @@ def test_pipeline_parses():
             'simulation_paper_figures',
             'simulation_gwas_all', 'sorghum_gwas_all', 'sorghum_prepare_genotype_pcs',
             'sorghum_train_baselines', 'sorghum_choose_linear_h2opt_noise',
+            'sorghum_pch_coefficients',
             'sim_sweep_linear_h2opt_noise', 'sim_plot_linear_h2opt_noise_sweep', 'miscanthus_all',
             'misc_prepare_images', 'misc_train_baselines', 'misc_score_heritability',
             'misc_plot_heritability', 'misc_choose_linear_h2opt_noise',
