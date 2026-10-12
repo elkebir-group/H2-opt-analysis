@@ -50,10 +50,10 @@ from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 FIG_SIZE = (6.5, 2.4)
 BOTTOM = 0.34
 TOP = FIG_SIZE[1] - 0.16
-PANELS = {'a': (0.0, 1.15), 'b': (1.52, 1.15), 'c': (3.2, 1.05), 'd': (5.0, 1.05),
+PANELS = {'a': (0.0, 1.15), 'b': (1.75, 0.98), 'c': (3.2, 1.05), 'd': (5.0, 1.05),
           'colorbar': (6.1, 0.06)}
 # x of the panel letters in inches.
-LETTERS = {'a': 0.0, 'b': 1.2, 'c': 2.8, 'd': 4.3}
+LETTERS = {'a': 0.0, 'b': 1.4, 'c': 2.8, 'd': 4.3}
 # Panel a, in inches from the bottom left of its frame: left and bottom of the front card (the
 # bottom of the other panels), its width, the offset of each card behind it, the number of near
 # cards and the position of the last card, and the room above the last card for its label.
