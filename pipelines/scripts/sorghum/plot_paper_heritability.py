@@ -67,8 +67,8 @@ def main():
     axes[0].set_ylim(0, 1)
     # the legend at the top right of the test panel, above the lines of the last traits
     ordered_legend(axes[1], [LABELS[m] for m in ordered(methods)], frameon=False,
-                   loc='upper right', handlelength=1.2, handletextpad=0.4, borderaxespad=0,
-                   labelspacing=0.25)
+                   loc='upper right', fontsize=plt.rcParams['xtick.labelsize'],
+                   handlelength=1.2, handletextpad=0.4, borderaxespad=0, labelspacing=0.2)
     fig.tight_layout(pad=0.3, w_pad=0.6)
     out = Path(args.out)
     fig.savefig(out)

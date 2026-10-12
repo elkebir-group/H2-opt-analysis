@@ -1,23 +1,24 @@
-"""Main sorghum figure of the paper (sorFig): input, heritability, coefficients, measured traits,
-GWAS hits.
+"""Main sorghum figure of the paper (sorFig): input, heritability, coefficients, measured traits.
 
-Panels: a, the input as a stack of cards, one spectrum per plant (the front card shows
-the spectrum of the first plant), with the numbers of plants and of genotypes; b,
-test heritability of every trait of each method of --heritability (evaluate_heritability.py): the
-median over the folds and a band from the 25th to the 75th percentile, and a dotted line at the
-median over the folds of the test heritability of NDVI (--ndvi, ndvi.py); c, wavelength
-coefficients of traits 1 to --traits of the linear H2-opt model of one fold (--model,
-train_h2opt.py), for the traits as saved (uncorrelated on the fold's training plants; the
-script checks them against --fold-traits); d, median over the folds of |Pearson r| between the
-genotype means (over all plants) of the H2-opt traits (--traits-files, one per fold) and the
-measured genotype means of --measured-traits (Ferguson et al. 2021, Supplemental Table S12); e,
-Bonferroni-significant SNPs (0.05 / SNPs) of each trait of the GWAS of one fold (--gwas,
-gwas.py). Writes the figure as .pdf and, beside it, .png, and prints the numbers of each panel.
+Panels: a, the input as a stack of cards, one spectrum per plant (the front card shows the
+spectrum of the first plant), with the numbers of plants and of genotypes; b, test heritability
+of every trait of each method of --heritability (evaluate_heritability.py): the median over the
+folds and a band from the 25th to the 75th percentile, and a dotted line at the median over the
+folds of the test heritability of NDVI (--ndvi, ndvi.py); c, wavelength coefficients of traits 1
+to --traits of linear H2-opt in one fold, for the traits as saved (uncorrelated on the fold's
+training plants; the script checks them against --fold-traits), and behind them the coefficients
+of the PCH trait with the highest |Pearson r| on the fold's training plants, with the sign of r
+(both from --coefficients, pch_coefficients.py); each trait's coefficients are scaled to a
+largest |coefficient| of 1, as PCH's are about 10 times larger; d, median over the folds of
+|Pearson r| between the genotype means (over all plants) of the H2-opt traits (--traits-files,
+one per fold) and the measured genotype means of --measured-traits (Ferguson et al. 2021,
+Supplemental Table S12). Writes the figure as .pdf and, beside it, .png, and prints the numbers
+of each panel.
 
     python pipelines/scripts/sorghum/plot_paper_main.py --heritability heritability_h2opt.npz \\
-        --model h2opt/fold0.pt --fold-traits h2opt/fold0.npz --fold 0 \\
+        --coefficients pch_coefficients/fold0.npz --fold-traits h2opt/fold0.npz --fold 0 \\
         --traits-files h2opt/fold0.npz ... h2opt/fold9.npz \\
-        --measured-traits SorgumTraits.tsv --gwas gwas/h2opt_fold0.npz --ndvi ndvi.npz \\
+        --measured-traits SorgumTraits.tsv --ndvi ndvi.npz \\
         --out figures/paper/sorFig.pdf --traits 4
 """
 
@@ -30,10 +31,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
-import torch  # noqa: E402
-from h2opt.decorrelation import Decorrelation  # noqa: E402
 from matplotlib.patches import Rectangle  # noqa: E402
-from matplotlib.ticker import MaxNLocator  # noqa: E402
 
 from h2opt_analysis import sorghum  # noqa: E402
 from h2opt_analysis.figures import (  # noqa: E402
@@ -50,20 +48,20 @@ from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 # in the style of the simulation figures. Positions are in inches: the bottom and the top of the
 # panels, and the left and the width of each panel (a: the frame of the stack; d: the heatmap,
 # then its colorbar).
-FIG_SIZE = (6.5, 2.3)
+FIG_SIZE = (6.5, 2.4)
 BOTTOM = 0.34
 TOP = FIG_SIZE[1] - 0.16
-PANELS = {'a': (0.0, 1.3), 'b': (1.62, 1.12), 'c': (3.05, 0.74), 'd': (4.46, 0.76),
-          'colorbar': (5.26, 0.06), 'e': (6.04, 0.3)}
+PANELS = {'a': (0.0, 1.15), 'b': (1.52, 1.15), 'c': (3.1, 1.1), 'd': (5.0, 1.05),
+          'colorbar': (6.1, 0.06)}
 # x of the panel letters in inches.
-LETTERS = {'a': 0.0, 'b': 1.32, 'c': 2.75, 'd': 3.82, 'e': 5.76}
+LETTERS = {'a': 0.0, 'b': 1.2, 'c': 2.8, 'd': 4.3}
 # Panel a, in inches from the bottom left of its frame: left and bottom of the front card (the
 # bottom of the other panels), its width, the offset of each card behind it, the number of near
 # cards and the position of the last card, and the room above the last card for its label.
-STACK = {'x0': 0.36, 'y0': BOTTOM, 'width': 0.7, 'offset': (0.03, 0.032), 'near': 4, 'far': 6.5,
+STACK = {'x0': 0.39, 'y0': BOTTOM, 'width': 0.56, 'offset': (0.03, 0.032), 'near': 4, 'far': 6.5,
          'top_room': 0.13}
 # Panel c: height of the room above each coefficient axes for its title.
-TITLE_ROOM = 0.12
+TITLE_ROOM = 0.13
 # Panel titles and annotations at the text size of the figure.
 RC = {**SIM_FIG_RC, **MATH_RC, 'axes.titlesize': 'medium'}
 
@@ -89,19 +87,6 @@ def read_measured_traits(path):
 def genotype_means(Y, genotypes, names):
     """(names, traits) means of the rows of Y of each genotype in names."""
     return np.array([Y[genotypes == name].mean(axis=0) for name in names])
-
-
-def model_coefficients(model_path, X, is_train):
-    """(wavelengths, traits) coefficients of the saved traits of a linear TraitModels.
-
-    The saved traits are the model outputs made uncorrelated on the training plants
-    (h2opt.synthetic_traits), so the coefficients are the weights times Decorrelation's map."""
-    model = torch.load(model_path, map_location='cpu', weights_only=False)
-    weights = np.stack([m.lin1.weight.detach().numpy()[0] for m in model.models], axis=1)
-    biases = np.array([m.lin1.bias.item() for m in model.models])
-    raw = X @ weights + biases
-    decorrelation = Decorrelation().fit(raw[is_train])
-    return weights @ decorrelation.components_, decorrelation.transform(raw)
 
 
 def axes_at(fig, left, bottom, width, height):
@@ -161,12 +146,12 @@ def spectra_stack(frame, wavelengths, X, n_plants, n_genotypes):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--heritability', required=True)
-    parser.add_argument('--model', required=True, help='linear H2-opt model of --fold (.pt)')
-    parser.add_argument('--fold-traits', required=True, help='saved traits of --model (.npz)')
+    parser.add_argument('--coefficients', required=True,
+                        help='PCH and H2-opt coefficients of --fold (pch_coefficients.py .npz)')
+    parser.add_argument('--fold-traits', required=True, help='saved H2-opt traits of --fold')
     parser.add_argument('--fold', type=int, required=True)
     parser.add_argument('--traits-files', nargs='+', required=True, help='one .npz per fold')
     parser.add_argument('--measured-traits', required=True, help='Supplemental Table S12 (.tsv)')
-    parser.add_argument('--gwas', required=True, help='GWAS of --fold (gwas.py .npz)')
     parser.add_argument('--out', required=True, help='.pdf; a .png is written beside it')
     parser.add_argument('--ndvi', required=True, help='heritability of NDVI (ndvi.py .npz)')
     parser.add_argument('--traits', type=int, required=True)
@@ -175,13 +160,22 @@ def main():
 
     X, genotypes, _ = sorghum.load()
     is_train = sorghum.folds(genotypes) != args.fold
-    coefficients, traits = model_coefficients(args.model, X, is_train)
+    fold_coefficients = np.load(args.coefficients)
+    coefficients = fold_coefficients['h2opt_coefficients'].T  # wavelengths x traits
+    traits = X @ coefficients
     saved = sorghum.load_traits(args.fold_traits)
-    error = np.abs(traits - saved).max(axis=0) / saved.std(axis=0)
+    agreement = [np.corrcoef(traits[:, t], saved[:, t])[0, 1] for t in range(saved.shape[1])]
     # float32 outputs (saved) vs float64 (here)
-    assert error.max() < 1e-2, f'model and saved traits differ (relative error {error})'
+    assert min(agreement) > 1 - 1e-5, f'coefficients and saved traits differ (r {agreement})'
+    # the PCH trait of each H2-opt trait: highest |r| on the training plants, with the sign of r
+    pch_coefficients = fold_coefficients['coefficients'].T  # wavelengths x traits
+    pch_traits = (X - fold_coefficients['mean']) @ pch_coefficients
+    r = np.corrcoef(traits[is_train, :k].T, pch_traits[is_train].T)[:k, k:]
+    pairs = np.abs(r).argmax(axis=1)
+    signs = np.sign(r[np.arange(k), pairs])
 
     plt.rcParams.update(RC)
+    small = plt.rcParams['xtick.labelsize']  # legends and heatmap values at the tick label size
     fig = plt.figure(figsize=FIG_SIZE)
     panels = {}
 
@@ -207,11 +201,11 @@ def main():
     all_traits = np.arange(1, test.shape[2] + 1)
     ax = panel('b')
     median_bands(ax, all_traits, test, methods)
-    ax.axhline(ndvi, color='0.3', ls=':', lw=1.2, label='NDVI')
+    ax.axhline(ndvi, color='0.3', ls=':', lw=0.8, label='NDVI')
     # the legend at the top right, above the lines of the last traits
     ordered_legend(ax, [LABELS[m] for m in ordered(methods)] + ['NDVI'], frameon=False,
-                   loc='upper right', handlelength=1.2, handletextpad=0.4, borderaxespad=0,
-                   labelspacing=0.25)
+                   loc='upper right', fontsize=small, handlelength=1.2, handletextpad=0.4,
+                   borderaxespad=0, labelspacing=0.2)
     ax.set_ylim(0, 1)
     ax.set_xticks(all_traits)
     ax.set_xlabel('synthetic trait')
@@ -219,25 +213,32 @@ def main():
     ax.spines[['top', 'right']].set_visible(False)
     order = np.arange(1, k + 1)
 
-    # c: wavelength coefficients of the traits of one fold
+    # c: wavelength coefficients of the traits of one fold, H2-opt in front of the paired PCH
+    # trait, each scaled to a largest |coefficient| of 1
     left, width = PANELS['c']
     step = (TOP - BOTTOM + TITLE_ROOM) / k
     for t in range(k):
         ax = axes_at(fig, left, TOP - (t + 1) * step + TITLE_ROOM, width, step - TITLE_ROOM)
         if t == 0:
             panels['c'] = ax
-        top = np.abs(coefficients[:, t]).max()
-        ax.plot(wavelengths, coefficients[:, t], lw=0.6, color=COLORS['h2opt'])
+        pch = signs[t] * pch_coefficients[:, pairs[t]]
+        ax.plot(wavelengths, pch / np.abs(pch).max(), lw=0.4, color=COLORS['pch'],
+                label=LABELS['pch'])
+        ax.plot(wavelengths, coefficients[:, t] / np.abs(coefficients[:, t]).max(), lw=0.6,
+                color=COLORS['h2opt'], label=LABELS['h2opt'])
         ax.axhline(0, color='0.7', lw=0.5)
-        ax.set_ylim(-1.1 * top, 1.1 * top)
-        ax.yaxis.set_major_locator(MaxNLocator(nbins=2, symmetric=True))
+        ax.set_ylim(-1.1, 1.1)
+        ax.set_yticks([-1, 0, 1])
         ax.set_title(f'trait {t + 1}', loc='left', pad=1.5)
         ax.spines[['top', 'right']].set_visible(False)
         if t < k - 1:
-            ax.set_xticklabels([])
+            ax.tick_params(axis='x', length=0, labelbottom=False)
     ax.set_xlabel('wavelength (nm)')
-    fig.text((left - 0.32) / FIG_SIZE[0], (BOTTOM + TOP) / 2 / FIG_SIZE[1], 'coefficient',
-             rotation=90, ha='center', va='center')
+    ordered_legend(panels['c'], [LABELS['h2opt'], LABELS['pch']], frameon=False,
+                   fontsize=small, loc='lower right', bbox_to_anchor=(1, 1), ncol=2,
+                   handlelength=1.0, handletextpad=0.3, columnspacing=0.6, borderaxespad=0.1)
+    fig.text((left - 0.25) / FIG_SIZE[0], (BOTTOM + TOP) / 2 / FIG_SIZE[1],
+             'coefficient (scaled)', rotation=90, ha='center', va='center')
 
     # d: |r| of genotype means with the measured traits, median over the folds
     names, labels, measured = read_measured_traits(args.measured_traits)
@@ -254,27 +255,12 @@ def main():
     ax = panel('d')
     image = ax.imshow(median, cmap='magma', vmin=0, aspect='auto')
     for (j, t), value in np.ndenumerate(median):
-        # the values at the size of the tick labels
-        ax.text(t, j, f'{value:.2f}', ha='center', va='center',
-                fontsize=plt.rcParams['xtick.labelsize'],
+        ax.text(t, j, f'{value:.2f}', ha='center', va='center', fontsize=small,
                 color='black' if value > 0.6 * median.max() else 'white')
     ax.set_xticks(range(k), order)
     ax.set_yticks(range(len(labels)), labels)
     ax.set_xlabel('synthetic trait')
     fig.colorbar(image, cax=panel('colorbar'), label='median |r|')
-
-    # e: Bonferroni-significant SNPs per trait
-    gwas = np.load(args.gwas)
-    score = gwas['neg_log10_p']
-    threshold = -np.log10(0.05 / score.shape[1])
-    hits = (score > threshold).sum(axis=1)
-    ax = panel('e')
-    ax.bar(np.arange(1, len(hits) + 1), hits, color=COLORS['h2opt'])
-    ax.set_xticks(np.arange(1, len(hits) + 1))
-    ax.set_xlabel('synthetic trait')
-    ax.set_ylabel('significant SNPs')
-    ax.yaxis.get_major_locator().set_params(integer=True)
-    ax.spines[['top', 'right']].set_visible(False)
 
     for name, x in LETTERS.items():
         left, width = PANELS[name]
@@ -291,14 +277,18 @@ def main():
         print(f'  {"":16s} 75th  ', np.round(np.percentile(values, 75, axis=0), 3))
         print(f'  {"":16s} mean  ', np.round(values.mean(axis=0), 3))
     print(f'  NDVI median test heritability over the folds {ndvi:.3f}')
+    print(f'c: PCH trait paired with H2-opt traits 1-{k} (highest |r| on the training plants of '
+          f'fold {args.fold}); both scaled to a largest |coefficient| of 1 per trait')
+    for t in range(k):
+        print(f'  H2-opt trait {t + 1} -> PCH trait {pairs[t] + 1}: r {r[t, pairs[t]]:+.3f}, '
+              f'sign {signs[t]:+.0f}; largest |coefficient| H2-opt '
+              f'{np.abs(coefficients[:, t]).max():.3g}, PCH '
+              f'{np.abs(pch_coefficients[:, pairs[t]]).max():.3g}')
     print('d: median |r| over folds (rows: measured traits; columns: synthetic traits)')
     for label, row in zip(labels, median, strict=True):
         print(f'  {label:24s}', np.round(row, 2))
     j, t = np.unravel_index(np.argmax(median), median.shape)
     print(f'  highest: trait {t + 1} with {labels[j]}, {median[j, t]:.2f}')
-    print(f'e: Bonferroni threshold -log10 p {threshold:.2f} ({score.shape[1]} SNPs); '
-          f'significant SNPs per trait {hits.tolist()}; '
-          f'lowest p per trait {[f"{10 ** -s:.3g}" for s in score.max(axis=1)]}')
 
 
 if __name__ == '__main__':

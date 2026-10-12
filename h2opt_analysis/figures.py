@@ -61,7 +61,7 @@ def median_bands(ax, x, values, slugs):
     for slug in ordered(slugs)[::-1]:
         low, median, high = np.percentile(values[slugs.index(slug)], [25, 50, 75], axis=0)
         ax.fill_between(x, low, high, color=COLORS[slug], alpha=0.25, linewidth=0)
-        ax.plot(x, median, 'o-', color=COLORS[slug], ms=3, lw=1.2, label=LABELS[slug])
+        ax.plot(x, median, 'o-', color=COLORS[slug], ms=1.5, lw=0.8, label=LABELS[slug])
 
 
 def ordered_legend(ax, labels, **kwargs):
