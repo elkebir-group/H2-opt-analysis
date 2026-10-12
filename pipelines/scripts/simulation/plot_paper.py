@@ -2,7 +2,8 @@
 
 --out-figure (paper Fig. 3, simFig): a test heritability of the true traits and of synthetic
 traits 1-5; b |r| of true trait t with synthetic trait t; c QQ and Manhattan plots of the GWAS of
-trait 1 of one method on one instance; d mean ROC curves of trait 1; e AUC of traits 1-3.
+trait 1 of one method on one instance; d mean ROC curves of trait 1, each with a band from the
+25th to the 75th percentile of the curves of the instances; e AUC of traits 1-3.
 --out-compare (paper Fig. S2, simCompareSNP): mean ROC curves of traits 2 and 3. Each figure is
 also saved as a .png next to its .pdf. The panels use the functions of plot_traits.py and
 plot_gwas.py, which make the same panels as separate files.
@@ -13,7 +14,6 @@ The H2-opt variant gets the label and the color of H2-opt.
     python pipelines/scripts/simulation/plot_paper.py --evaluation evaluation.npz \\
         --roc roc.npz --h2opt h2opt_hybrid --baselines pca genetic_pca pch max_features \\
         --gwas-example instance0/gwas/h2opt_hybrid.npz \\
-        --example-label "H2-opt, instance 0, trait 1" \\
         --out-figure figures/paper/simFig.pdf --out-compare figures/paper/simCompareSNP.pdf
 """
 
@@ -90,6 +90,14 @@ def select_methods(result, axes, shown, h2opt):
     return selected
 
 
+def roc_bands(ax, roc, t):
+    """Band from the 25th to the 75th percentile over the instances of the ROC curves of trait t
+    (0-based) of each method, in the color of the method."""
+    for j, m in enumerate(roc['methods']):
+        low, high = np.percentile(roc['tpr_instances'][t, j], [25, 75], axis=0)
+        ax.fill_between(roc['fpr'], low, high, color=COLORS[m], alpha=0.15, linewidth=0)
+
+
 def letter(ax, text, x=-0.14):
     ax.text(x, 1.02, text, transform=ax.transAxes, fontsize=12, fontweight='bold', va='bottom')
 
@@ -111,7 +119,6 @@ def main():
     parser.add_argument('--baselines', nargs='+', required=True, help='slugs of the baselines')
     parser.add_argument('--gwas-example', required=True,
                         help='gwas.summarize result of the example (trait 1 is shown)')
-    parser.add_argument('--example-label', required=True)
     parser.add_argument('--out-figure', required=True, help='simFig .pdf')
     parser.add_argument('--out-compare', required=True, help='simCompareSNP .pdf')
     args = parser.parse_args()
@@ -119,7 +126,8 @@ def main():
                          'xtick.labelsize': FONT_SIZE - 1, 'ytick.labelsize': FONT_SIZE - 1})
     shown = [args.h2opt] + args.baselines
     ev = select_methods(np.load(args.evaluation), {'herit': 0, 'cor': 0}, shown, args.h2opt)
-    roc = select_methods(np.load(args.roc), {'auc': 1, 'tpr': 1}, ['truth'] + shown, args.h2opt)
+    roc = select_methods(np.load(args.roc), {'auc': 1, 'tpr': 1, 'tpr_instances': 1},
+                         ['truth'] + shown, args.h2opt)
     summary = np.load(args.gwas_example)
 
     fig = plt.figure(figsize=(7.2, 5.6))
@@ -142,15 +150,14 @@ def main():
     c = bottom[0].subgridspec(2, 1, hspace=0.65)
     ax = fig.add_subplot(c[0])
     qq(ax, summary, 0)
-    ax.set_title(args.example_label, fontsize=FONT_SIZE)
     letter(ax, 'c', -0.3)
     manhattan(fig.add_subplot(c[1]), summary, 0)
 
     ax = fig.add_subplot(bottom[1])
+    roc_bands(ax, roc, 0)
     plot_roc(ax, roc, 0)
     ax.legend(loc='lower right', fontsize=FONT_SIZE - 2.5, frameon=True, framealpha=0.9,
               edgecolor='none', borderpad=0.2, handlelength=1.2)
-    ax.set_title('trait 1, mean over instances', fontsize=FONT_SIZE)
     letter(ax, 'd', -0.22)
 
     ax = fig.add_subplot(bottom[2])

@@ -5,7 +5,8 @@ SNP) gets the highest -log10 p of its SNPs in the GWAS of synthetic trait t (0 i
 and is a true bin if it holds a QTN of true trait t. The AUC of these scores is computed per
 trait, method and instance, and the ROC curves are averaged over the instances on a common
 false-positive-rate grid. Writes an .npz (methods, auc: traits x methods x instances, fpr,
-tpr: traits x methods x grid).
+tpr: traits x methods x grid, the mean curves, and tpr_instances: traits x methods x instances x
+grid, the curve of each instance).
 
     python pipelines/scripts/simulation/roc.py --instances 0 ... 9 \\
         --method pca g0.npz ... g9.npz [--method ...] --out roc.npz [--bin 100000]
@@ -53,6 +54,7 @@ def main():
     grid = np.linspace(0, 1, 101)
     auc = np.zeros((n_t, len(methods), n_i))
     tpr = np.zeros((n_t, len(methods), len(grid)))
+    tpr_instances = np.full((n_t, len(methods), n_i, len(grid)), np.nan)
     for i, instance in enumerate(args.instances):
         qtns = simulation.qtns(instance)
         for m, method in enumerate(args.method):
@@ -64,9 +66,11 @@ def main():
                 values, truth = binned(chromosome, position, score[t], qtns[t], args.bin)
                 auc[t, m, i] = roc_auc_score(truth, values)
                 fpr_t, tpr_t, _ = roc_curve(truth, values)
-                tpr[t, m] += np.interp(grid, fpr_t, tpr_t) / n_i
+                tpr_instances[t, m, i] = np.interp(grid, fpr_t, tpr_t)
+                tpr[t, m] += tpr_instances[t, m, i] / n_i
 
-    np.savez(args.out, methods=methods, auc=auc, fpr=grid, tpr=tpr)
+    np.savez(args.out, methods=methods, auc=auc, fpr=grid, tpr=tpr,
+             tpr_instances=tpr_instances)
     print('median AUC over instances (traits 1-3)')
     for m, method in enumerate(methods):
         print(f'{LABELS.get(method, method):16s} {np.nanmedian(auc[:, m], axis=1).round(3)}')
