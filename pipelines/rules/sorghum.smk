@@ -239,7 +239,8 @@ rule sorghum_run_gwas:
 rule sorghum_paper_figures:
     input:
         expand(str(SORGHUM_PAPER_FIGURES / "{stem}.pdf"),
-               stem=["sorFig", "multiTraitHerit_all", "crossGWAS", "sorGWAS"]),
+               stem=["sorFig", "multiTraitHerit_all", "sorCoefficients", "crossGWAS",
+                     "sorGWAS"]),
 
 
 rule sorghum_plot_paper_main:
@@ -255,13 +256,12 @@ rule sorghum_plot_paper_main:
     log:
         str(SORGHUM_PAPER_FIGURES / "sorFig.log"),
     params:
-        fold=SORGHUM_FOLDS[0],
         fold_traits=sorghum_traits("h2opt", SORGHUM_FOLDS[0]),
     threads: 1
     shell:
         "python -u {SORGHUM_SCRIPTS}/plot_paper_main.py --heritability {input.heritability}"
         " --coefficients {input.coefficients} --fold-traits {params.fold_traits}"
-        " --fold {params.fold} --traits-files {input.traits} --measured-traits {input.measured}"
+        " --traits-files {input.traits} --measured-traits {input.measured}"
         " --ndvi {input.ndvi} --out {output.pdf} --traits 4 > {log} 2>&1"
 
 
@@ -280,6 +280,25 @@ rule sorghum_plot_paper_heritability:
         "python -u {SORGHUM_SCRIPTS}/plot_paper_heritability.py --heritability {input}"
         " --out {output.pdf} --traits {params.traits} > {log} 2>&1"
 
+
+
+# sorCoefficients: wavelength coefficients of H2-opt and of the paired PCH traits in the first fold,
+# a zoom on trait 1 (zoom, nm) and the total variation of the coefficients over the folds.
+rule sorghum_plot_paper_coefficients:
+    input:
+        [str(SORGHUM_OUT / "pch_coefficients" / f"fold{f}.npz") for f in SORGHUM_FOLDS],
+    output:
+        pdf=str(SORGHUM_PAPER_FIGURES / "sorCoefficients.pdf"),
+        png=str(SORGHUM_PAPER_FIGURES / "sorCoefficients.png"),
+    log:
+        str(SORGHUM_PAPER_FIGURES / "sorCoefficients.log"),
+    params:
+        fold=SORGHUM_FOLDS[0],
+        zoom="400 800",
+    threads: 1
+    shell:
+        "python -u {SORGHUM_SCRIPTS}/plot_paper_coefficients.py --fold {params.fold}"
+        " --coefficients {input} --zoom {params.zoom} --out {output.pdf} > {log} 2>&1"
 
 rule sorghum_plot_paper_gwas:
     input:

@@ -46,6 +46,7 @@ def test_pipeline_parses():
             'misc_plot_paper_heritability', 'misc_plot_paper_correlations',
             'misc_plot_paper_gwas', 'misc_plot_paper_main', 'sorghum_paper_figures',
             'sorghum_plot_paper_main', 'sorghum_plot_paper_heritability',
+            'sorghum_plot_paper_coefficients',
             'sorghum_plot_paper_gwas', 'arabidopsis_gwas_all', 'arabi_prepare_genotypes',
             'arabi_run_gwas', 'arabidopsis_paper_figures', 'arabi_paper_pathways',
             'arabi_trait_coefficients',
