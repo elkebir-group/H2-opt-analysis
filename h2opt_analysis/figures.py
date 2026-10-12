@@ -1,5 +1,5 @@
-"""Shared plotting helpers: method colors, grouped boxplots, median bands, Manhattan and QQ
-plots."""
+"""Shared plotting helpers: method colors, the style of the paper figures, panel letters, grouped
+boxplots, median bands, Manhattan and QQ plots."""
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,6 +10,29 @@ COLORS = {'truth': 'tab:red', 'h2opt_paper': 'tab:blue', 'h2opt': 'tab:blue',
           'h2opt_hybrid': 'tab:cyan',
           'pca': 'tab:orange', 'genetic_pca': 'tab:purple',
           'pch': 'tab:pink', 'max_features': 'tab:green'}
+
+
+# Style of the paper figures, drawn at their size in the paper so that LaTeX does not scale them:
+# Liberation Sans (the metrics of Arial), 6.5 pt labels and legend, 6 pt ticks, 8.5 pt bold panel
+# letters.
+FONT_SIZE = 6.5
+TICK_SIZE = 6
+LETTER_SIZE = 8.5
+SIM_FIG_RC = {'font.family': 'sans-serif', 'font.sans-serif': ['Liberation Sans'],
+              'pdf.fonttype': 42, 'font.size': FONT_SIZE, 'axes.labelsize': FONT_SIZE,
+              'xtick.labelsize': TICK_SIZE, 'ytick.labelsize': TICK_SIZE,
+              'legend.fontsize': FONT_SIZE, 'axes.linewidth': 0.6, 'xtick.major.width': 0.6,
+              'ytick.major.width': 0.6, 'xtick.major.size': 2.5, 'ytick.major.size': 2.5,
+              'lines.linewidth': 1.0}
+# Math labels in the text font of the figure.
+MATH_RC = {'mathtext.fontset': 'custom', 'mathtext.rm': 'Liberation Sans',
+           'mathtext.it': 'Liberation Sans:italic', 'mathtext.bf': 'Liberation Sans:bold'}
+
+
+def letter(ax, text, x):
+    """Panel letter at the top left of ax; x is in axes coordinates."""
+    ax.text(x, 1.0, text, transform=ax.transAxes, fontsize=LETTER_SIZE, fontweight='bold',
+            va='bottom', ha='left')
 
 
 def grouped_boxplot(ax, groups, slugs, values):

@@ -2,8 +2,10 @@
 a band from the 25th to the 75th percentile (paper figure multiTraitHerit_all).
 
 Reads the .npz of evaluate_heritability.py; method labels and colors come from the slugs saved
-with the values. Left panel: train genotypes; right panel: test genotypes. Writes the figure as
-.pdf and, beside it, .png, and prints the median, 25th and 75th percentiles and mean per method.
+with the values. Left panel: train genotypes; right panel: test genotypes. The figure is drawn at
+half the text width of the paper (3.25 in), so that LaTeX does not scale it, in the style of the
+simulation figures. Writes the figure as .pdf and, beside it, .png, and prints the median, 25th
+and 75th percentiles and mean per method.
 
     python pipelines/scripts/sorghum/plot_paper_heritability.py \\
         --heritability heritability_h2opt.npz --out figures/paper/multiTraitHerit_all.pdf \\
@@ -19,8 +21,17 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
-from h2opt_analysis.figures import median_bands, ordered_legend  # noqa: E402
+from h2opt_analysis.figures import (  # noqa: E402
+    MATH_RC,
+    SIM_FIG_RC,
+    median_bands,
+    ordered_legend,
+)
 from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
+
+FIG_SIZE = (3.25, 2.1)
+# Panel titles at the text size of the figure.
+RC = {**SIM_FIG_RC, **MATH_RC, 'axes.titlesize': 'medium'}
 
 
 def main():
@@ -33,7 +44,8 @@ def main():
     results = np.load(args.heritability)
     methods = list(results['methods'])
     order = np.arange(1, args.traits + 1)
-    fig, axes = plt.subplots(1, 2, figsize=(8, 3), sharey=True)
+    plt.rcParams.update(RC)
+    fig, axes = plt.subplots(1, 2, figsize=FIG_SIZE, sharey=True)
     for ax, split in zip(axes, ['train', 'test'], strict=True):
         values = results[split][:, :, :args.traits]  # methods x folds x traits
         median_bands(ax, order, values, methods)
@@ -47,17 +59,20 @@ def main():
             print(f'  {"":16s} mean  ', np.round(v.mean(axis=0), 3))
         ax.set_xticks(order)
         ax.set_xlabel('synthetic trait')
-        ax.set_title(f'{split} genotypes', fontsize=10)
-        ax.grid(axis='y', color='0.9')
+        ax.set_title(f'{split} genotypes')
+        ax.grid(axis='y', color='0.9', linewidth=0.6)
         ax.set_axisbelow(True)
         ax.spines[['top', 'right']].set_visible(False)
     axes[0].set_ylabel('heritability (median over folds)')
-    axes[0].set_ylim(0, None)
-    ordered_legend(axes[1], [LABELS[m] for m in ordered(methods)], frameon=False, fontsize=7)
-    fig.tight_layout()
+    axes[0].set_ylim(0, 1)
+    # the legend at the top right of the test panel, above the lines of the last traits
+    ordered_legend(axes[1], [LABELS[m] for m in ordered(methods)], frameon=False,
+                   loc='upper right', handlelength=1.2, handletextpad=0.4, borderaxespad=0,
+                   labelspacing=0.25)
+    fig.tight_layout(pad=0.3, w_pad=0.6)
     out = Path(args.out)
     fig.savefig(out)
-    fig.savefig(out.with_suffix('.png'), dpi=150)
+    fig.savefig(out.with_suffix('.png'), dpi=300)
 
 
 if __name__ == '__main__':

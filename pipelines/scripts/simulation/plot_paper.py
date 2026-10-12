@@ -37,27 +37,15 @@ from matplotlib.ticker import MaxNLocator  # noqa: E402
 from plot_gwas import auc_values, plot_roc  # noqa: E402
 from plot_traits import correlation_values, heritability_values  # noqa: E402
 
-from h2opt_analysis.figures import COLORS  # noqa: E402
+from h2opt_analysis.figures import COLORS, MATH_RC, SIM_FIG_RC, letter  # noqa: E402
 from h2opt_analysis.methods import LABELS  # noqa: E402
 
 # simFig is drawn at the text width of the paper (6.5 in), so that LaTeX does not scale it. Its
-# text is Liberation Sans (the metrics of Arial): 6.5 pt labels and legend, 6 pt ticks.
-# simCompareSNP and simGWASexample have the same style, also at the text width.
-FONT_SIZE = 6.5
-TICK_SIZE = 6
+# text is SIM_FIG_RC (h2opt_analysis.figures). simCompareSNP and simGWASexample have the same
+# style, also at the text width.
 ROC_LEGEND_SIZE = 5.5
 ROW_LABEL_SIZE = 7.5
-LETTER_SIZE = 8.5
 SIM_FIG_SIZE = (6.5, 3.7)
-SIM_FIG_RC = {'font.family': 'sans-serif', 'font.sans-serif': ['Liberation Sans'],
-              'pdf.fonttype': 42, 'font.size': FONT_SIZE, 'axes.labelsize': FONT_SIZE,
-              'xtick.labelsize': TICK_SIZE, 'ytick.labelsize': TICK_SIZE,
-              'legend.fontsize': FONT_SIZE, 'axes.linewidth': 0.6, 'xtick.major.width': 0.6,
-              'ytick.major.width': 0.6, 'xtick.major.size': 2.5, 'ytick.major.size': 2.5,
-              'lines.linewidth': 1.0}
-# Math labels in the text font of the figure.
-MATH_RC = {'mathtext.fontset': 'custom', 'mathtext.rm': 'Liberation Sans',
-           'mathtext.it': 'Liberation Sans:italic', 'mathtext.bf': 'Liberation Sans:bold'}
 # simGWASexample: size in inches and x of the panel letters (QQ, Manhattan) in axes coordinates.
 EXAMPLE_FIG_SIZE = (6.5, 2.4)
 EXAMPLE_LETTER_X = [-0.28, -0.11]
@@ -163,11 +151,6 @@ def roc_bands(ax, roc, t, alpha):
     for j, m in enumerate(roc['methods']):
         low, high = np.percentile(roc['tpr_instances'][t, j], [25, 75], axis=0)
         ax.fill_between(roc['fpr'], low, high, color=COLORS[m], alpha=alpha, linewidth=0)
-
-
-def letter(ax, text, x):
-    ax.text(x, 1.0, text, transform=ax.transAxes, fontsize=LETTER_SIZE, fontweight='bold',
-            va='bottom', ha='left')
 
 
 def row_label(fig, ax, text):

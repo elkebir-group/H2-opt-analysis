@@ -32,12 +32,40 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
 from h2opt.decorrelation import Decorrelation  # noqa: E402
-from matplotlib.gridspec import GridSpecFromSubplotSpec  # noqa: E402
 from matplotlib.patches import Rectangle  # noqa: E402
+from matplotlib.ticker import MaxNLocator  # noqa: E402
 
 from h2opt_analysis import sorghum  # noqa: E402
-from h2opt_analysis.figures import COLORS, median_bands, ordered_legend  # noqa: E402
+from h2opt_analysis.figures import (  # noqa: E402
+    COLORS,
+    MATH_RC,
+    SIM_FIG_RC,
+    letter,
+    median_bands,
+    ordered_legend,
+)
 from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
+
+# The figure is drawn at the text width of the paper (6.5 in), so that LaTeX does not scale it,
+# in the style of the simulation figures. Positions are in inches: the bottom and the top of the
+# panels, and the left and the width of each panel (a: the frame of the stack; d: the heatmap,
+# then its colorbar).
+FIG_SIZE = (6.5, 2.3)
+BOTTOM = 0.34
+TOP = FIG_SIZE[1] - 0.16
+PANELS = {'a': (0.0, 1.3), 'b': (1.62, 1.12), 'c': (3.05, 0.74), 'd': (4.46, 0.76),
+          'colorbar': (5.26, 0.06), 'e': (6.04, 0.3)}
+# x of the panel letters in inches.
+LETTERS = {'a': 0.0, 'b': 1.32, 'c': 2.75, 'd': 3.82, 'e': 5.76}
+# Panel a, in inches from the bottom left of its frame: left and bottom of the front card (the
+# bottom of the other panels), its width, the offset of each card behind it, the number of near
+# cards and the position of the last card, and the room above the last card for its label.
+STACK = {'x0': 0.36, 'y0': BOTTOM, 'width': 0.7, 'offset': (0.03, 0.032), 'near': 4, 'far': 6.5,
+         'top_room': 0.13}
+# Panel c: height of the room above each coefficient axes for its title.
+TITLE_ROOM = 0.12
+# Panel titles and annotations at the text size of the figure.
+RC = {**SIM_FIG_RC, **MATH_RC, 'axes.titlesize': 'medium'}
 
 # Short labels of the measured traits (column names of Supplemental Table S12).
 MEASURED_LABELS = {'gs': '$g_s$', 'AN': '$A_N$', 'ci/ca': '$c_i/c_a$'}
@@ -76,43 +104,58 @@ def model_coefficients(model_path, X, is_train):
     return weights @ decorrelation.components_, decorrelation.transform(raw)
 
 
+def axes_at(fig, left, bottom, width, height):
+    """Axes at a position given in inches from the bottom left of the figure."""
+    fig_width, fig_height = fig.get_size_inches()
+    return fig.add_axes([left / fig_width, bottom / fig_height, width / fig_width,
+                         height / fig_height])
+
+
 def spectra_stack(frame, wavelengths, X, n_plants, n_genotypes):
     """Draw the input as a stack of cards in the axes frame: the front card is an axes with the
     spectrum of the first plant, the cards behind it are offset up and to the right, and the last
-    card shows part of the spectrum of the second plant. The depth of the stack is labeled with
-    the number of plants, its top with the number of genotypes (clones)."""
+    card shows part of the spectrum of the second plant, clipped to the card. The depth of the
+    stack is labeled with the number of plants, its top with the number of genotypes (clones).
+
+    The data coordinates of frame are inches from its bottom left (STACK gives the geometry)."""
+    width, height = (frame.get_position().size * frame.figure.get_size_inches())
     frame.set_axis_off()
-    frame.set_xlim(0, 1)
-    frame.set_ylim(0, 1)
-    x0, y0, width, height = 0.16, 0.0, 0.58, 0.72  # the front card
-    dx, dy = 0.035, 0.04  # offset of each card behind the one before it
-    near, far = 4, 6.5  # the near cards, then a gap (dots) to the last card
-    card = dict(facecolor='white', edgecolor='black', linewidth=0.8, clip_on=False)
-    # the last card, with part of a spectrum
+    frame.set_xlim(0, width)
+    frame.set_ylim(0, height)
+    x0, y0, w = STACK['x0'], STACK['y0'], STACK['width']
+    dx, dy = STACK['offset']
+    near, far = STACK['near'], STACK['far']
+    h = height - y0 - far * dy - STACK['top_room']
+    card = dict(facecolor='white', edgecolor='black', linewidth=0.6, clip_on=False)
+    # the last card, with part of a spectrum, clipped to the card
     bx, by = x0 + far * dx, y0 + far * dy
-    frame.add_patch(Rectangle((bx, by), width, height, zorder=1, **card))
+    back = Rectangle((bx, by), w, h, zorder=1, **card)
+    frame.add_patch(back)
     low, high = X[:2].min(), X[:2].max()
-    xs = bx + 0.08 * width + 0.85 * width * (wavelengths - wavelengths[0]) / np.ptp(wavelengths)
-    ys = by + 0.08 * height + 0.85 * height * (X[1] - low) / (high - low)
-    frame.plot(xs, ys, color=COLORS['h2opt'], lw=1, zorder=1.5)
+    xs = bx + 0.1 * w + 0.85 * w * (wavelengths - wavelengths[0]) / np.ptp(wavelengths)
+    ys = by + 0.08 * h + 0.85 * h * (X[1] - low) / (high - low)
+    line, = frame.plot(xs, ys, color=COLORS['h2opt'], zorder=1.5)
+    line.set_clip_path(back)
     for i in range(near, 0, -1):
-        frame.add_patch(Rectangle((x0 + i * dx, y0 + i * dy), width, height, zorder=2, **card))
-    # the dots between the near cards and the last card, at the top-left and bottom-right corners
-    angle = np.degrees(np.arctan2(dy * frame.bbox.height, dx * frame.bbox.width))
-    middle = (near + far) / 2
-    for corner_x, corner_y in [(x0, y0 + height), (x0 + width, y0)]:
-        frame.text(corner_x + middle * dx, corner_y + middle * dy, r'$\cdots$', rotation=angle,
-                   rotation_mode='anchor', ha='center', va='center', fontsize=12)
-    frame.text(x0 - 0.03, y0 + height + 0.07, f'$n = {n_plants}$', rotation=angle,
-               rotation_mode='anchor', ha='left', va='bottom', fontsize=9)
-    frame.text(bx + 0.05, by + height + 0.03, f'$c = {n_genotypes}$   clones', ha='left',
-               va='bottom', fontsize=9)
+        frame.add_patch(Rectangle((x0 + i * dx, y0 + i * dy), w, h, zorder=2, **card))
+    # three dots between the near cards and the last card, at the top-left and bottom-right
+    # corners
+    middle = (near + far) / 2 + np.array([-0.6, 0, 0.6])
+    for corner_x, corner_y in [(x0, y0 + h), (x0 + w, y0)]:
+        frame.plot(corner_x + middle * dx, corner_y + middle * dy, 'o', color='black', ms=0.8,
+                   clip_on=False)
+    # the number of plants along the top-left edge of the stack, the number of clones on top
+    angle = np.degrees(np.arctan2(dy, dx))
+    along = np.array([dx, dy]) / np.hypot(dx, dy)
+    start = np.array([x0, y0 + h]) - 0.05 * along + 0.07 * np.array([-along[1], along[0]])
+    frame.text(*start, f'$n = {n_plants}$', rotation=angle, rotation_mode='anchor', ha='left',
+               va='bottom')
+    frame.text(bx + 0.12, by + h + 0.03, f'$c = {n_genotypes}$ clones', ha='left', va='bottom')
     # the front card
-    ax = frame.inset_axes([x0, y0, width, height], zorder=3)
-    ax.plot(wavelengths, X[0], color=COLORS['h2opt'], lw=1)
-    ax.set_xlabel('wavelength (nm)', fontsize=7)
-    ax.set_ylabel('intensity', fontsize=7)
-    ax.tick_params(labelsize=6)
+    ax = frame.inset_axes([x0, y0, w, h], transform=frame.transData, zorder=3)
+    ax.plot(wavelengths, X[0], color=COLORS['h2opt'])
+    ax.set_xlabel('wavelength (nm)')
+    ax.set_ylabel('intensity')
 
 
 def main():
@@ -138,14 +181,22 @@ def main():
     # float32 outputs (saved) vs float64 (here)
     assert error.max() < 1e-2, f'model and saved traits differ (relative error {error})'
 
-    fig = plt.figure(figsize=(16.5, 3.4))
-    grid = fig.add_gridspec(1, 5, width_ratios=[1, 1.7, 1.4, 1.4, 0.6], wspace=0.7)
+    plt.rcParams.update(RC)
+    fig = plt.figure(figsize=FIG_SIZE)
+    panels = {}
+
+    def panel(name):
+        left, width = PANELS[name]
+        panels[name] = axes_at(fig, left, BOTTOM, width, TOP - BOTTOM)
+        return panels[name]
 
     # a: the input, a stack of cards with one spectrum per plant
     wavelengths = sorghum.FIRST_WAVELENGTH + np.arange(X.shape[1])
     n_plants, n_genotypes = len(X), len(np.unique(genotypes))
     assert (n_plants, n_genotypes) == (1920, 854), (n_plants, n_genotypes)
-    spectra_stack(fig.add_subplot(grid[0]), wavelengths, X, n_plants, n_genotypes)
+    left, width = PANELS['a']
+    panels['a'] = axes_at(fig, left, 0, width, TOP)
+    spectra_stack(panels['a'], wavelengths, X, n_plants, n_genotypes)
 
     # b: test heritability of every trait: median over the folds and band from the 25th to the
     # 75th percentile; NDVI's median test heritability over the folds as a dotted line
@@ -154,11 +205,14 @@ def main():
     test = results['test']  # methods x folds x traits
     ndvi = np.median(np.load(args.ndvi)['test'])
     all_traits = np.arange(1, test.shape[2] + 1)
-    ax = fig.add_subplot(grid[1])
+    ax = panel('b')
     median_bands(ax, all_traits, test, methods)
     ax.axhline(ndvi, color='0.3', ls=':', lw=1.2, label='NDVI')
+    # the legend at the top right, above the lines of the last traits
     ordered_legend(ax, [LABELS[m] for m in ordered(methods)] + ['NDVI'], frameon=False,
-                   fontsize=6)
+                   loc='upper right', handlelength=1.2, handletextpad=0.4, borderaxespad=0,
+                   labelspacing=0.25)
+    ax.set_ylim(0, 1)
     ax.set_xticks(all_traits)
     ax.set_xlabel('synthetic trait')
     ax.set_ylabel('test heritability')
@@ -166,21 +220,24 @@ def main():
     order = np.arange(1, k + 1)
 
     # c: wavelength coefficients of the traits of one fold
-    inner = GridSpecFromSubplotSpec(k, 1, grid[2], hspace=0.6)
+    left, width = PANELS['c']
+    step = (TOP - BOTTOM + TITLE_ROOM) / k
     for t in range(k):
-        ax = fig.add_subplot(inner[t])
+        ax = axes_at(fig, left, TOP - (t + 1) * step + TITLE_ROOM, width, step - TITLE_ROOM)
+        if t == 0:
+            panels['c'] = ax
         top = np.abs(coefficients[:, t]).max()
-        ax.plot(wavelengths, coefficients[:, t], lw=0.8, color=COLORS['h2opt'])
+        ax.plot(wavelengths, coefficients[:, t], lw=0.6, color=COLORS['h2opt'])
         ax.axhline(0, color='0.7', lw=0.5)
         ax.set_ylim(-1.1 * top, 1.1 * top)
-        ax.set_title(f'trait {t + 1}', fontsize=7, loc='left', pad=2)
-        ax.tick_params(labelsize=6)
+        ax.yaxis.set_major_locator(MaxNLocator(nbins=2, symmetric=True))
+        ax.set_title(f'trait {t + 1}', loc='left', pad=1.5)
         ax.spines[['top', 'right']].set_visible(False)
         if t < k - 1:
             ax.set_xticklabels([])
     ax.set_xlabel('wavelength (nm)')
-    fig.text(grid[2].get_position(fig).x0 - 0.035, 0.5, 'coefficient', rotation=90,
-             va='center', fontsize=10)
+    fig.text((left - 0.32) / FIG_SIZE[0], (BOTTOM + TOP) / 2 / FIG_SIZE[1], 'coefficient',
+             rotation=90, ha='center', va='center')
 
     # d: |r| of genotype means with the measured traits, median over the folds
     names, labels, measured = read_measured_traits(args.measured_traits)
@@ -194,22 +251,24 @@ def main():
             for t in range(k):
                 correlation[f, t, j] = np.corrcoef(means[known, t], measured[known, j])[0, 1]
     median = np.median(np.abs(correlation), axis=0).T  # measured x traits
-    ax = fig.add_subplot(grid[3])
+    ax = panel('d')
     image = ax.imshow(median, cmap='magma', vmin=0, aspect='auto')
     for (j, t), value in np.ndenumerate(median):
-        ax.text(t, j, f'{value:.2f}', ha='center', va='center', fontsize=6,
+        # the values at the size of the tick labels
+        ax.text(t, j, f'{value:.2f}', ha='center', va='center',
+                fontsize=plt.rcParams['xtick.labelsize'],
                 color='black' if value > 0.6 * median.max() else 'white')
     ax.set_xticks(range(k), order)
-    ax.set_yticks(range(len(labels)), labels, fontsize=6)
+    ax.set_yticks(range(len(labels)), labels)
     ax.set_xlabel('synthetic trait')
-    fig.colorbar(image, ax=ax, fraction=0.08, pad=0.03, label='median |r|')
+    fig.colorbar(image, cax=panel('colorbar'), label='median |r|')
 
     # e: Bonferroni-significant SNPs per trait
     gwas = np.load(args.gwas)
     score = gwas['neg_log10_p']
     threshold = -np.log10(0.05 / score.shape[1])
     hits = (score > threshold).sum(axis=1)
-    ax = fig.add_subplot(grid[4])
+    ax = panel('e')
     ax.bar(np.arange(1, len(hits) + 1), hits, color=COLORS['h2opt'])
     ax.set_xticks(np.arange(1, len(hits) + 1))
     ax.set_xlabel('synthetic trait')
@@ -217,13 +276,12 @@ def main():
     ax.yaxis.get_major_locator().set_params(integer=True)
     ax.spines[['top', 'right']].set_visible(False)
 
-    for c, (label, shift) in enumerate(zip('abcde', [0.04, 0.04, 0.05, 0.06, 0.04],
-                                           strict=True)):
-        fig.text(grid[c].get_position(fig).x0 - shift, 0.93, label, fontsize=13,
-                 fontweight='bold')
+    for name, x in LETTERS.items():
+        left, width = PANELS[name]
+        letter(panels[name], name, (x - left) / width)
     out = Path(args.out)
-    fig.savefig(out, bbox_inches='tight')
-    fig.savefig(out.with_suffix('.png'), dpi=150, bbox_inches='tight')
+    fig.savefig(out)
+    fig.savefig(out.with_suffix('.png'), dpi=300)
 
     print('b: test heritability per trait over the folds (25th, 50th, 75th percentile; mean)')
     for method in ordered(methods):
