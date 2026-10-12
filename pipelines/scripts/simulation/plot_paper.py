@@ -42,7 +42,7 @@ from h2opt_analysis.methods import LABELS  # noqa: E402
 
 # simFig is drawn at the text width of the paper (6.5 in), so that LaTeX does not scale it. Its
 # text is Liberation Sans (the metrics of Arial): 6.5 pt labels and legend, 6 pt ticks.
-# simCompareSNP and simGWASexample keep their earlier sizes and font sizes (7 to 11 pt).
+# simCompareSNP and simGWASexample have the same style, also at the text width.
 FONT_SIZE = 6.5
 TICK_SIZE = 6
 ROC_LEGEND_SIZE = 5.5
@@ -55,6 +55,12 @@ SIM_FIG_RC = {'font.family': 'sans-serif', 'font.sans-serif': ['Liberation Sans'
               'legend.fontsize': FONT_SIZE, 'axes.linewidth': 0.6, 'xtick.major.width': 0.6,
               'ytick.major.width': 0.6, 'xtick.major.size': 2.5, 'ytick.major.size': 2.5,
               'lines.linewidth': 1.0}
+# Math labels in the text font of the figure.
+MATH_RC = {'mathtext.fontset': 'custom', 'mathtext.rm': 'Liberation Sans',
+           'mathtext.it': 'Liberation Sans:italic', 'mathtext.bf': 'Liberation Sans:bold'}
+# simGWASexample: size in inches and x of the panel letters (QQ, Manhattan) in axes coordinates.
+EXAMPLE_FIG_SIZE = (6.5, 2.4)
+EXAMPLE_LETTER_X = [-0.28, -0.11]
 # simFig columns: heritability (traits 1-5), |r| (traits 1-3), ROC, AUC (traits 1-3).
 WIDTH_RATIOS = [4.6, 3, 3.6, 3]
 # x of the panel letters, in axes coordinates of each column.
@@ -69,38 +75,45 @@ GROUP_SPAN = 0.84
 
 
 def manhattan(ax, summary, row):
-    """Manhattan plot of one run of a gwas.summarize result; chromosomes alternate red and blue,
-    the dotted line is the Bonferroni threshold 0.05 / SNPs."""
+    """Manhattan plot of one run of a gwas.summarize result; chromosomes alternate red and blue
+    and are labeled at their centers, the dotted line is the Bonferroni threshold 0.05 / SNPs."""
     chromosome, position, score = summary['chr'], summary['ps'], summary['neg_log10_p'][row]
     order = np.unique(chromosome)
     offset = np.zeros(len(position), dtype=np.int64)
+    centers = []
     start = 0
     for c in order:
         on = chromosome == c
         offset[on] = start
+        centers.append(start + (position[on].max() + 1) / 2)
         start += position[on].max() + 1
     parity = np.searchsorted(order, chromosome) % 2
     ax.scatter(position + offset, score, s=1, c=np.where(parity, 'tab:red', 'tab:blue'),
                rasterized=True)
-    ax.axhline(-np.log10(0.05 / len(score)), color='black', linestyle=':', linewidth=1)
-    ax.set_xticks([])
+    ax.axhline(-np.log10(0.05 / len(score)), color='black', linestyle=':', linewidth=0.8)
+    ax.set_xticks(centers, [str(c) for c in order])
+    ax.tick_params(axis='x', length=0)
     ax.set_xlim(0, start)
-    ax.set_xlabel('genome position')
-    ax.set_ylabel('-log10 p')
+    ax.set_ylim(0, None)
+    ax.set_xlabel('chromosome')
+    ax.set_ylabel(r'$-\log_{10} p$')
     ax.spines[['top', 'right']].set_visible(False)
 
 
 def qq(ax, summary, row):
-    """QQ plot of one run of a gwas.summarize result, with its genomic-control lambda."""
+    """QQ plot of one run of a gwas.summarize result, with its genomic-control lambda. The dashed
+    line is the diagonal, as in simNull."""
     observed = np.sort(summary['neg_log10_p'][row])
     expected = -np.log10(np.arange(len(observed), 0, -1) / (len(observed) + 1))
     ax.scatter(expected, observed, s=2, color='tab:blue', rasterized=True)
     top = min(expected.max(), observed.max())
-    ax.plot([0, top], [0, top], 'r--', linewidth=1)
-    ax.text(0.03, 0.95, f'lambda GC {summary["lambda_gc"][row]:.3f}', transform=ax.transAxes,
-            va='top', fontsize=7)
-    ax.set_xlabel('expected -log10 p')
-    ax.set_ylabel('observed -log10 p')
+    ax.plot([0, top], [0, top], color='black', linewidth=0.6, linestyle='--', zorder=1)
+    ax.text(0.04, 0.96, rf'$\lambda_\mathrm{{GC}}$ = {summary["lambda_gc"][row]:.3f}',
+            transform=ax.transAxes, va='top', ha='left')
+    ax.set_xlim(0, None)
+    ax.set_ylim(0, None)
+    ax.set_xlabel(r'expected $-\log_{10} p$')
+    ax.set_ylabel(r'observed $-\log_{10} p$')
     ax.spines[['top', 'right']].set_visible(False)
 
 
@@ -276,14 +289,16 @@ def main():
         save(fig, args.out_compare)
 
     summary = np.load(args.gwas_example)
-    fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.6), gridspec_kw={'width_ratios': [1, 2]})
-    qq(axes[0], summary, 0)
-    manhattan(axes[1], summary, 0)
-    for ax, text in zip(axes, 'ab', strict=True):
-        ax.text(-0.3, 1.04, text, transform=ax.transAxes, fontsize=11, fontweight='bold',
-                va='bottom')
-    fig.tight_layout()
-    save(fig, args.out_example)
+    # Drawn at the text width in the style of simFig, with math labels in the text font.
+    with plt.rc_context({**SIM_FIG_RC, **MATH_RC}):
+        fig, axes = plt.subplots(1, 2, figsize=EXAMPLE_FIG_SIZE,
+                                 gridspec_kw={'width_ratios': [1, 2.4]})
+        qq(axes[0], summary, 0)
+        manhattan(axes[1], summary, 0)
+        fig.subplots_adjust(left=0.075, right=0.99, top=0.9, bottom=0.17, wspace=0.22)
+        for ax, text, x in zip(axes, 'ab', EXAMPLE_LETTER_X, strict=True):
+            letter(ax, text, x)
+        save(fig, args.out_example)
 
 
 if __name__ == '__main__':
