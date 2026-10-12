@@ -65,7 +65,7 @@ TOP_MARGIN = 0.31
 BOTTOM_MARGIN = 0.32
 LEGEND_GAP = 0.11
 # Part of the unit between two traits that the boxes of one trait span.
-GROUP_SPAN = 0.72
+GROUP_SPAN = 0.84
 
 
 def manhattan(ax, summary, row):
@@ -112,7 +112,7 @@ def boxplot_panel(ax, n_traits, slugs, values, ylabel):
         keep = [t for t in range(n_traits) if len(values[slug].get(t, []))]
         boxes = ax.boxplot([values[slug][t] for t in keep],
                            positions=[t + (s - (len(slugs) - 1) / 2) * step for t in keep],
-                           widths=step * 0.75, patch_artist=True, showfliers=False,
+                           widths=step * 0.9, patch_artist=True, showfliers=False,
                            medianprops={'color': 'black', 'linewidth': 0.8},
                            whiskerprops={'linewidth': 0.7}, capprops={'linewidth': 0.7},
                            boxprops={'linewidth': 0.5})
