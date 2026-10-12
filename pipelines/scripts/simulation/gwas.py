@@ -38,9 +38,7 @@ def main():
                             jobs=args.jobs, threads=args.threads)
     summary = gwas.summarize(result)
     np.savez_compressed(args.out, **summary)
-    for t, score in enumerate(summary['neg_log10_p']):
-        print(f'trait {t + 1}: {len(score)} SNPs, max -log10 p {score.max():.2f}, '
-              f'lambda GC {summary["lambda_gc"][t]:.3f}', flush=True)
+    gwas.report(summary)
 
 
 if __name__ == '__main__':

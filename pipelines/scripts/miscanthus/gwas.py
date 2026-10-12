@@ -36,11 +36,7 @@ def main():
                             jobs=args.jobs, threads=args.threads)
     summary = gwas.summarize(result)
     np.savez_compressed(args.out, **summary)
-    threshold = -np.log10(0.05 / summary['neg_log10_p'].shape[1])
-    for fold, score in enumerate(summary['neg_log10_p']):
-        print(f'fold {fold}: {len(score)} SNPs, max -log10 p {score.max():.2f}, '
-              f'{np.sum(score > threshold)} Bonferroni hits, '
-              f'lambda GC {summary["lambda_gc"][fold]:.3f}', flush=True)
+    gwas.report(summary, [f'fold {f}' for f in range(len(summary['lambda_gc']))])
 
 
 if __name__ == '__main__':

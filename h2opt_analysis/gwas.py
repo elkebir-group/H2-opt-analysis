@@ -286,6 +286,23 @@ def summarize(result):
             'lambda_gc': np.median(stats.chi2.isf(p, 1), axis=1) / stats.chi2.ppf(0.5, 1)}
 
 
+def bonferroni_hits(neg_log10_p):
+    """The number of SNPs of each trait (row of neg_log10_p) with p below 0.05 / the number of
+    SNPs."""
+    return np.sum(neg_log10_p > -np.log10(0.05 / neg_log10_p.shape[1]), axis=1)
+
+
+def report(summary, names=None):
+    """Print a summarize result, one line per trait: the number of SNPs, the largest -log10 p, the
+    Bonferroni hits and lambda GC. names: the label of each trait (default 'trait 1', ...)."""
+    score = summary['neg_log10_p']
+    names = names or [f'trait {t + 1}' for t in range(len(score))]
+    for name, s, hits, lam in zip(names, score, bonferroni_hits(score), summary['lambda_gc'],
+                                  strict=True):
+        print(f'{name}: {len(s)} SNPs, max -log10 p {s.max():.2f}, {hits} Bonferroni hits, '
+              f'lambda GC {lam:.3f}', flush=True)
+
+
 def cross_fit(traits, fold_of_row):
     """Cross-fitted trait: the trait of each row from the fold model that held that row out.
 

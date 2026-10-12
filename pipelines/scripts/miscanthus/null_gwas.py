@@ -77,14 +77,9 @@ def main():
     result = gwas.run_gemma(args.genotypes, phenotypes, args.work, covariates=np.load(args.pcs),
                             jobs=1, threads=args.threads)
     scores = gwas.summarize(result)
-    summary = nulls.null_summary(scores, h2(train_test == 0), h2(train_test == 1))
-    np.savez(args.out, permutation=args.permutation, source=source, train_test=train_test,
-             traits=Y, phenotypes=phenotypes, chr=scores['chr'], ps=scores['ps'],
-             neg_log10_p=scores['neg_log10_p'], **summary)
-    print(f'trait 1: h2 train {summary["h2_train"][0]:.3f} test {summary["h2_test"][0]:.3f}, '
-          f'{summary["hits"][0]} Bonferroni hits, max -log10 p '
-          f'{summary["max_neg_log10_p"][0]:.2f}, lambda GC {summary["lambda_gc"][0]:.3f}',
-          flush=True)
+    nulls.save(args.out, scores, h2(train_test == 0), h2(train_test == 1),
+               permutation=args.permutation, source=source, train_test=train_test, traits=Y,
+               phenotypes=phenotypes)
 
 
 if __name__ == '__main__':

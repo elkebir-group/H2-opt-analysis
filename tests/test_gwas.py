@@ -127,3 +127,15 @@ def test_cross_fit_takes_each_row_from_its_held_out_fold():
     np.testing.assert_allclose(r, 1)
     z = (base - base.mean()) / base.std()
     np.testing.assert_allclose(stitched, z)
+
+
+def test_bonferroni_hits_and_report(capsys):
+    # 100 SNPs: threshold -log10(0.05 / 100) = 3.30
+    score = np.zeros((2, 100), dtype=np.float32)
+    score[0, :3] = 3.4
+    score[1, 0] = 3.2
+    assert gwas.bonferroni_hits(score).tolist() == [3, 0]
+    gwas.report({'neg_log10_p': score, 'lambda_gc': np.array([1.0, 1.1])}, ['fold 0', 'fold 1'])
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[0].startswith('fold 0: 100 SNPs') and '3 Bonferroni hits' in lines[0]
+    assert '0 Bonferroni hits, lambda GC 1.100' in lines[1]

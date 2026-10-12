@@ -10,6 +10,8 @@ the row. Subset rows (an environment, a fold) after permuting.
 
 import numpy as np
 
+from .gwas import bonferroni_hits
+
 
 def permute_genotypes(genotypes, strata=None, seed=0):
     """Genotype labels permuted among the rows of each stratum (e.g. field set or treatment).
@@ -61,7 +63,20 @@ def null_summary(summary, h2_train, h2_test):
     """What a permutation null records of its GWAS summary (gwas.summarize): the Bonferroni hits,
     the largest -log10 p and lambda GC of each trait, and the train and test heritability."""
     score = summary['neg_log10_p']
-    threshold = -np.log10(0.05 / score.shape[1])
-    return {'hits': np.sum(score > threshold, axis=1), 'max_neg_log10_p': score.max(axis=1),
+    return {'hits': bonferroni_hits(score), 'max_neg_log10_p': score.max(axis=1),
             'lambda_gc': summary['lambda_gc'], 'h2_train': np.asarray(h2_train),
             'h2_test': np.asarray(h2_test)}
+
+
+def save(out, scores, h2_train, h2_test, **arrays):
+    """Save one permutation of a null to the .npz out and print its summary per trait. Saves the
+    arrays (e.g. the permuted labels, the folds, the traits and the GWAS phenotypes), the -log10 p
+    of every SNP of scores (gwas.summarize) and null_summary."""
+    summary = null_summary(scores, h2_train, h2_test)
+    np.savez(out, **arrays, chr=scores['chr'], ps=scores['ps'],
+             neg_log10_p=scores['neg_log10_p'], **summary)
+    for t in range(len(summary['hits'])):
+        print(f'trait {t + 1}: h2 train {summary["h2_train"][t]:.3f} test '
+              f'{summary["h2_test"][t]:.3f}, {summary["hits"][t]} Bonferroni hits, max -log10 p '
+              f'{summary["max_neg_log10_p"][t]:.2f}, lambda GC {summary["lambda_gc"][t]:.3f}',
+              flush=True)
