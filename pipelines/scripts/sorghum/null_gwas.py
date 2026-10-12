@@ -12,7 +12,7 @@ max -log10 p and lambda GC per trait, train and test heritability under the perm
 
     python pipelines/scripts/sorghum/null_gwas.py --permutation 0 --noise noise.npz \\
         --pcs genotype_pcs.npy --out perm0.npz --work work/perm0 --traits 5 --steps 320000 \\
-        --penalty tv 1e-4 --device cuda --jobs 3 --threads 1
+        --penalty tv 1e-5 --device cuda --jobs 3 --threads 1
 """
 
 import argparse

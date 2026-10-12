@@ -59,6 +59,7 @@ def main():
             with np.load(method[1 + i]) as f:
                 chromosome, position, score = f['chr'], f['ps'], f['neg_log10_p']
             auc[len(score):, m, i] = np.nan  # a file of fewer traits (cross-fitted trait 1)
+            tpr[len(score):, m] = np.nan
             for t in range(min(n_t, len(score))):
                 values, truth = binned(chromosome, position, score[t], qtns[t], args.bin)
                 auc[t, m, i] = roc_auc_score(truth, values)
