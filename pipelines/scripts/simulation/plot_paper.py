@@ -7,8 +7,12 @@ trait 1 of one method on one instance; d mean ROC curves of trait 1; e AUC of tr
 also saved as a .png next to its .pdf. The panels use the functions of plot_traits.py and
 plot_gwas.py, which make the same panels as separate files.
 
+The figures show the ground truth, one H2-opt variant (--h2opt) and the baselines (--baselines).
+The H2-opt variant gets the label and the color of H2-opt.
+
     python pipelines/scripts/simulation/plot_paper.py --evaluation evaluation.npz \\
-        --roc roc.npz --gwas-example instance0/gwas/h2opt.npz \\
+        --roc roc.npz --h2opt h2opt_hybrid --baselines pca genetic_pca pch max_features \\
+        --gwas-example instance0/gwas/h2opt_hybrid.npz \\
         --example-label "H2-opt, instance 0, trait 1" \\
         --out-figure figures/paper/simFig.pdf --out-compare figures/paper/simCompareSNP.pdf
 """
@@ -72,6 +76,20 @@ def boxplot_panel(ax, n_traits, slugs, values, ylabel):
     ax.set_ylabel(ylabel)
 
 
+def select_methods(result, axes, shown, h2opt):
+    """A copy of an evaluate.py or roc.py result with only the methods in shown.
+
+    axes: the per-method arrays to subset, as {key: method axis}. The H2-opt variant h2opt takes
+    the slug 'h2opt', so that the figures give it the label and the color of H2-opt."""
+    methods = list(result['methods'])
+    index = [methods.index(s) for s in shown]
+    selected = {k: result[k] for k in result.files}
+    for key, axis in axes.items():
+        selected[key] = np.take(result[key], index, axis=axis)
+    selected['methods'] = np.array(['h2opt' if s == h2opt else s for s in shown])
+    return selected
+
+
 def letter(ax, text, x=-0.14):
     ax.text(x, 1.02, text, transform=ax.transAxes, fontsize=12, fontweight='bold', va='bottom')
 
@@ -88,6 +106,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--evaluation', required=True)
     parser.add_argument('--roc', required=True)
+    parser.add_argument('--h2opt', required=True,
+                        help='slug of the H2-opt variant shown as H2-opt')
+    parser.add_argument('--baselines', nargs='+', required=True, help='slugs of the baselines')
     parser.add_argument('--gwas-example', required=True,
                         help='gwas.summarize result of the example (trait 1 is shown)')
     parser.add_argument('--example-label', required=True)
@@ -96,7 +117,9 @@ def main():
     args = parser.parse_args()
     plt.rcParams.update({'font.size': FONT_SIZE, 'axes.labelsize': FONT_SIZE,
                          'xtick.labelsize': FONT_SIZE - 1, 'ytick.labelsize': FONT_SIZE - 1})
-    ev, roc = np.load(args.evaluation), np.load(args.roc)
+    shown = [args.h2opt] + args.baselines
+    ev = select_methods(np.load(args.evaluation), {'herit': 0, 'cor': 0}, shown, args.h2opt)
+    roc = select_methods(np.load(args.roc), {'auc': 1, 'tpr': 1}, ['truth'] + shown, args.h2opt)
     summary = np.load(args.gwas_example)
 
     fig = plt.figure(figsize=(7.2, 5.6))

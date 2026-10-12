@@ -343,7 +343,8 @@ rule sim_plot_paper_figures:
     input:
         evaluation=str(SIM_OUT / "evaluation.npz"),
         roc=str(SIM_OUT / "roc.npz"),
-        example=sim_file(SIM["example"]["instance"], f"gwas/{SIM['example']['method']}.npz"),
+        example=sim_file(SIM["example"]["instance"],
+                         f"gwas/{SIM['paper_figures']['h2opt']}.npz"),
     output:
         figure=str(SIM_PAPER / "simFig.pdf"),
         figure_png=str(SIM_PAPER / "simFig.png"),
@@ -352,11 +353,13 @@ rule sim_plot_paper_figures:
     log:
         str(SIM_PAPER / "plot_paper.log"),
     params:
-        label=(f"{LABELS[SIM['example']['method']]}, "
-               f"instance {SIM['example']['instance']}, trait 1"),
+        label=f"{LABELS['h2opt']}, instance {SIM['example']['instance']}, trait 1",
+        h2opt=SIM["paper_figures"]["h2opt"],
+        baselines=" ".join(SIM["paper_figures"]["baselines"]),
     threads: 1
     shell:
         "python -u {SIM_SCRIPTS}/plot_paper.py --evaluation {input.evaluation} --roc {input.roc}"
+        " --h2opt {params.h2opt} --baselines {params.baselines}"
         " --gwas-example {input.example} --example-label '{params.label}'"
         " --out-figure {output.figure} --out-compare {output.compare} > {log} 2>&1"
 
