@@ -52,7 +52,7 @@ def test_pipeline_parses():
             'sorghum_plot_paper_coefficients',
             'sorghum_plot_paper_gwas', 'sorghum_plot_paper_null',
             'arabidopsis_gwas_all', 'arabi_prepare_genotypes',
-            'arabi_run_gwas', 'arabidopsis_paper_figures', 'arabi_paper_pathways',
+            'arabi_run_gwas', 'arabidopsis_paper_figures',
             'arabi_trait_coefficients',
             'arabi_paper_main_figure', 'arabi_paper_heritability', 'arabi_paper_coefficients',
             'arabi_paper_gwas', 'estimator_check_all', 'check_estimator_inputs',
