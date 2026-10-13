@@ -6,8 +6,8 @@ trait 1 per date, H2-opt (hybrid) against linear H2-opt and the baselines (plot_
 .py). c: the median over the folds of |r| between half-sib family means of H2-opt traits of the
 first five dates (date_correlations.py). d: the same with the measured traits of Central Japan,
 the 6 traits with the largest value on these dates (measured_correlations.py). e: the number of
-Bonferroni-significant SNPs of the GWAS of the first fold per date, first five dates
-(plot_paper_gwas.py). Also saved as a .png next to the .pdf.
+SNPs that are Bonferroni-significant in the GWAS of at least one fold, per date, first five
+dates. Also saved as a .png next to the .pdf.
 
     python pipelines/scripts/miscanthus/plot_paper_main.py \\
         --images central/images.npy south/images.npy \\
@@ -26,7 +26,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 from plot_paper_correlations import heatmap, median_abs, sort_traits  # noqa: E402
-from plot_paper_gwas import significant_counts  # noqa: E402
 from plot_paper_heritability import (  # noqa: E402
     FONT_SIZE,
     PAPER_LABELS,
@@ -43,6 +42,17 @@ N_MEASURED = 6
 EXAMPLE_PLANT = 2  # index among the kept plants
 EXAMPLE_DATES = (0, 2, 4)
 RGB = (3, 2, 1)
+
+
+def union_counts(files):
+    """Number of SNPs that are Bonferroni-significant in at least one fold, per file (one file
+    per date, gwas.py result with one row per fold)."""
+    counts = []
+    for file in files:
+        with np.load(file) as f:
+            score = f['neg_log10_p']
+        counts.append(int((score > -np.log10(0.05 / score.shape[1])).any(axis=0).sum()))
+    return np.array(counts)
 
 
 def rgb_image(images, row, date):
@@ -115,7 +125,7 @@ def main():
 
         ax = fig.add_subplot(grid[p, 5])
         letters.setdefault('e', ax)
-        counts = significant_counts(args.gwas[p * N_DATES:(p + 1) * N_DATES])
+        counts = union_counts(args.gwas[p * N_DATES:(p + 1) * N_DATES])
         ax.bar(range(N_DATES), counts, color=COLORS['h2opt_hybrid'])
         ax.set_xticks(range(N_DATES), dates, rotation=90)
         ax.set_ylim(0, max(counts.max(), 1) * 1.15)
@@ -123,7 +133,7 @@ def main():
         ax.set_ylabel('significant SNPs')
         ax.set_title(population.capitalize(), fontsize=FONT_SIZE + 1)
         ax.spines[['top', 'right']].set_visible(False)
-        print(population, 'significant SNPs, first fold, dates 1-5:', counts.tolist())
+        print(population, 'SNPs significant in at least one fold, dates 1-5:', counts.tolist())
     letters['b'].legend(*letters['b'].get_legend_handles_labels(), loc='lower center',
                         bbox_to_anchor=(0.5, 1.12), ncol=3, frameon=False,
                         fontsize=FONT_SIZE - 1, handletextpad=0.2, columnspacing=0.8)
