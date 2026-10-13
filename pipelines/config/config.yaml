@@ -138,6 +138,12 @@ miscanthus:
   # PCH: one ridge for all folds and dates, chosen as the linear H2-opt level
   # (choose_pch_ridge.py, the validation splits of all folds on selection_date).
   baselines: [pca, genetic_pca, pch, max_features, single_band]
+  # Nearest-neighbor field adjustment of the test heritability (evaluate_heritability_spatial.py):
+  # the other-family plots within spatial_width field columns in the same rep. Chosen without
+  # trained traits: the smallest residual correlation of neighboring plots' raw image channel
+  # means after the adjustment (Central +0.02, South +0.03), with the measured traits' heritability
+  # unchanged.
+  spatial_width: 3
   # Linear H2-opt (choose_noise.py, train_h2opt.py) and the hybrid (train_hybrid.py:
   # h2opt.LinearConvModel with h2opt.PositionImageConvModel), Henderson3 loss, Adam. Two noise
   # levels of h2opt.selection.NOISE_LEVELS, each one for all folds and all dates: the linear level

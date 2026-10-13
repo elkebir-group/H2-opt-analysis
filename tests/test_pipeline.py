@@ -27,6 +27,7 @@ def test_pipeline_parses():
             'sorghum_pch_coefficients',
             'sim_sweep_linear_h2opt_noise', 'sim_plot_linear_h2opt_noise_sweep', 'miscanthus_all',
             'misc_prepare_images', 'misc_train_baselines', 'misc_score_heritability',
+            'misc_score_heritability_spatial',
             'misc_plot_heritability', 'misc_choose_linear_h2opt_noise',
             'misc_train_linear_h2opt', 'misc_choose_hybrid_cnn_level',
             'misc_train_hybrid_h2opt',

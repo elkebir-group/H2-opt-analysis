@@ -36,6 +36,8 @@ rule miscanthus_all:
     input:
         expand(str(MISC_OUT / "{population}" / "figures" / "heritability.pdf"),
                population=MISC_POPULATIONS),
+        expand(str(MISC_OUT / "{population}" / "heritability_spatial.npz"),
+               population=MISC_POPULATIONS),
 
 
 # GWAS of trait 1 of hybrid H2-opt, every date and fold. Run only on request.
@@ -270,6 +272,26 @@ rule misc_score_heritability:
     shell:
         "python -u {MISC_SCRIPTS}/evaluate_heritability.py --population {wildcards.population}"
         " {params.methods} --traits {MISC[traits]} --out {output} > {log} 2>&1"
+
+
+# The test heritability after a nearest-neighbor field adjustment (Papadakis 1937), with the
+# measured traits of Central as a control.
+rule misc_score_heritability_spatial:
+    input:
+        h2opt=lambda wc: [f for m in MISC_H2OPT_METHODS for f in misc_date_files(wc.population, m)],
+        baselines=lambda wc: [str(MISC_OUT / wc.population / b / f"fold{f}.npz")
+                              for b in MISC_BASELINES for f in MISC_FOLDS],
+    output:
+        str(MISC_OUT / "{population}" / "heritability_spatial.npz"),
+    log:
+        str(MISC_OUT / "{population}" / "heritability_spatial.log"),
+    params:
+        methods=misc_method_args,
+    threads: 2
+    shell:
+        "python -u {MISC_SCRIPTS}/evaluate_heritability_spatial.py"
+        " --population {wildcards.population} {params.methods}"
+        " --width {MISC[spatial_width]} --out {output} > {log} 2>&1"
 
 
 rule misc_plot_heritability:

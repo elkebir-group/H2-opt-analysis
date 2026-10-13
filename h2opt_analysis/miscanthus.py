@@ -63,6 +63,30 @@ def design(population):
                                  environment=environment[keep], fold=fold[keep])
 
 
+def neighbor_weights(design, width):
+    """Papadakis neighbor matrix of the kept plants (design): row i averages the plants of the
+    plots within width field columns of plant i's plot in the same rep, without plant i's own
+    plot and without other plots of its family. Rows sum to 1 (n x n, float32)."""
+    rep, column = design.environment[:, 0], design.environment[:, 1].astype(int)
+    near = ((rep[:, None] == rep[None]) & (np.abs(column[:, None] - column[None]) <= width)
+            & (design.plots[:, None] != design.plots[None])
+            & (design.families[:, None] != design.families[None])).astype(np.float32)
+    return near / near.sum(axis=1, keepdims=True)
+
+
+def papadakis(y, weights, rows):
+    """Nearest-neighbor adjustment (Papadakis 1937) of the trait y (all kept plants, NaN where
+    missing): y - b (x - mean x), with x the neighbor mean of y (weights, over the plants with a
+    value) and b the least-squares slope of y on x on the plants rows. Returns the adjusted y."""
+    have = np.isfinite(y)
+    w = weights[:, have]
+    x = w @ y[have] / w.sum(axis=1)
+    fit = rows & have
+    xc = x[fit] - x[fit].mean()
+    b = xc @ (y[fit] - y[fit].mean()) / (xc @ xc)
+    return y - b * (x - x[fit].mean())
+
+
 def genotype_rows(population, fam):
     """Row in the .fam file fam of each kept plant (design order), -1 for a plant without
     genotypes. A sample ID is <plate well>_<population>_<plot>_<plant>, e.g. B2FP10D_MsiC_213_5.
