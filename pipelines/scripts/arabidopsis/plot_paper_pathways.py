@@ -1,17 +1,15 @@
-"""Pathway enrichment of the H2-opt traits on Arabidopsis (images/pathwayAll and panel e of
-images/metabFig).
+"""Pathway enrichment of the H2-opt traits on Arabidopsis (panel e of images/metabFig).
 
 A heatmap per treatment: the adjusted Fisher p-value (AdjP.Fisher, adjusted over the pathways of
 one peak list) of each pathway for each trait, on a log color scale; a dot marks p < 0.05. Not the
 mummichog p-value P(Gamma): it is below 0.05 for most pathways also for a peak list ranked without
 a trait (by intensity SD alone), while the adjusted Fisher p-value of that list is at least 0.5.
-pathwayAll shows every pathway with p < 0.05 for a trait of either treatment; panel e shows the TOP
-pathways with the lowest p-value over all traits and treatments. Reads the tables of
-pathway_enrichment.R, traits 1 to k per treatment. Saves each .pdf and a .png next to it.
+The panel shows every pathway with p < 0.05 for a trait of either treatment. Reads the tables of
+pathway_enrichment.R, traits 1 to k per treatment. Saves the .pdf and a .png next to it.
 
     python pipelines/scripts/arabidopsis/plot_paper_pathways.py --treatments 0d 6d \\
         --tables 0d/enrichment/trait{1..10}_pathways.csv 6d/enrichment/trait{1..10}_pathways.csv \\
-        --out-all pathwayAll.pdf --out-top metabFig_e.pdf
+        --out metabFig_e.pdf
 """
 
 import argparse
@@ -26,7 +24,6 @@ from matplotlib.colors import LogNorm  # noqa: E402
 
 P_COLUMN = 'AdjP.Fisher'
 ALPHA = 0.05
-TOP = 5
 
 
 def load(tables, n_treatments):
@@ -65,20 +62,17 @@ def main():
     parser.add_argument('--treatments', nargs='+', required=True)
     parser.add_argument('--tables', nargs='+', required=True,
                         help='pathway tables, traits 1 to k of each treatment in order')
-    parser.add_argument('--out-all', required=True)
-    parser.add_argument('--out-top', required=True)
+    parser.add_argument('--out', required=True)
     args = parser.parse_args()
     if len(args.tables) % len(args.treatments):
         parser.error('give the same number of tables for each treatment')
 
     p, pathways = load(args.tables, len(args.treatments))
     best = np.nanmin(p, axis=(0, 1))
-    significant = [i for i in range(len(pathways)) if best[i] < ALPHA]
-    top = sorted(np.argsort(best)[:TOP])
-    for name, keep, out in (('all', significant, args.out_all), ('top', top, args.out_top)):
-        heatmap(p[:, :, keep], [pathways[i] for i in keep], args.treatments, out)
-        print(f'{name}: {len(keep)} pathways: ' + '; '.join(
-            f'{pathways[i]} (min p {best[i]:.2g})' for i in keep), flush=True)
+    keep = [i for i in range(len(pathways)) if best[i] < ALPHA]
+    heatmap(p[:, :, keep], [pathways[i] for i in keep], args.treatments, args.out)
+    print(f'{len(keep)} pathways: ' + '; '.join(
+        f'{pathways[i]} (min p {best[i]:.2g})' for i in keep), flush=True)
 
 
 if __name__ == '__main__':
