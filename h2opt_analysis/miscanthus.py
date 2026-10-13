@@ -12,6 +12,7 @@ import types
 import numpy as np
 from h2opt import spatial
 
+from . import gwas
 from .paths import data
 
 POPULATIONS = ('central', 'south')
@@ -79,6 +80,18 @@ def papadakis(y, weights, rows):
     """Nearest-neighbor adjustment (Papadakis 1937) of the trait y (all kept plants, NaN where
     missing), with the slope fitted on the plants rows: h2opt.spatial.papadakis."""
     return spatial.papadakis(y, weights, rows)
+
+
+def neighbor_covariates(Y, weights, rows, n_lines):
+    """GWAS covariates of the field (Papadakis 1937 as an analysis of covariance): the neighbor
+    mean (weights, from neighbor_weights) of each column of Y (kept plants x k) after the
+    rank-based inverse normal transform over all plants, in .fam order (rows from genotype_rows,
+    n_lines .fam rows; NaN for a line without a plant)."""
+    neighbor = weights @ gwas.rank_normal(np.asarray(Y).reshape(len(Y), -1))
+    out = np.full((n_lines, neighbor.shape[1]), np.nan)
+    on = np.asarray(rows) >= 0
+    out[rows[on]] = neighbor[on]
+    return out
 
 
 def genotype_rows(population, fam):

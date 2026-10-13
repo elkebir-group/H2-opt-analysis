@@ -33,6 +33,7 @@ def test_pipeline_parses():
             'miscanthus_adjusted_gwas_all',
             'misc_adjusted_crossfit_traits', 'misc_adjusted_run_gwas',
             'misc_adjusted_date_correlations', 'misc_adjusted_measured_correlations',
+            'miscanthus_adjusted_null_all', 'misc_adjusted_null_gwas',
             'misc_plot_heritability', 'misc_choose_linear_h2opt_noise',
             'misc_train_linear_h2opt', 'misc_choose_hybrid_cnn_level',
             'misc_train_hybrid_h2opt',

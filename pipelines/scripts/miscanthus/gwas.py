@@ -46,14 +46,11 @@ def main():
     else:
         weights = miscanthus.neighbor_weights(miscanthus.design(args.population),
                                               args.neighbor_width)
-        neighbor = weights @ gwas.rank_normal(Y)  # plants x folds
-        genotyped = rows >= 0
+        neighbor = miscanthus.neighbor_covariates(Y, weights, rows, n_lines)  # lines x folds
 
         def run(f):
-            covariate = np.full(n_lines, np.nan)
-            covariate[rows[genotyped]] = neighbor[genotyped, f]
             return gwas.run_gemma(args.genotypes, phenotypes[:, f], f'{args.work}/fold{f}',
-                                  covariates=np.column_stack([pcs, covariate]), jobs=1,
+                                  covariates=np.column_stack([pcs, neighbor[:, f]]), jobs=1,
                                   threads=args.threads)
 
         with ThreadPoolExecutor(args.jobs) as pool:

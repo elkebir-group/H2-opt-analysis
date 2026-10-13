@@ -672,6 +672,44 @@ rule misc_adjusted_measured_correlations:
         " > {log} 2>&1"
 
 
+# The permutation null of the adjusted run (null_gwas.py --neighbor-width) on selection_date.
+rule miscanthus_adjusted_null_all:
+    input:
+        expand(str(MISC_ADJ / "{population}" / "null" / "perm{k}.npz"),
+               population=MISC_POPULATIONS, k=range(MISC["gwas"]["permutations"])),
+
+
+rule misc_adjusted_null_gwas:
+    input:
+        images=misc_images,
+        noise=str(MISC_ADJ / "{population}" / "h2opt" / "noise.npz"),
+        cnn_level=str(MISC_OUT / MISC_ADJ_CONFIG["cnn_level_population"] / "h2opt_hybrid"
+                      / "cnn_level.npz"),
+        genotypes=multiext(str(MISC_OUT / "{population}" / "gwas" / "genotypes"),
+                           ".bed", ".bim", ".fam"),
+        pcs=str(MISC_OUT / "{population}" / "gwas" / "genotype_pcs.npy"),
+    output:
+        str(MISC_ADJ / "{population}" / "null" / "perm{k}.npz"),
+    log:
+        str(MISC_ADJ / "{population}" / "null" / "perm{k}.log"),
+    wildcard_constraints:
+        k=r"\d+",
+    params:
+        prefix=lambda wc: str(MISC_OUT / wc.population / "gwas" / "genotypes"),
+        work=lambda wc: str(MISC_ADJ / wc.population / "null" / "work" / f"perm{wc.k}"),
+    threads: MISC["gwas"]["threads"]
+    resources:
+        gpu=lambda wc: 4 if MISC["hybrid"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {MISC_SCRIPTS}/null_gwas.py --population {wildcards.population}"
+        " --images {input.images} --noise {input.noise} --cnn-level {input.cnn_level}"
+        " --date {MISC[selection_date]} --permutation {wildcards.k}"
+        " --genotypes {params.prefix} --pcs {input.pcs} --out {output} --work {params.work}"
+        " --linear-steps {MISC[hybrid][linear_steps]} --steps {MISC[hybrid][steps]}"
+        " --max-copies {MISC[hybrid][max_copies]} --device {MISC[hybrid][device]}"
+        " --threads {MISC[gwas][threads]} --neighbor-width {MISC[spatial_width]} > {log} 2>&1"
+
+
 def misc_adjusted_method_args(wildcards):
     """--by-date and --by-fold arguments of the adjusted run: its H2-opt traits, the main baselines."""
     args = " ".join(
