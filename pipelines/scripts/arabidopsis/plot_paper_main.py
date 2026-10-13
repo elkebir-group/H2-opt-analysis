@@ -155,7 +155,7 @@ def main():
                     (2, arabidopsis.N_MZ, arabidopsis.N_RT))[0, MZ_SHOWN:]
                 image = np.ma.masked_less_equal(image, 0)
                 ax = axes(0.42 + step * k, row, size, height=size, dy=step * k)
-                ax.imshow(image, aspect='auto', interpolation='nearest',
+                ax.imshow(image, aspect='auto', interpolation='none',
                           cmap=plt.get_cmap('magma').with_extremes(bad='black'),
                           norm=LogNorm(vmin=image.min(), vmax=image.max()),
                           extent=(0, arabidopsis.N_RT * RT_BIN, arabidopsis.N_MZ, MZ_SHOWN))
@@ -212,8 +212,11 @@ def main():
             # e: pathway enrichment
             ax = axes(5.42, row, 0.7)
             norm = LogNorm(vmin=1e-3, vmax=1)
-            image = ax.imshow(np.clip(p[row].T, 1e-3, 1), cmap='magma', norm=norm,
-                              aspect='auto')
+            values = np.clip(p[row].T, 1e-3, 1)  # pathways x traits
+            image = ax.pcolormesh(np.arange(values.shape[1] + 1) - 0.5,
+                                  np.arange(values.shape[0] + 1) - 0.5, values, cmap='magma',
+                                  norm=norm)
+            ax.set_ylim(values.shape[0] - 0.5, -0.5)
             r, c = np.nonzero(p[row].T < ALPHA)
             ax.scatter(c, r + 0.25, marker='*', s=5, c='white', linewidths=0)
             ax.set_xticks(range(len(traits)),
