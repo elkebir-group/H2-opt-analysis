@@ -3,7 +3,7 @@
 One row per simulation (--row), each with three panels of boxplots over the instances: the test
 heritability of the true traits and of synthetic traits 1-5; |r| of true trait t with synthetic
 trait t; the AUC of traits 1-3. The figure shows the ground truth, the hybrid H2-opt
-(h2opt_hybrid, labeled 'H2-opt (linear + CNN)' in the color of H2-opt), the linear H2-opt
+(h2opt_hybrid, labeled 'H2-opt (CNN)' in the color of H2-opt), the linear H2-opt
 (h2opt, labeled 'H2-opt (linear)' in a light tint of that color) and PCH. The style is that of
 simFig (plot_paper.py): a panel has the same y-axis in all rows, the letters go down the columns
 and the row labels are at the right of the rows. The figure is also saved as a .png next to the
@@ -42,7 +42,7 @@ from h2opt_analysis.figures import COLORS  # noqa: E402
 from h2opt_analysis.methods import LABELS  # noqa: E402
 
 SHOWN = ['h2opt_hybrid', 'h2opt', 'pch']
-LABELS_LINEAR = {**LABELS, 'h2opt_hybrid': 'H2-opt (linear + CNN)', 'h2opt': 'H2-opt (linear)'}
+LABELS_LINEAR = {**LABELS, 'h2opt_hybrid': 'H2-opt (CNN)', 'h2opt': 'H2-opt (linear)'}
 # The hybrid in the color of H2-opt in simFig (tab:blue), the linear H2-opt in a light tint of it.
 COLORS_LINEAR = {**COLORS, 'h2opt_hybrid': COLORS['h2opt'], 'h2opt': '#9ecae1'}
 FIG_SIZE = (6.5, 3.5)
