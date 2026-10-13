@@ -155,7 +155,7 @@ miscanthus:
   # the dates before canopy closure and two after; the baselines of the main run without PCH,
   # which cannot maximize the adjusted heritability. Scored after the adjustment.
   spatial_pilot:
-    dates: [0, 1, 2, 3, 4, 5, 6, 7]
+    dates: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
     cnn_level_population: central
     baselines: [pca, genetic_pca, max_features, single_band]
   # Linear H2-opt (choose_noise.py, train_h2opt.py) and the hybrid (train_hybrid.py:
