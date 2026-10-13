@@ -402,7 +402,6 @@ rule misc_plot_paper_main:
         heritability=misc_by_population("heritability.npz"),
         dates=misc_by_population("date_correlations.npz"),
         measured=str(MISC_OUT / "central" / "measured_correlations.npz"),
-        gwas=misc_gwas_files(range(5)),
     output:
         str(MISC_PAPER / "miscFig.pdf"),
     log:
@@ -411,7 +410,7 @@ rule misc_plot_paper_main:
     shell:
         "python -u {MISC_SCRIPTS}/plot_paper_main.py --images {input.images}"
         " --heritability {input.heritability} --dates {input.dates}"
-        " --measured {input.measured} --gwas {input.gwas} --out {output} > {log} 2>&1"
+        " --measured {input.measured} --out {output} > {log} 2>&1"
 
 
 rule misc_null_gwas:
