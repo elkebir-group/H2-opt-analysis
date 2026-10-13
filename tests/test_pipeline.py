@@ -30,6 +30,8 @@ def test_pipeline_parses():
             'misc_score_heritability_spatial', 'miscanthus_spatial_all',
             'misc_spatial_choose_linear_h2opt_noise', 'misc_spatial_train_linear_h2opt',
             'misc_spatial_train_hybrid_h2opt', 'misc_spatial_score_heritability',
+            'miscanthus_spatial_gwas_all',
+            'misc_spatial_crossfit_traits', 'misc_spatial_run_gwas',
             'misc_plot_heritability', 'misc_choose_linear_h2opt_noise',
             'misc_train_linear_h2opt', 'misc_choose_hybrid_cnn_level',
             'misc_train_hybrid_h2opt',

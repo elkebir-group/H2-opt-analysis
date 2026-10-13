@@ -596,6 +596,54 @@ rule misc_spatial_train_hybrid_h2opt:
         " --out-models {output.models} > {log} 2>&1"
 
 
+# GWAS of trait 1 of the pilot's hybrid H2-opt per date (all folds) and of its cross-fitted trait,
+# with the neighbor mean as a covariate (gwas.py --neighbor-width); genotypes from the main run.
+rule miscanthus_spatial_gwas_all:
+    input:
+        expand(str(MISC_SP / "{population}" / "gwas" / "{kind}date{date}.npz"),
+               population=MISC_POPULATIONS, kind=["", "crossfit_"], date=MISC_SP_DATES),
+
+
+rule misc_spatial_crossfit_traits:
+    input:
+        str(MISC_SP / "{population}" / "h2opt_hybrid" / "date{date}.npz"),
+    output:
+        str(MISC_SP / "{population}" / "h2opt_hybrid" / "crossfit_date{date}.npz"),
+    log:
+        str(MISC_SP / "{population}" / "h2opt_hybrid" / "crossfit_date{date}.log"),
+    wildcard_constraints:
+        date=r"\d+",
+    threads: 1
+    shell:
+        "python -u {PIPELINE_DIR}/scripts/shared/cross_fit_traits.py --dataset miscanthus"
+        " --population {wildcards.population} --trait 1 --traits {input} --out {output}"
+        " > {log} 2>&1"
+
+
+rule misc_spatial_run_gwas:
+    input:
+        traits=str(MISC_SP / "{population}" / "h2opt_hybrid" / "{kind}date{date}.npz"),
+        genotypes=multiext(str(MISC_OUT / "{population}" / "gwas" / "genotypes"),
+                           ".bed", ".bim", ".fam"),
+        pcs=str(MISC_OUT / "{population}" / "gwas" / "genotype_pcs.npy"),
+    output:
+        str(MISC_SP / "{population}" / "gwas" / "{kind}date{date}.npz"),
+    log:
+        str(MISC_SP / "{population}" / "gwas" / "{kind}date{date}.log"),
+    wildcard_constraints:
+        kind="|crossfit_",
+        date=r"\d+",
+    params:
+        prefix=lambda wc: str(MISC_OUT / wc.population / "gwas" / "genotypes"),
+        work=lambda wc: str(MISC_SP / wc.population / "gwas" / "work" / f"{wc.kind}date{wc.date}"),
+    threads: MISC["gwas"]["jobs"] * MISC["gwas"]["threads"]
+    shell:
+        "python -u {MISC_SCRIPTS}/gwas.py --population {wildcards.population}"
+        " --h2opt-traits {input.traits} --genotypes {params.prefix} --pcs {input.pcs}"
+        " --neighbor-width {MISC[spatial_width]} --out {output} --work {params.work}"
+        " --jobs {MISC[gwas][jobs]} --threads {MISC[gwas][threads]} > {log} 2>&1"
+
+
 def misc_spatial_method_args(wildcards):
     """--by-date and --by-fold arguments of the pilot: its H2-opt traits, the main baselines."""
     args = " ".join(
