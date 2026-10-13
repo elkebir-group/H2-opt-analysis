@@ -1,10 +1,10 @@
 """Main Arabidopsis figure of the paper (Fig. arabiResult, images/metabFig), panels a to e, one row
-per treatment where a panel has one.
+per treatment, with the treatment at the right of the row (as in simFig).
 
 a: the binned MS1 input matrices of the first three samples of each treatment as a stack (log
 scale), with the number of samples n and of accessions c. b: test heritability per trait of H2-opt
-and every baseline, mean over the folds. c: coefficients of traits 1-3 of the first treatment's
-model (MS1 only), the ones with magnitude at least 2% of the trait's largest, the marker area
+and every baseline, mean over the folds. c: coefficients of traits 1-3 of each treatment's model
+(MS1 only), the ones with magnitude at least 2% of the trait's largest, the marker area
 proportional to the magnitude relative to the largest. d: SNPs above the Bonferroni threshold
 0.05 / SNPs, per trait. e: pathway enrichment of each trait, the adjusted Fisher p-value
 (AdjP.Fisher of pathway_enrichment.R, adjusted over the pathways of one peak list) on a log color
@@ -18,7 +18,7 @@ Drawn at the text width of the paper (6.5 in) in the style of simFig. Saves --ou
 
     python pipelines/scripts/arabidopsis/plot_paper_main.py --features features.npy \\
         --treatments 0d 6d --heritability 0d/heritability.npz 6d/heritability.npz \\
-        --coefficients 0d/h2opt/coefficients_fold0.npz \\
+        --coefficients {0d,6d}/h2opt/coefficients_fold0.npz \\
         --gwas 0d/gwas/fold0.npz 6d/gwas/fold0.npz \\
         --pathways {0d,6d}/enrichment/trait{1..10}_pathways.csv \\
         --out metabFig.pdf
@@ -62,6 +62,9 @@ FIG_SIZE = (6.5, 2.35)
 # Rows of panels in inches: the bottoms of the first and the second treatment, and their height.
 ROW_BOTTOM = (1.27, 0.33)
 ROW_HEIGHT = 0.6
+# Row labels (the treatments) at the right of the rows, as in simFig.
+ROW_LABEL_X = 6.33
+ROW_LABEL_SIZE = 7.5
 
 
 def treatment_label(treatment):
@@ -107,15 +110,17 @@ def main():
     parser.add_argument('--features', required=True)
     parser.add_argument('--treatments', nargs='+', required=True)
     parser.add_argument('--heritability', nargs='+', required=True, help='one per treatment')
-    parser.add_argument('--coefficients', required=True,
-                        help='coefficients.py output of the first treatment')
+    parser.add_argument('--coefficients', nargs='+', required=True,
+                        help='coefficients.py output, one per treatment')
     parser.add_argument('--gwas', nargs='+', required=True, help='one per treatment')
     parser.add_argument('--pathways', nargs='+', required=True,
                         help='pathway tables, traits 1 to k of each treatment in order')
     parser.add_argument('--out', required=True)
     args = parser.parse_args()
-    if not len(args.treatments) == len(args.heritability) == len(args.gwas) == 2:
-        parser.error('give two treatments, and one heritability and one GWAS file per treatment')
+    if not (len(args.treatments) == len(args.heritability) == len(args.coefficients)
+            == len(args.gwas) == 2):
+        parser.error('give two treatments, and one heritability, coefficients and GWAS file per '
+                     'treatment')
     if len(args.pathways) % len(args.treatments):
         parser.error('give the same number of pathway tables for each treatment')
 
@@ -171,8 +176,8 @@ def main():
                 ax.set_xlabel('retention time (min)')
             fig.text(0.42 / FIG_SIZE[0],
                      (ROW_BOTTOM[row] + size + step * (STACK - 1) + 0.04) / FIG_SIZE[1],
-                     f'{treatment_label(treatment)}: $n = {len(accessions)}$, '
-                     f'$c = {len(np.unique(accessions))}$', fontsize=TICK_SIZE)
+                     f'$n = {len(accessions)}$, $c = {len(np.unique(accessions))}$',
+                     fontsize=TICK_SIZE)
 
             # b: test heritability per trait, mean over the folds
             results = np.load(args.heritability[row])
@@ -186,7 +191,7 @@ def main():
             ax.set_ylim(0, 1)
             ax.set_yticks([0, 0.5, 1])
             ax.set_xticks(traits, traits if last else [])
-            ax.set_ylabel(f'{treatment_label(treatment)}\ntest heritability')
+            ax.set_ylabel('test heritability')
             ax.spines[['top', 'right']].set_visible(False)
             if last:
                 ax.set_xlabel('synthetic trait')
@@ -199,19 +204,45 @@ def main():
                           handletextpad=0.25, labelspacing=0.1, borderaxespad=0.1,
                           borderpad=0)
 
+            # c: coefficients of traits 1-3 (MS1), larger magnitudes on top
+            coefficients = np.load(args.coefficients[row])['coefficients'][:3, 0]
+            ax = axes(3.2, row, 0.6)
+            for t, (color, marker) in enumerate(TRAIT_STYLE):
+                magnitude = np.abs(coefficients[t]) / np.abs(coefficients[t]).max()
+                mz, rt = np.nonzero(magnitude >= SHOWN)
+                order = np.argsort(magnitude[mz, rt])
+                mz, rt = mz[order], rt[order]
+                ax.scatter((rt + 0.5) * RT_BIN, mz, s=6 * magnitude[mz, rt], color=color,
+                           marker=marker, alpha=0.6, linewidths=0, label=f'trait {t + 1}')
+            ax.set_xlim(0, arabidopsis.N_RT * RT_BIN)
+            ax.set_ylim(MZ_SHOWN, 1300)
+            ax.set_yticks([MZ_SHOWN, 500, 1000])
+            ax.set_xticks([0, 10, 20], [0, 10, 20] if last else [])
+            ax.set_ylabel('$m/z$ (Da)')
+            ax.spines[['top', 'right']].set_visible(False)
+            if last:
+                ax.set_xlabel('retention time (min)')
+            else:
+                legend = ax.legend(loc='lower left', bbox_to_anchor=(0, 1.0), ncol=2,
+                                   frameon=False, fontsize=TICK_SIZE - 0.5, handletextpad=0,
+                                   columnspacing=0.4, labelspacing=0.1, borderaxespad=0.1,
+                                   borderpad=0)
+                for handle in legend.legend_handles:
+                    handle.set_sizes([8])
+                    handle.set_alpha(1)
+
             # d: significant SNPs per trait
-            ax = axes(4.22, row, 0.55)
+            ax = axes(4.27, row, 0.46)
             ax.bar(traits, counts[row], color=COLORS['h2opt'], width=0.7)
             ax.set_xticks(traits, [t if last and t in (1, 5, 10) else '' for t in traits])
             ax.set_ylim(0, max(c.max() for c in counts) * 1.05)
             ax.set_ylabel('significant SNPs')
-            ax.set_title(treatment_label(treatment))
             ax.spines[['top', 'right']].set_visible(False)
             if last:
                 ax.set_xlabel('synthetic trait')
 
             # e: pathway enrichment
-            ax = axes(5.42, row, 0.7)
+            ax = axes(5.29, row, 0.65)
             norm = LogNorm(vmin=1e-3, vmax=1)
             values = np.clip(p[row].T, 1e-3, 1)  # pathways x traits
             image = ax.pcolormesh(np.arange(values.shape[1] + 1) - 0.5,
@@ -225,38 +256,17 @@ def main():
             ax.set_yticks(range(len(pathways)), [short_name(n) for n in pathways],
                           fontsize=TICK_SIZE - 1.5, linespacing=0.9)
             ax.tick_params(length=0)
-            ax.set_title(treatment_label(treatment))
             if last:
                 ax.set_xlabel('synthetic trait')
-            bar = fig.colorbar(image, cax=axes(6.2, row, 0.05), ticks=[1e-3, 1e-2, ALPHA, 1])
+            bar = fig.colorbar(image, cax=axes(5.99, row, 0.05), ticks=[1e-3, 1e-2, ALPHA, 1])
             bar.ax.set_yticklabels(['$10^{-3}$', '$10^{-2}$', '$0.05$', '$1$'])
             bar.ax.tick_params(labelsize=TICK_SIZE - 1, length=1.5)
             bar.outline.set_linewidth(0.6)
+            fig.text(ROW_LABEL_X / FIG_SIZE[0], (ROW_BOTTOM[row] + ROW_HEIGHT / 2) / FIG_SIZE[1],
+                     treatment_label(treatment), rotation=-90, ha='left', va='center',
+                     fontsize=ROW_LABEL_SIZE, fontweight='bold')
 
-        # c: coefficients of traits 1-3 (MS1), larger magnitudes on top
-        coefficients = np.load(args.coefficients)['coefficients'][:3, 0]
-        ax = axes(3.27, 0, 0.6, rows=2)
-        for t, (color, marker) in enumerate(TRAIT_STYLE):
-            magnitude = np.abs(coefficients[t]) / np.abs(coefficients[t]).max()
-            mz, rt = np.nonzero(magnitude >= SHOWN)
-            order = np.argsort(magnitude[mz, rt])
-            mz, rt = mz[order], rt[order]
-            ax.scatter((rt + 0.5) * RT_BIN, mz, s=10 * magnitude[mz, rt], color=color,
-                       marker=marker, alpha=0.6, linewidths=0, label=f'trait {t + 1}')
-        ax.set_xlim(0, arabidopsis.N_RT * RT_BIN)
-        ax.set_ylim(MZ_SHOWN, 1300)
-        ax.set_xticks([0, 10, 20])
-        ax.set_xlabel('retention time (min)')
-        ax.set_ylabel('$m/z$ (Da)')
-        ax.set_title(treatment_label(args.treatments[0]))
-        ax.spines[['top', 'right']].set_visible(False)
-        legend = ax.legend(loc='upper right', frameon=False,
-                           fontsize=TICK_SIZE - 0.5, handletextpad=0.1, labelspacing=0.15,
-                           borderaxespad=0, markerscale=1.0)
-        for handle in legend.legend_handles:
-            handle.set_sizes([10])
-            handle.set_alpha(1)
-        for x, text in ((0.0, 'a'), (1.3, 'b'), (2.92, 'c'), (3.92, 'd'), (4.85, 'e')):
+        for x, text in ((0.0, 'a'), (1.3, 'b'), (2.92, 'c'), (4.02, 'd'), (4.75, 'e')):
             letter(x, text)
         save(fig, args.out)
 

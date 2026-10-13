@@ -236,7 +236,7 @@ rule arabi_paper_main_figure:
         features=ARABI_FEATURES,
         heritability=expand(str(ARABI_OUT / "{treatment}" / "heritability.npz"),
                             treatment=ARABI["treatments"]),
-        coefficients=arabi_paper_coefficients(ARABI["treatments"][0]),
+        coefficients=[arabi_paper_coefficients(t) for t in ARABI["treatments"]],
         gwas=[arabi_paper_gwas(t) for t in ARABI["treatments"]],
         pathways=expand(str(ARABI_OUT / "{treatment}" / "enrichment" / "trait{k}_pathways.csv"),
                         treatment=ARABI["treatments"],
