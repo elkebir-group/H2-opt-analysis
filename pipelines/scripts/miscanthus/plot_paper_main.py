@@ -2,12 +2,14 @@
 
 a: example input images (red, green and blue channels) of one plant on three dates, with the
 number of kept plants n and of half-sib families c. b: the narrow-sense test heritability of
-trait 1 per date, clipped at 0, H2-opt (the hybrid) against the baselines
-(plot_paper_heritability.py). c: the median over the folds of |r| between half-sib family means
-of H2-opt traits of the first five dates (date_correlations.py). d: the same with the measured
-traits of Central Japan, the 6 traits with the largest value on these dates
-(measured_correlations.py). Also saved as a
-.png next to the .pdf.
+trait 1 per date after the nearest-neighbor field adjustment (4 x Henderson3, clipped to [0, 1]
+per fold; the neighbor-adjusted run, evaluate_heritability_spatial.py): the median over the folds
+and a band from the 25th to the 75th percentile, H2-opt with a CNN (the hybrid) and with linear
+functions against the baselines; a dotted line before the date of canopy closure. c: the median
+over the folds of |r| between half-sib family means of H2-opt traits of the first five dates
+(date_correlations.py). d: the same with the measured traits of Central Japan, the 6 traits with
+the largest value on these dates (measured_correlations.py). Also saved as a .png next to the
+.pdf.
 
     python pipelines/scripts/miscanthus/plot_paper_main.py \\
         --images central/images.npy south/images.npy \\
@@ -25,17 +27,16 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 from matplotlib.ticker import MaxNLocator  # noqa: E402
 from plot_paper_correlations import heatmap, median_abs, sort_traits  # noqa: E402
-from plot_paper_heritability import (  # noqa: E402
-    PAPER_LABELS,
-    load_heritability,
-    plot_dates,
-    save,
-)
+from plot_paper_heritability import MARKERS, PAPER_LABELS, narrow, save  # noqa: E402
 
 from h2opt_analysis import miscanthus  # noqa: E402
 from h2opt_analysis.figures import COLORS, MATH_RC, SIM_FIG_RC, TICK_SIZE, letter  # noqa: E402
+from h2opt_analysis.methods import ordered  # noqa: E402
 
 N_DATES = 5  # panels c and d: the dates before canopy closure
+CANOPY_CLOSURE = '07/24'
+LABELS_B = {**PAPER_LABELS, 'h2opt_hybrid': 'H2-opt (CNN)', 'h2opt': 'H2-opt (linear)'}
+MARKERS_B = {**MARKERS, 'h2opt': 'o'}
 N_MEASURED = 6
 EXAMPLE_PLANT = 2  # index among the kept plants
 EXAMPLE_DATES = (0, 2, 4)
@@ -80,6 +81,29 @@ def panel_a(fig, box, images_path, population):
     return n, c
 
 
+def load_adjusted(path):
+    """{method: narrow-sense test heritability of trait 1, dates x folds} of a
+    evaluate_heritability_spatial.py output, in figure order."""
+    with np.load(path) as f:
+        values = dict(zip(f['methods'], narrow(f['test']), strict=True))
+    return {m: values[m] for m in ordered(values)}
+
+
+def plot_bands(ax, curves, dates=miscanthus.DATES):
+    """Per method, the median over the folds (line and markers) and a band from the 25th to the
+    75th percentile; the first method of the figure order on top."""
+    x = np.arange(len(dates))
+    for i, (key, values) in enumerate(curves.items()):
+        low, median, high = np.percentile(values, [25, 50, 75], axis=1)
+        ax.fill_between(x, low, high, color=COLORS[key], alpha=0.2, linewidth=0, zorder=10 - i)
+        ax.plot(x, median, '-', color=COLORS[key], alpha=0.6, lw=1, zorder=10 - i)
+        ax.plot(x, median, MARKERS_B[key], color=COLORS[key], ms=3, label=LABELS_B[key],
+                zorder=10 - i)
+    ax.axvline(dates.index(CANOPY_CLOSURE) - 0.5, color='0.5', ls=':', lw=0.8)
+    ax.set_xticks(x, dates, rotation=60)
+    ax.spines[['top', 'right']].set_visible(False)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--images', nargs=2, required=True, metavar=('CENTRAL', 'SOUTH'))
@@ -106,8 +130,7 @@ def main():
             panel_a(fig, box, args.images[p], population)
 
             ax = axes(1.2, p, 1.65)
-            plot_dates(ax, load_heritability(args.heritability[p], 'test'), COLORS,
-                       PAPER_LABELS)
+            plot_bands(ax, load_adjusted(args.heritability[p]))
             ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=90,
                           fontsize=TICK_SIZE - 1)
             ax.set_title(population.capitalize())

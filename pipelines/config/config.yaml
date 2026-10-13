@@ -149,12 +149,12 @@ miscanthus:
   # means after the adjustment (Central +0.02, South +0.03), with the measured traits' heritability
   # unchanged.
   spatial_width: 3
-  # Pilot (miscanthus_spatial_all, outputs under miscanthus_spatial/): linear and hybrid H2-opt
-  # trained on the heritability after the nearest-neighbor adjustment (spatial_width), the linear
-  # level selected again under it; the CNN level of cnn_level_population for both populations;
-  # the dates before canopy closure and two after; the baselines of the main run without PCH,
-  # which cannot maximize the adjusted heritability. Scored after the adjustment.
-  spatial_pilot:
+  # The run of the paper (miscanthus_adjusted_all, outputs under miscanthus_adjusted/): linear and
+  # hybrid H2-opt trained on the heritability after the nearest-neighbor adjustment
+  # (spatial_width), the linear level selected again under it; the CNN level of
+  # cnn_level_population for both populations; the baselines of the main run without PCH, which
+  # cannot maximize the adjusted heritability. Scored after the adjustment.
+  adjusted:
     dates: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
     cnn_level_population: central
     baselines: [pca, genetic_pca, max_features, single_band]
