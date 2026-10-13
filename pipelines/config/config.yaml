@@ -39,7 +39,7 @@ sorghum:
     traits: 10
   # GEMMA LMM of the per-line trait means.
   gwas:
-    traits: 5
+    traits: 10
     pcs: 5
     jobs: 3      # traits run at once
     threads: 1   # OpenBLAS threads per GEMMA run (its per-SNP fit uses one core)
@@ -51,7 +51,7 @@ sorghum:
     locus_merge: 1000000
     locus_window: 250000
     # The cross-fitted H2-opt traits 1 to crossfit_traits get a GWAS (sorghum_null_gwas_all).
-    crossfit_traits: 5
+    crossfit_traits: 10
 
 simulation:
   instances: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
