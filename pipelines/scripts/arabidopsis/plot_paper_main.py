@@ -60,7 +60,7 @@ SHORT = {'Alanine, aspartate and glutamate metabolism': 'Ala, Asp and Glu',
          'Citrate cycle (TCA cycle)': 'TCA cycle',
          'Glyoxylate and dicarboxylate metabolism': 'glyoxylate'}
 TRAIT_STYLE = (('tab:cyan', 's'), ('tab:pink', 'X'), ('tab:olive', 'P'))
-FIG_SIZE = (6.5, 2.35)
+FIG_SIZE = (6.5, 2.13)
 # Rows of panels in inches: the bottoms of the first and the second treatment, and their height.
 ROW_BOTTOM = (1.27, 0.33)
 ROW_HEIGHT = 0.6
