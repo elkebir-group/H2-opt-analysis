@@ -186,17 +186,18 @@ def main():
             ax.set_ylim(0, 1)
             ax.set_yticks([0, 0.5, 1])
             ax.set_xticks(traits, traits if last else [])
-            ax.set_ylabel('test heritability')
-            ax.set_title(treatment_label(treatment))
+            ax.set_ylabel(f'{treatment_label(treatment)}\ntest heritability')
             ax.spines[['top', 'right']].set_visible(False)
             if last:
                 ax.set_xlabel('synthetic trait')
             else:
+                # above the axes, in the place of the titles of the other panels
                 handles, labels = ax.get_legend_handles_labels()
-                ax.legend(handles[::-1], labels[::-1], loc='lower center',
-                          bbox_to_anchor=(0.5, 1.25), ncol=3, frameon=False,
-                          fontsize=TICK_SIZE - 0.5, handlelength=1.2, columnspacing=0.7,
-                          handletextpad=0.3, labelspacing=0.15, borderaxespad=0)
+                ax.legend(handles[::-1], labels[::-1], loc='lower left',
+                          bbox_to_anchor=(0, 1.0), ncol=3, frameon=False,
+                          fontsize=TICK_SIZE - 0.5, handlelength=1.0, columnspacing=0.5,
+                          handletextpad=0.25, labelspacing=0.1, borderaxespad=0.1,
+                          borderpad=0)
 
             # d: significant SNPs per trait
             ax = axes(4.22, row, 0.55)
