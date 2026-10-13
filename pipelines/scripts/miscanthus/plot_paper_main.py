@@ -41,7 +41,7 @@ EXAMPLE_PLANT = 2  # index among the kept plants
 EXAMPLE_DATES = (0, 2, 4)
 RGB = (3, 2, 1)
 # Drawn at the text width of the paper (6.5 in), in the style of simFig.
-FIG_SIZE = (6.5, 2.6)
+FIG_SIZE = (6.5, 2.45)
 HEATMAP_SIZE = 4.5
 # Rows of panels in inches: the bottoms of the Central and the South row, and their height.
 ROW_BOTTOM = (1.6, 0.4)
@@ -117,8 +117,9 @@ def main():
             if p == 0:
                 letter(ax, 'a', -0.73)
                 letter(ax, 'b', -0.23)
-                ax.legend(loc='lower left', bbox_to_anchor=(-0.4, 1.25), ncol=5, frameon=False,
-                          handletextpad=0.2, columnspacing=1.2, borderaxespad=0)
+                ax.legend(loc='upper right', ncol=2, frameon=False, fontsize=TICK_SIZE - 1,
+                          handletextpad=0.1, columnspacing=0.6, labelspacing=0.2,
+                          borderaxespad=0.1, markerscale=0.8)
 
             ax = axes(3.27, p, 0.85)
             with np.load(args.dates[p]) as f:
