@@ -267,18 +267,19 @@ rule sorghum_reference_gwas_summary:
         h2opt=[str(SORGHUM_OUT / "gwas" / f"h2opt_fold{f}.npz") for f in SORGHUM_FOLDS],
         reference=expand(str(SORGHUM_OUT / "gwas" / "reference" / "{trait}.npz"),
                          trait=SORGHUM_REFERENCE_TRAITS),
+        genotypes=multiext(str(sorghum.GENOTYPES), ".bed", ".bim", ".fam"),
     output:
         str(SORGHUM_OUT / "gwas" / "reference" / "summary.tsv"),
     log:
         str(SORGHUM_OUT / "gwas" / "reference" / "summary.log"),
     params:
-        merge=SORGHUM["gwas"]["locus_merge"],
         window=SORGHUM["gwas"]["locus_window"],
     threads: 1
     shell:
         "python -u {SORGHUM_SCRIPTS}/reference_gwas_summary.py --h2opt {input.h2opt}"
-        " --reference {input.reference} --merge {params.merge} --window {params.window}"
-        " --out {output} > {log} 2>&1"
+        " --genotypes {sorghum.GENOTYPES} --r2 {config[gwas_loci][r2]}"
+        " --kb {config[gwas_loci][kb]} --reference {input.reference}"
+        " --window {params.window} --out {output} > {log} 2>&1"
 
 
 # The figures of the paper, made from the h2opt source (linear H2-opt retrained here). They need

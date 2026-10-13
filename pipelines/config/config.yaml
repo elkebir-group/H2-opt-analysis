@@ -9,6 +9,12 @@ raw_root: null
 # Everything the pipeline writes.
 outputs_root: data/derived
 
+# Loci of the Bonferroni hits of every dataset: LD clumping (h2opt_analysis.gwas.clump) with the
+# PLINK --clump defaults, r^2 above r2 with the lead SNP within kb kilobases.
+gwas_loci:
+  r2: 0.5
+  kb: 250
+
 sorghum:
   folds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
   # The predictions behind the paper (raw data): the traits per fold.
@@ -46,9 +52,8 @@ sorghum:
     # Permutation null of the whole pipeline (null_gwas.py): permutations, each fold 0 and the
     # GWAS traits.
     permutations: 10
-    # Loci of the H2-opt hits (reference_gwas_summary.py): hits at most locus_merge bp apart form
-    # one locus; the reference traits are scored within locus_window bp of it.
-    locus_merge: 1000000
+    # The reference traits are scored within locus_window bp of each locus of the H2-opt hits
+    # (reference_gwas_summary.py; loci from gwas_loci).
     locus_window: 250000
     # The cross-fitted H2-opt traits 1 to crossfit_traits get a GWAS (sorghum_null_gwas_all).
     crossfit_traits: 10

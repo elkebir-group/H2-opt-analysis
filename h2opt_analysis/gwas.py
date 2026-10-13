@@ -297,6 +297,39 @@ def bonferroni_hits(neg_log10_p):
     return np.sum(neg_log10_p > -np.log10(0.05 / neg_log10_p.shape[1]), axis=1)
 
 
+def clump(prefix, chrom, ps, neg_log10_p, r2=0.5, kb=250):
+    """Loci of the Bonferroni hits by LD clumping, as PLINK --clump with p1 = p2 = 0.05 / SNPs.
+
+    neg_log10_p: (rows, SNPs), e.g. the traits of several folds stacked, all of the same SNPs
+    (chrom, ps); each SNP takes its largest value over the rows. The strongest remaining hit is
+    the lead SNP of a new locus, and every remaining hit on its chromosome within kb kilobases and
+    with r^2 above r2 (genotypes of the PLINK set prefix, pairwise complete) joins it. Returns the
+    loci, strongest first, as dicts: lead (SNP index), snps (SNP indices) and rows (the rows with
+    a hit at a SNP of the locus)."""
+    neg_log10_p = np.atleast_2d(neg_log10_p)
+    hit = neg_log10_p > -np.log10(0.05 / neg_log10_p.shape[1])
+    snps = np.flatnonzero(hit.any(axis=0))
+    G = read_bed(prefix, snps)
+    best = neg_log10_p[:, snps].max(axis=0)
+    remaining = list(np.argsort(-best))
+    loci = []
+    while remaining:
+        lead = remaining[0]
+        x = G[:, lead]
+        members = []
+        for k in remaining:
+            y = G[:, k]
+            ok = ~np.isnan(x) & ~np.isnan(y)
+            near = (chrom[snps[k]] == chrom[snps[lead]]
+                    and abs(int(ps[snps[k]]) - int(ps[snps[lead]])) <= kb * 1000)
+            if k == lead or (near and np.corrcoef(x[ok], y[ok])[0, 1] ** 2 > r2):
+                members.append(k)
+        loci.append({'lead': snps[lead], 'snps': snps[members],
+                     'rows': np.flatnonzero(hit[:, snps[members]].any(axis=1))})
+        remaining = [k for k in remaining if k not in members]
+    return loci
+
+
 def report(summary, names=None):
     """Print a summarize result, one line per trait: the number of SNPs, the largest -log10 p, the
     Bonferroni hits and lambda GC. names: the label of each trait (default 'trait 1', ...)."""

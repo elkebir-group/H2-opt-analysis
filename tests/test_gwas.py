@@ -160,3 +160,21 @@ def test_bonferroni_hits_and_report(capsys):
     lines = capsys.readouterr().out.splitlines()
     assert lines[0].startswith('fold 0: 100 SNPs') and '3 Bonferroni hits' in lines[0]
     assert '0 Bonferroni hits, lambda GC 1.100' in lines[1]
+
+
+def test_clump_joins_hits_in_ld_and_nearby():
+    rng = np.random.default_rng(1)
+    G = rng.binomial(2, 0.5, size=(200, 5)).astype(float)
+    G[:, 1] = G[:, 0]  # in LD with SNP 0
+    G[:, 3] = G[:, 0]  # in LD with SNP 0, but far away
+    chrom = np.ones(5, dtype=int)
+    ps = np.array([1_000, 2_000, 3_000, 900_000, 5_000])
+    score = np.zeros((2, 5))
+    score[0, [0, 2, 3]] = [12, 9, 8]
+    score[1, 1] = 10  # SNP 4 is not significant
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(gwas, 'read_bed', lambda prefix, snps: G[:, snps])
+        loci = gwas.clump('g', chrom, ps, score, r2=0.5, kb=250)
+    assert [int(locus['lead']) for locus in loci] == [0, 2, 3]
+    assert [sorted(locus['snps'].tolist()) for locus in loci] == [[0, 1], [2], [3]]
+    assert loci[0]['rows'].tolist() == [0, 1]
