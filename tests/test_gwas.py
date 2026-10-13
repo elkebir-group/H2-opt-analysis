@@ -37,6 +37,27 @@ def test_bed_roundtrip_and_subset(tmp_path):
     assert np.array_equal(gwas.read_bed(tmp_path / 's'), G[keep], equal_nan=True)
 
 
+def test_writers_never_write_through_leftover_symlinks(tmp_path):
+    """A failed run can leave geno.bed and geno.bim as symlinks to the source set; the next run must
+    replace them, not write the subset into the source files."""
+    G = genotypes()
+    write_plink(tmp_path / 'g', G)
+    source = {ext: (tmp_path / f'g.{ext}').read_bytes() for ext in ['bed', 'bim', 'fam']}
+    work = tmp_path / 'work'
+    work.mkdir()
+    for ext in ['bed', 'bim', 'fam']:  # as left by a run with every individual phenotyped
+        (work / f'geno.{ext}').symlink_to(tmp_path / f'g.{ext}')
+    Y = np.random.default_rng(1).normal(size=len(G))
+    Y[::3] = np.nan
+    gwas.run_gemma(tmp_path / 'g', Y, work)
+    assert not (work / 'geno.bed').is_symlink()
+    gwas.write_snp_subset(tmp_path / 'g', np.arange(G.shape[1]) % 2 > 0, work / 'geno')
+    gwas.write_plink_set(tmp_path / 'g', tmp_path / 'g.fam', work / 'geno')
+    gwas.write_snp_subset(tmp_path / 'g', np.arange(G.shape[1]) % 2 > 0, work / 'geno')
+    for ext, content in source.items():
+        assert (tmp_path / f'g.{ext}').read_bytes() == content, ext
+
+
 def test_snp_subset(tmp_path):
     G = genotypes()
     write_plink(tmp_path / 'g', G)

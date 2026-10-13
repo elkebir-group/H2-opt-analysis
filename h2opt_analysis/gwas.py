@@ -9,6 +9,9 @@ intercept when covariates are given (-c), so run_gemma adds one unless told othe
 The GEMMA binary is $GEMMA, or bin/gemma-0.97/gemma in this repository (GEMMA 0.97, the version used
 for the paper). GEMMA 0.97 fails when the number of SNPs analyzed is a multiple of 10,000 (its batch
 size).
+
+Every file written here first replaces whatever is at its path, so a write never goes through a
+symlink that an earlier call left there into the source genotype files (new_file).
 """
 
 import os
@@ -53,17 +56,23 @@ def check_plink_set(prefix):
                          f'{n} individuals of the .fam and {m} SNPs of the .bim')
 
 
+def new_file(path):
+    """path, with any file or symlink at it removed. Write output files only through this: opening
+    a leftover symlink for writing would overwrite the file it points to (such as a source .bed)."""
+    path = Path(path)
+    path.unlink(missing_ok=True)
+    return path
+
+
 def write_plink_set(prefix, fam, out_prefix):
     """PLINK set out_prefix with the .bed of prefix (symlinked), its .bim with every chromosome
     that is not an integer (e.g. unplaced scaffolds) set to 0, and the .fam file fam."""
     out_prefix = Path(out_prefix)
-    link = Path(f'{out_prefix}.bed')
-    link.unlink(missing_ok=True)
-    link.symlink_to(Path(f'{prefix}.bed').resolve())
+    new_file(f'{out_prefix}.bed').symlink_to(Path(f'{prefix}.bed').resolve())
     bim = read_bim(prefix)
     bim[~np.char.isdigit(bim[:, 0]), 0] = '0'
-    np.savetxt(f'{out_prefix}.bim', bim, fmt='%s', delimiter='\t')
-    shutil.copyfile(fam, f'{out_prefix}.fam')
+    np.savetxt(new_file(f'{out_prefix}.bim'), bim, fmt='%s', delimiter='\t')
+    shutil.copyfile(fam, new_file(f'{out_prefix}.fam'))
     check_plink_set(out_prefix)
 
 
@@ -131,13 +140,11 @@ def write_bed_subset(prefix, keep, out_prefix, chunk=20000):
     The .bim is symlinked.
     """
     keep = np.asarray(keep, bool)
-    with open(f'{out_prefix}.bed', 'wb') as dst:
+    with open(new_file(f'{out_prefix}.bed'), 'wb') as dst:
         dst.write(BED_MAGIC)
         for raw in _bed_blocks(prefix, len(keep), chunk):
             dst.write(_pack(_unpack(raw, len(keep))[:, keep]).tobytes())
-    link = Path(f'{out_prefix}.bim')
-    link.unlink(missing_ok=True)
-    link.symlink_to(Path(f'{prefix}.bim').resolve())
+    new_file(f'{out_prefix}.bim').symlink_to(Path(f'{prefix}.bim').resolve())
 
 
 def write_snp_subset(prefix, snps, out_prefix, chunk=20000):
@@ -145,16 +152,16 @@ def write_snp_subset(prefix, snps, out_prefix, chunk=20000):
     true; all individuals are kept."""
     snps = np.asarray(snps, bool)
     start = 0
-    with open(f'{out_prefix}.bed', 'wb') as dst:
+    with open(new_file(f'{out_prefix}.bed'), 'wb') as dst:
         dst.write(BED_MAGIC)
         for raw in _bed_blocks(prefix, len(read_fam(prefix)), chunk):
             dst.write(raw[snps[start:start + len(raw)]].tobytes())
             start += len(raw)
     if start != len(snps):
         raise ValueError(f'{len(snps)} SNP flags for {start} SNPs in {prefix}.bed')
-    with open(f'{prefix}.bim') as src, open(f'{out_prefix}.bim', 'w') as dst:
+    with open(f'{prefix}.bim') as src, open(new_file(f'{out_prefix}.bim'), 'w') as dst:
         dst.writelines(line for line, kept in zip(src, snps, strict=True) if kept)
-    shutil.copyfile(f'{prefix}.fam', f'{out_prefix}.fam')
+    shutil.copyfile(f'{prefix}.fam', new_file(f'{out_prefix}.fam'))
 
 
 def line_means(Y, line_of_row, n_lines):
@@ -213,13 +220,11 @@ def run_gemma(prefix, phenotypes, workdir, covariates=None, intercept=True, jobs
     keep = ~missing[:, 0]
     if keep.all():
         for ext in ['bed', 'bim']:
-            link = workdir / f'geno.{ext}'
-            link.unlink(missing_ok=True)
-            link.symlink_to(f'{prefix}.{ext}')
+            new_file(workdir / f'geno.{ext}').symlink_to(f'{prefix}.{ext}')
     else:
         write_bed_subset(prefix, keep, workdir / 'geno')
     fam_rows = np.hstack([fam[keep], np.char.mod('%.10g', Y[keep])])
-    np.savetxt(workdir / 'geno.fam', fam_rows, fmt='%s', delimiter=' ')
+    np.savetxt(new_file(workdir / 'geno.fam'), fam_rows, fmt='%s', delimiter=' ')
     args = []
     if covariates is not None or intercept:
         if covariates is None:
@@ -230,12 +235,12 @@ def run_gemma(prefix, phenotypes, workdir, covariates=None, intercept=True, jobs
             W = np.hstack([np.ones((len(Y), 1)), W])
         if np.isnan(W[keep]).any():
             raise ValueError('missing covariates for individuals with phenotypes')
-        np.savetxt(workdir / 'covariates.txt', W[keep], fmt='%.17g', delimiter='\t')
+        np.savetxt(new_file(workdir / 'covariates.txt'), W[keep], fmt='%.17g', delimiter='\t')
         args = ['-c', 'covariates.txt']
 
     env = dict(os.environ, OPENBLAS_NUM_THREADS=str(threads), OMP_NUM_THREADS=str(threads))
     def gemma(*options, log):
-        with open(workdir / log, 'w') as out:
+        with open(new_file(workdir / log), 'w') as out:
             return subprocess.Popen([binary, '-bfile', 'geno', '-outdir', 'output', *options],
                                     cwd=workdir, stdout=out, stderr=subprocess.STDOUT, env=env)
 
