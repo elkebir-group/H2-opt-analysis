@@ -297,19 +297,34 @@ def bonferroni_hits(neg_log10_p):
     return np.sum(neg_log10_p > -np.log10(0.05 / neg_log10_p.shape[1]), axis=1)
 
 
+def bim_rows(prefix, chrom, ps):
+    """The .bim row of each SNP given by chromosome and position; an error if a SNP is missing
+    or ambiguous (two .bim rows with its chromosome and position)."""
+    bim = read_bim(prefix)
+    rows = {}
+    for r, key in enumerate(zip(bim[:, 0].astype(int), bim[:, 3].astype(np.int64), strict=True)):
+        rows.setdefault(key, []).append(r)
+    found = [rows.get((int(c), int(p)), []) for c, p in zip(chrom, ps, strict=True)]
+    bad = [(int(c), int(p)) for c, p, f in zip(chrom, ps, found, strict=True) if len(f) != 1]
+    if bad:
+        raise ValueError(f'SNPs missing or ambiguous in {prefix}.bim: {bad[:5]}')
+    return np.array([f[0] for f in found])
+
+
 def clump(prefix, chrom, ps, neg_log10_p, r2=0.5, kb=250):
     """Loci of the Bonferroni hits by LD clumping, as PLINK --clump with p1 = p2 = 0.05 / SNPs.
 
     neg_log10_p: (rows, SNPs), e.g. the traits of several folds stacked, all of the same SNPs
     (chrom, ps); each SNP takes its largest value over the rows. The strongest remaining hit is
     the lead SNP of a new locus, and every remaining hit on its chromosome within kb kilobases and
-    with r^2 above r2 (genotypes of the PLINK set prefix, pairwise complete) joins it. Returns the
-    loci, strongest first, as dicts: lead (SNP index), snps (SNP indices) and rows (the rows with
-    a hit at a SNP of the locus)."""
+    with r^2 above r2 (genotypes of the PLINK set prefix, pairwise complete) joins it. The SNPs are
+    found in the .bim by chromosome and position: GEMMA leaves out some SNPs of the set, so an
+    index into its results is not a .bim row. Returns the loci, strongest first, as dicts: lead
+    (SNP index), snps (SNP indices) and rows (the rows with a hit at a SNP of the locus)."""
     neg_log10_p = np.atleast_2d(neg_log10_p)
     hit = neg_log10_p > -np.log10(0.05 / neg_log10_p.shape[1])
     snps = np.flatnonzero(hit.any(axis=0))
-    G = read_bed(prefix, snps)
+    G = read_bed(prefix, bim_rows(prefix, chrom[snps], ps[snps]))
     best = neg_log10_p[:, snps].max(axis=0)
     remaining = list(np.argsort(-best))
     loci = []

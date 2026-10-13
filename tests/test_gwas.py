@@ -174,7 +174,18 @@ def test_clump_joins_hits_in_ld_and_nearby():
     score[1, 1] = 10  # SNP 4 is not significant
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(gwas, 'read_bed', lambda prefix, snps: G[:, snps])
+        patch.setattr(gwas, 'bim_rows', lambda prefix, c, p: np.searchsorted(ps, p))
         loci = gwas.clump('g', chrom, ps, score, r2=0.5, kb=250)
     assert [int(locus['lead']) for locus in loci] == [0, 2, 3]
     assert [sorted(locus['snps'].tolist()) for locus in loci] == [[0, 1], [2], [3]]
     assert loci[0]['rows'].tolist() == [0, 1]
+
+
+def test_bim_rows_skips_snps_left_out_of_the_results(tmp_path):
+    G = genotypes(n=20, m=6)
+    write_plink(tmp_path / 'g', G)  # positions 1..6 on chromosome 1
+    kept = np.array([0, 2, 5])  # GEMMA left out SNPs 1, 3 and 4
+    rows = gwas.bim_rows(tmp_path / 'g', np.ones(3, dtype=int), kept + 1)
+    assert rows.tolist() == [0, 2, 5]
+    with pytest.raises(ValueError):
+        gwas.bim_rows(tmp_path / 'g', np.array([1]), np.array([99]))
