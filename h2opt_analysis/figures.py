@@ -178,11 +178,16 @@ MARK_COLOR = 'black'
 
 def real_vs_null(ax, real, null, mark=None):
     """Per trait (column): the real values (rows of real) as a box in the color of H2-opt with
-    dark points, and the null values (rows of null) as a light box with gray points beside it.
-    mark: None, or one value per trait (NaN: none) drawn as a black diamond on the real box."""
+    dark points (one row: a diamond in the color of H2-opt), and the null values (rows of null)
+    as a light box with gray points beside it. mark: None, or one value per trait (NaN: none)
+    drawn as a black diamond on the real box."""
     rng = np.random.default_rng(0)
     n_traits = real.shape[1]
     for t in range(n_traits):
+        if len(real) == 1:
+            ax.scatter([t - 0.2], real[:, t], s=22, marker='D', color=COLORS['h2opt'],
+                       edgecolor='white', linewidth=0.4, zorder=4)
+            continue
         boxes = ax.boxplot([real[:, t]], positions=[t - 0.2], widths=0.32, showfliers=False,
                            patch_artist=True, medianprops={'color': 'black', 'linewidth': 0.8},
                            whiskerprops={'color': COLORS['h2opt'], 'linewidth': 0.7},
@@ -191,6 +196,7 @@ def real_vs_null(ax, real, null, mark=None):
         boxes['boxes'][0].set(facecolor=COLORS['h2opt'], edgecolor=COLORS['h2opt'], alpha=0.85)
         ax.scatter(t - 0.2 + rng.uniform(-0.08, 0.08, len(real)), real[:, t], s=5,
                    color=REAL_POINT_COLOR, linewidth=0, zorder=3)
+    for t in range(n_traits):
         ax.boxplot([null[:, t]], positions=[t + 0.2], widths=0.32, showfliers=False,
                    patch_artist=True, boxprops={'facecolor': NULL_FILL, 'edgecolor': NULL_COLOR,
                                                 'linewidth': 0.5},
