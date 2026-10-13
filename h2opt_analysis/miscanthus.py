@@ -10,6 +10,7 @@ and near infrared.
 import types
 
 import numpy as np
+from h2opt import spatial
 
 from .paths import data
 
@@ -76,15 +77,8 @@ def neighbor_weights(design, width):
 
 def papadakis(y, weights, rows):
     """Nearest-neighbor adjustment (Papadakis 1937) of the trait y (all kept plants, NaN where
-    missing): y - b (x - mean x), with x the neighbor mean of y (weights, over the plants with a
-    value) and b the least-squares slope of y on x on the plants rows. Returns the adjusted y."""
-    have = np.isfinite(y)
-    w = weights[:, have]
-    x = w @ y[have] / w.sum(axis=1)
-    fit = rows & have
-    xc = x[fit] - x[fit].mean()
-    b = xc @ (y[fit] - y[fit].mean()) / (xc @ xc)
-    return y - b * (x - x[fit].mean())
+    missing), with the slope fitted on the plants rows: h2opt.spatial.papadakis."""
+    return spatial.papadakis(y, weights, rows)
 
 
 def genotype_rows(population, fam):

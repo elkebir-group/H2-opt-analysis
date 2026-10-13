@@ -287,11 +287,12 @@ rule misc_score_heritability_spatial:
         str(MISC_OUT / "{population}" / "heritability_spatial.log"),
     params:
         methods=misc_method_args,
+        dates=" ".join(str(d) for d in MISC_DATES),
     threads: 2
     shell:
         "python -u {MISC_SCRIPTS}/evaluate_heritability_spatial.py"
         " --population {wildcards.population} {params.methods}"
-        " --width {MISC[spatial_width]} --out {output} > {log} 2>&1"
+        " --dates {params.dates} --width {MISC[spatial_width]} --out {output} > {log} 2>&1"
 
 
 rule misc_plot_heritability:
@@ -502,3 +503,126 @@ rule misc_crossfit_gwas:
         " --h2opt-traits {input.traits} --genotypes {params.prefix} --pcs {input.pcs}"
         " --out {output} --work {params.work} --jobs 1 --threads {MISC[gwas][threads]}"
         " > {log} 2>&1"
+
+
+# Pilot: H2-opt trained on the heritability after the nearest-neighbor field adjustment
+# (config miscanthus.spatial_pilot). Outputs under miscanthus_spatial/; the baselines and images
+# come from the main run.
+MISC_SP = OUT_ROOT / "miscanthus_spatial"
+MISC_SP_CONFIG = MISC["spatial_pilot"]
+MISC_SP_DATES = MISC_SP_CONFIG["dates"]
+
+
+rule miscanthus_spatial_all:
+    input:
+        expand(str(MISC_SP / "{population}" / "heritability_spatial.npz"),
+               population=MISC_POPULATIONS),
+
+
+rule misc_spatial_choose_linear_h2opt_noise:
+    input:
+        misc_images,
+    output:
+        str(MISC_SP / "{population}" / "h2opt" / "noise.npz"),
+    log:
+        str(MISC_SP / "{population}" / "h2opt" / "noise.log"),
+    params:
+        steps=MISC["h2opt"]["steps"],
+        max_copies=MISC["h2opt"]["max_copies"],
+        device=MISC["h2opt"]["device"],
+    threads: 4
+    resources:
+        gpu=lambda wc: 4 if MISC["h2opt"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {MISC_SCRIPTS}/choose_noise.py --population {wildcards.population}"
+        " --images {input} --date {MISC[selection_date]} --out {output} --steps {params.steps}"
+        " --max-copies {params.max_copies} --device {params.device}"
+        " --neighbor-width {MISC[spatial_width]} > {log} 2>&1"
+
+
+rule misc_spatial_train_linear_h2opt:
+    input:
+        images=misc_images,
+        noise=str(MISC_SP / "{population}" / "h2opt" / "noise.npz"),
+    output:
+        traits=str(MISC_SP / "{population}" / "h2opt" / "date{date}.npz"),
+        models=str(MISC_SP / "{population}" / "h2opt" / "date{date}.pt"),
+    log:
+        str(MISC_SP / "{population}" / "h2opt" / "date{date}.log"),
+    wildcard_constraints:
+        date=r"\d+",
+    params:
+        steps=MISC["h2opt"]["steps"],
+        device=MISC["h2opt"]["device"],
+    threads: 2
+    resources:
+        gpu=lambda wc: 2 if MISC["h2opt"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {MISC_SCRIPTS}/train_h2opt.py --population {wildcards.population}"
+        " --images {input.images} --noise {input.noise} --date {wildcards.date}"
+        " --traits {MISC[traits]} --steps {params.steps} --device {params.device}"
+        " --neighbor-width {MISC[spatial_width]}"
+        " --out {output.traits} --out-models {output.models} > {log} 2>&1"
+
+
+rule misc_spatial_train_hybrid_h2opt:
+    input:
+        images=misc_images,
+        noise=str(MISC_SP / "{population}" / "h2opt" / "noise.npz"),
+        cnn_level=str(MISC_OUT / MISC_SP_CONFIG["cnn_level_population"] / "h2opt_hybrid"
+                      / "cnn_level.npz"),
+    output:
+        traits=str(MISC_SP / "{population}" / "h2opt_hybrid" / "date{date}.npz"),
+        models=str(MISC_SP / "{population}" / "h2opt_hybrid" / "date{date}.pt"),
+    log:
+        str(MISC_SP / "{population}" / "h2opt_hybrid" / "date{date}.log"),
+    wildcard_constraints:
+        date=r"\d+",
+    params:
+        linear_steps=MISC["hybrid"]["linear_steps"],
+        steps=MISC["hybrid"]["steps"],
+        max_copies=MISC["hybrid"]["max_copies"],
+        device=MISC["hybrid"]["device"],
+    threads: 2
+    resources:
+        gpu=lambda wc: 4 if MISC["hybrid"]["device"] == "cuda" else 0,
+    shell:
+        "python -u {MISC_SCRIPTS}/train_hybrid.py --population {wildcards.population}"
+        " --images {input.images} --noise {input.noise} --cnn-level {input.cnn_level}"
+        " --date {wildcards.date} --traits {MISC[traits]}"
+        " --linear-steps {params.linear_steps} --steps {params.steps}"
+        " --max-copies {params.max_copies} --device {params.device}"
+        " --neighbor-width {MISC[spatial_width]} --out {output.traits}"
+        " --out-models {output.models} > {log} 2>&1"
+
+
+def misc_spatial_method_args(wildcards):
+    """--by-date and --by-fold arguments of the pilot: its H2-opt traits, the main baselines."""
+    args = " ".join(
+        f"--by-date {m} " + " ".join(str(MISC_SP / wildcards.population / m / f"date{d}.npz")
+                                     for d in MISC_SP_DATES)
+        for m in MISC_H2OPT_METHODS)
+    for baseline in MISC_SP_CONFIG["baselines"]:
+        args += f" --by-fold {baseline} " + " ".join(
+            str(MISC_OUT / wildcards.population / baseline / f"fold{f}.npz") for f in MISC_FOLDS)
+    return args
+
+
+rule misc_spatial_score_heritability:
+    input:
+        h2opt=lambda wc: [str(MISC_SP / wc.population / m / f"date{d}.npz")
+                          for m in MISC_H2OPT_METHODS for d in MISC_SP_DATES],
+        baselines=lambda wc: [str(MISC_OUT / wc.population / b / f"fold{f}.npz")
+                              for b in MISC_SP_CONFIG["baselines"] for f in MISC_FOLDS],
+    output:
+        str(MISC_SP / "{population}" / "heritability_spatial.npz"),
+    log:
+        str(MISC_SP / "{population}" / "heritability_spatial.log"),
+    params:
+        methods=misc_spatial_method_args,
+        dates=" ".join(str(d) for d in MISC_SP_DATES),
+    threads: 2
+    shell:
+        "python -u {MISC_SCRIPTS}/evaluate_heritability_spatial.py"
+        " --population {wildcards.population} {params.methods}"
+        " --dates {params.dates} --width {MISC[spatial_width]} --out {output} > {log} 2>&1"

@@ -41,6 +41,9 @@ def main():
     parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
     parser.add_argument('--out', required=True)
     parser.add_argument('--out-models', required=True, help='.pt: the list of fold models')
+    parser.add_argument('--neighbor-width', type=int,
+                        help='train on the heritability after the nearest-neighbor field '
+                             'adjustment (h2opt.spatial), neighbors within this many columns')
     args = parser.parse_args()
 
     torch.manual_seed(args.date)
@@ -58,7 +61,9 @@ def main():
         lambda: PositionImageConvModel(x.shape[1], x.shape[2:]), x, design.families,
         design.environment, train_test, noise_sd[:, None], conv_sd[:, None], n_traits=args.traits,
         n_linear_iter=args.linear_steps, n_iter=args.steps, device=args.device,
-        subgroups=design.plots, estimator='henderson3', max_copies=args.max_copies)
+        subgroups=design.plots, estimator='henderson3', max_copies=args.max_copies,
+        neighbors=None if args.neighbor_width is None
+        else miscanthus.neighbor_weights(design, args.neighbor_width))
     torch.save(models, args.out_models)
     np.savez(args.out, traits=np.stack([synthetic_traits(m, x, tt == 0)
                                         for m, tt in zip(models, train_test, strict=True)]))

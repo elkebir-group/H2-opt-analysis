@@ -32,6 +32,9 @@ def main():
     parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
     parser.add_argument('--out', required=True)
     parser.add_argument('--out-models', required=True, help='.pt: the list of fold models')
+    parser.add_argument('--neighbor-width', type=int,
+                        help='train on the heritability after the nearest-neighbor field '
+                             'adjustment (h2opt.spatial), neighbors within this many columns')
     args = parser.parse_args()
 
     torch.manual_seed(args.date)
@@ -45,7 +48,9 @@ def main():
     models = [TraitModels(args.traits, LinearModel, x.shape[1]) for _ in folds]
     train_models(models, x, design.families, design.environment, train_test,
                  n_traits=args.traits, n_iter=args.steps, noise_sd=noise_sd[:, None],
-                 device=args.device, subgroups=design.plots, estimator='henderson3')
+                 device=args.device, subgroups=design.plots, estimator='henderson3',
+                 neighbors=None if args.neighbor_width is None
+                 else miscanthus.neighbor_weights(design, args.neighbor_width))
     torch.save(models, args.out_models)
     np.savez(args.out, traits=np.stack([synthetic_traits(m, x, tt == 0)
                                         for m, tt in zip(models, train_test, strict=True)]))

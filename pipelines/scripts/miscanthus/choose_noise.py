@@ -44,11 +44,16 @@ def main():
     parser.add_argument('--max-copies', type=int,
                         help='models trained at once (GPU memory; a multiple of the levels)')
     parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
+    parser.add_argument('--neighbor-width', type=int,
+                        help='train on the heritability after the nearest-neighbor field '
+                             'adjustment (h2opt.spatial), neighbors within this many columns')
     args = parser.parse_args()
 
     design = miscanthus.design(args.population)
     folds = np.arange(miscanthus.N_FOLDS)
     subsets = np.array([design.fold != f for f in folds])
+    neighbors = (None if args.neighbor_width is None
+                 else miscanthus.neighbor_weights(design, args.neighbor_width))
 
     def pixels(date):
         x = miscanthus.load_date(args.images, design.keep, date)
@@ -58,7 +63,8 @@ def main():
     _, scores, _ = select_noise_level(
         lambda: LinearModel(x.shape[1]), x, design.families, design.environment, subsets,
         subgroups=design.plots, estimator='henderson3', split_units=np.arange(len(x)),
-        n_iter=args.steps, device=args.device, max_copies=args.max_copies)
+        n_iter=args.steps, device=args.device, max_copies=args.max_copies,
+        neighbors=neighbors)
     chosen = highest_level_within_one_se(NOISE_LEVELS, scores.reshape((-1, len(NOISE_LEVELS))))
     noise_sd = np.zeros((len(folds), len(miscanthus.DATES)))
     for d in range(len(miscanthus.DATES)):

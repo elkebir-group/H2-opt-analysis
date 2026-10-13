@@ -1,8 +1,10 @@
 """Henderson3 test heritability of the Miscanthus traits after a nearest-neighbor field
 adjustment (Papadakis 1937; h2opt_analysis.miscanthus.papadakis), every method, date and fold.
 
-The traits are read as in evaluate_heritability.py. For each fold, trait 1 of all kept plants is
-adjusted by the mean of the plants of the other-family plots within --width field columns in the
+The traits are read as in evaluate_heritability.py, for the dates --dates (indices into
+miscanthus.DATES; one --by-date file per listed date, --by-fold files hold all dates). For each
+fold, trait 1 of all kept plants is adjusted by the mean of the plants of the other-family plots
+within --width field columns in the
 same rep (the slope fitted on the fold's test plants) and scored by Henderson3 (families, plots
 within families, rep and field column fixed) on the test plants. Central only: the measured
 traits (measured_correlations.py) are scored on all plants with a value, before and after the
@@ -12,7 +14,7 @@ narrow-sense test heritability (4 x Henderson3, clipped to [0, 1] per fold) per 
 
     python pipelines/scripts/miscanthus/evaluate_heritability_spatial.py --population central \\
         --by-date h2opt_hybrid date0.npz ... date13.npz --by-fold pch fold0.npz ... fold4.npz \\
-        --width 3 --out heritability_spatial.npz
+        --dates 0 1 ... 13 --width 3 --out heritability_spatial.npz
 """
 
 import argparse
@@ -37,20 +39,23 @@ def main():
                         metavar=('METHOD', 'FILE'), help='a method and one file per date')
     parser.add_argument('--by-fold', nargs='+', action='append', default=[],
                         metavar=('METHOD', 'FILE'), help='a method and one file per fold')
+    parser.add_argument('--dates', type=int, nargs='+', required=True,
+                        help='indices into miscanthus.DATES')
     parser.add_argument('--width', type=int, required=True, help='neighbor columns on each side')
     parser.add_argument('--out', required=True)
     args = parser.parse_args()
 
     design = miscanthus.design(args.population)
     weights = miscanthus.neighbor_weights(design, args.width)
-    n_dates, n_folds = len(miscanthus.DATES), miscanthus.N_FOLDS
+    dates, n_folds = args.dates, miscanthus.N_FOLDS
+    n_dates = len(dates)
     traits = {}  # method -> dates x folds x plants (trait 1)
     for method, *files in args.by_date:
         assert len(files) == n_dates, f'{method}: give one file per date'
         traits[method] = np.stack([np.load(f)['traits'][..., 0] for f in files])
     for method, *files in args.by_fold:
         assert len(files) == n_folds, f'{method}: give one file per fold'
-        traits[method] = np.stack([np.load(f)['traits'][..., 0] for f in files], axis=1)
+        traits[method] = np.stack([np.load(f)['traits'][dates, ..., 0] for f in files], axis=1)
     methods = list(traits)
     test = np.zeros((len(methods), n_dates, n_folds))
     for m, method in enumerate(methods):
@@ -60,7 +65,8 @@ def main():
                 test[m, d, f] = h3(miscanthus.papadakis(traits[method][d, f], weights, rows),
                                    design, rows)
         print(f'{method} done', flush=True)
-    out = dict(methods=methods, dates=miscanthus.DATES, test=test, width=args.width)
+    out = dict(methods=methods, dates=[miscanthus.DATES[d] for d in dates], test=test,
+               width=args.width)
 
     if args.population == 'central':
         names = list(MEASURED_TRAITS)
@@ -81,7 +87,7 @@ def main():
     print(f'mean narrow-sense test heritability of trait 1 after the adjustment (width '
           f'{args.width}; 4 x Henderson3, clipped to [0, 1] per fold), per date')
     print(f'{"date":8s}' + ''.join(f'{m:>14s}' for m in methods))
-    for d, date in enumerate(miscanthus.DATES):
+    for d, date in enumerate(out['dates']):
         row = np.clip(4 * test[:, d], 0, 1).mean(axis=1)
         print(f'{date:8s}' + ''.join(f'{v:14.3f}' for v in row))
 
