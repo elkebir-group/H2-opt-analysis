@@ -393,8 +393,8 @@ rule misc_plot_paper_heritability:
 
 rule misc_plot_paper_correlations:
     input:
-        dates=misc_by_population("date_correlations.npz"),
-        measured=str(MISC_OUT / "central" / "measured_correlations.npz"),
+        dates=[str(MISC_ADJ / p / "date_correlations.npz") for p in miscanthus.POPULATIONS],
+        measured=str(MISC_ADJ / "central" / "measured_correlations.npz"),
     output:
         dates_plant=str(MISC_PAPER / "miscCorTimeSimple.pdf"),
         dates_family=str(MISC_PAPER / "miscCorTime.pdf"),
