@@ -223,10 +223,9 @@ def main():
             if last:
                 ax.set_xlabel('retention time (min)')
             else:
-                legend = ax.legend(loc='lower left', bbox_to_anchor=(0, 1.0), ncol=2,
-                                   frameon=False, fontsize=TICK_SIZE - 0.5, handletextpad=0,
-                                   columnspacing=0.4, labelspacing=0.1, borderaxespad=0.1,
-                                   borderpad=0)
+                legend = ax.legend(loc='upper right', bbox_to_anchor=(1.05, 1.08), frameon=False,
+                                   fontsize=TICK_SIZE - 0.5, handletextpad=0, labelspacing=0.1,
+                                   borderaxespad=0, borderpad=0)
                 for handle in legend.legend_handles:
                     handle.set_sizes([8])
                     handle.set_alpha(1)
