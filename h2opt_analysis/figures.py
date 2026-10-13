@@ -164,3 +164,75 @@ def plot_gwas(path, summary, rows, row_labels, title, dpi=150):
     fig.tight_layout()
     fig.savefig(path, dpi=dpi)
     plt.close(fig)
+
+
+# Real results against the permutation null (simNull and the null figures of the real datasets):
+# the null in gray, the real results in the color of H2-opt, one marked result (the cross-fit) as
+# a black diamond.
+NULL_COLOR = '0.55'
+NULL_LINE_COLOR = '0.78'
+NULL_FILL = '0.92'
+REAL_POINT_COLOR = '#0b3c66'  # the points over the H2-opt boxes
+MARK_COLOR = 'black'
+
+
+def real_vs_null(ax, real, null, mark=None):
+    """Per trait (column): the real values (rows of real) as a box in the color of H2-opt with
+    dark points, and the null values (rows of null) as a light box with gray points beside it.
+    mark: None, or one value per trait (NaN: none) drawn as a black diamond on the real box."""
+    rng = np.random.default_rng(0)
+    n_traits = real.shape[1]
+    for t in range(n_traits):
+        boxes = ax.boxplot([real[:, t]], positions=[t - 0.2], widths=0.32, showfliers=False,
+                           patch_artist=True, medianprops={'color': 'black', 'linewidth': 0.8},
+                           whiskerprops={'color': COLORS['h2opt'], 'linewidth': 0.7},
+                           capprops={'color': COLORS['h2opt'], 'linewidth': 0.7},
+                           boxprops={'linewidth': 0.5})
+        boxes['boxes'][0].set(facecolor=COLORS['h2opt'], edgecolor=COLORS['h2opt'], alpha=0.85)
+        ax.scatter(t - 0.2 + rng.uniform(-0.08, 0.08, len(real)), real[:, t], s=5,
+                   color=REAL_POINT_COLOR, linewidth=0, zorder=3)
+        ax.boxplot([null[:, t]], positions=[t + 0.2], widths=0.32, showfliers=False,
+                   patch_artist=True, boxprops={'facecolor': NULL_FILL, 'edgecolor': NULL_COLOR,
+                                                'linewidth': 0.5},
+                   medianprops={'color': NULL_COLOR, 'linewidth': 0.8},
+                   whiskerprops={'color': NULL_COLOR, 'linewidth': 0.6},
+                   capprops={'color': NULL_COLOR, 'linewidth': 0.6})
+        ax.scatter(t + 0.2 + rng.uniform(-0.08, 0.08, len(null)), null[:, t], s=5,
+                   color=NULL_COLOR, linewidth=0, zorder=3)
+    if mark is not None:
+        ax.scatter(np.arange(n_traits) - 0.2, mark, s=22, marker='D', color=MARK_COLOR,
+                   edgecolor='white', linewidth=0.4, zorder=4)
+    ax.set_xticks(range(n_traits), [str(t + 1) for t in range(n_traits)])
+    ax.set_xlim(-0.5, n_traits - 0.5)
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.grid(axis='y', color='0.9', linewidth=0.6)
+    ax.set_axisbelow(True)
+    ax.set_xlabel('trait')
+
+
+def qq_curve(ax, score, color, linewidth, zorder, alpha=1.0):
+    """QQ curve of one GWAS (-log10 p of all SNPs); returns the largest expected -log10 p."""
+    observed = np.sort(score)
+    expected = -np.log10(np.arange(len(observed), 0, -1) / (len(observed) + 1))
+    ax.plot(expected, observed, color=color, linewidth=linewidth, zorder=zorder, alpha=alpha,
+            rasterized=True)
+    return expected.max()
+
+
+def qq_real_vs_null(ax, reals, nulls, mark=None):
+    """QQ plot: each null GWAS in light gray, each real GWAS in the color of H2-opt (thin when
+    there are several), mark (one GWAS, or None) in black; the diagonal (dashed) and the
+    Bonferroni line 0.05 / SNPs (dotted)."""
+    for score in nulls:
+        qq_curve(ax, score, NULL_LINE_COLOR, 0.8, 2)
+    for score in reals:
+        top = qq_curve(ax, score, COLORS['h2opt'], 1.0 if len(reals) == 1 else 0.6, 3,
+                       1.0 if len(reals) == 1 else 0.6)
+    if mark is not None:
+        qq_curve(ax, mark, MARK_COLOR, 1.0, 4)
+    ax.plot([0, top], [0, top], color='black', linewidth=0.6, linestyle='--', zorder=1)
+    ax.axhline(-np.log10(0.05 / len(reals[0])), color='black', linestyle=':', linewidth=0.8)
+    ax.set_xlim(0, None)
+    ax.set_ylim(0, None)
+    ax.spines[['top', 'right']].set_visible(False)
+    ax.set_xlabel(r'expected $-\log_{10} p$')

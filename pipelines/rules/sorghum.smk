@@ -287,7 +287,7 @@ rule sorghum_paper_figures:
     input:
         expand(str(SORGHUM_PAPER_FIGURES / "{stem}.pdf"),
                stem=["sorFig", "multiTraitHerit_all", "sorCoefficients", "crossGWAS",
-                     "sorGWAS"]),
+                     "sorGWAS", "sorNull"]),
 
 
 rule sorghum_plot_paper_main:
@@ -365,6 +365,28 @@ rule sorghum_plot_paper_gwas:
         "python -u {SORGHUM_SCRIPTS}/plot_paper_gwas.py --folds {params.folds} --gwas {input}"
         " --trait 1 --example-fold {params.example} --out-folds {output.folds}"
         " --out-manhattan {output.manhattan} > {log} 2>&1"
+
+
+# sorNull: the GWAS of the H2-opt traits of all folds against their cross-fit and the permutation
+# null (test heritability, largest -log10 p, QQ plot, lambda GC), in the style of simNull.
+rule sorghum_plot_paper_null:
+    input:
+        gwas=[str(SORGHUM_OUT / "gwas" / f"h2opt_fold{f}.npz") for f in SORGHUM_FOLDS],
+        heritability=str(SORGHUM_OUT / "heritability_h2opt.npz"),
+        nulls=expand(str(SORGHUM_OUT / "null" / "perm{k}.npz"),
+                     k=range(SORGHUM["gwas"]["permutations"])),
+        crossfit=expand(str(SORGHUM_OUT / "gwas" / "h2opt_crossfit_trait{trait}.npz"),
+                        trait=range(1, SORGHUM["gwas"]["crossfit_traits"] + 1)),
+    output:
+        pdf=str(SORGHUM_PAPER_FIGURES / "sorNull.pdf"),
+        png=str(SORGHUM_PAPER_FIGURES / "sorNull.png"),
+    log:
+        str(SORGHUM_PAPER_FIGURES / "sorNull.log"),
+    threads: 1
+    shell:
+        "python -u {SORGHUM_SCRIPTS}/plot_paper_null.py --gwas {input.gwas}"
+        " --heritability {input.heritability} --null {input.nulls} --crossfit {input.crossfit}"
+        " --out {output.pdf} > {log} 2>&1"
 
 
 rule sorghum_null_gwas:

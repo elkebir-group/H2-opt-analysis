@@ -374,9 +374,10 @@ rule sim_plot_paper_figures:
         " --out-example {output.example} > {log} 2>&1"
 
 
-# simNull: per simulation of simulation.paper_figures.rows, the real H2-opt traits of the null
-# instance (simulation.paper_figures.null_methods) against the permutation null (sim_null_gwas,
-# img_null_gwas): test heritability, QQ plot of trait 1 and lambda GC of traits 1-3.
+# simNull: per simulation of simulation.paper_figures.rows, the real H2-opt traits of all instances
+# (simulation.paper_figures.null_methods) and the cross-fit of the null instance against the
+# permutation null of the null instance (sim_null_gwas, img_null_gwas): test heritability, largest
+# -log10 p, QQ plot of trait 1 and lambda GC of traits 1-3.
 SIM_NULL_SLUGS = SIM["paper_figures"]["null_methods"]
 
 
@@ -388,10 +389,17 @@ def sim_null_perms(sim):
     return [sim_null_files(sim, f"null/perm{k}.npz") for k in range(SIM["gwas"]["permutations"])]
 
 
+def sim_instance_gwas(sim):
+    return [str(OUT_ROOT / sim / f"instance{i}" / "gwas" / f"{SIM_NULL_SLUGS[sim]}.npz")
+            for i in SIM["instances"]]
+
+
 rule sim_plot_paper_null:
     input:
         evaluations=[str(OUT_ROOT / s / "evaluation.npz") for s in SIM_PAPER_ROWS],
-        gwas=[sim_null_files(s, f"gwas/{SIM_NULL_SLUGS[s]}.npz") for s in SIM_PAPER_ROWS],
+        gwas=[f for s in SIM_PAPER_ROWS for f in sim_instance_gwas(s)],
+        crossfit=[sim_null_files(s, f"gwas/{SIM_NULL_SLUGS[s]}_crossfit.npz")
+                  for s in SIM_PAPER_ROWS],
         nulls=[f for s in SIM_PAPER_ROWS for f in sim_null_perms(s)],
     output:
         figure=str(SIM_PAPER / "simNull.pdf"),
@@ -400,13 +408,15 @@ rule sim_plot_paper_null:
         str(SIM_PAPER / "plot_paper_null.log"),
     params:
         rows=" ".join(
-            f"--row '{label}' {SIM_NULL_SLUGS[s]} {OUT_ROOT / s / 'evaluation.npz'} "
-            f"{sim_null_files(s, f'gwas/{SIM_NULL_SLUGS[s]}.npz')} " + " ".join(sim_null_perms(s))
+            f"--label '{label}' --slug {SIM_NULL_SLUGS[s]}"
+            f" --evaluation {OUT_ROOT / s / 'evaluation.npz'}"
+            f" --gwas {' '.join(sim_instance_gwas(s))}"
+            f" --crossfit {sim_null_files(s, f'gwas/{SIM_NULL_SLUGS[s]}_crossfit.npz')}"
+            f" --null {' '.join(sim_null_perms(s))}"
             for s, label in SIM_PAPER_ROWS.items()),
-        instance=SIM["gwas"]["null_instance"],
     threads: 1
     shell:
-        "python -u {SIM_SCRIPTS}/plot_paper_null.py {params.rows} --instance {params.instance}"
+        "python -u {SIM_SCRIPTS}/plot_paper_null.py {params.rows}"
         " --out {output.figure} > {log} 2>&1"
 
 
