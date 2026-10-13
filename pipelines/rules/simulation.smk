@@ -330,10 +330,11 @@ rule sim_plot_gwas:
 
 # The simulation figures of the paper (file stems as in the paper's images/), from the saved
 # results. They need the GWAS outputs, so they are not part of simulation_all. simFig has one row
-# per simulation of simulation.paper_figures.rows; simCompareSNP and simGWASexample show the
-# spectral simulation.
+# per simulation of simulation.paper_figures.rows, each with its H2-opt variant
+# (simulation.paper_figures.h2opt); simCompareSNP and simGWASexample show the spectral simulation.
 SIM_PAPER = SIM_OUT / "figures" / "paper"
 SIM_PAPER_ROWS = SIM["paper_figures"]["rows"]
+SIM_PAPER_H2OPT = SIM["paper_figures"]["h2opt"]
 
 
 rule simulation_paper_figures:
@@ -349,7 +350,7 @@ rule sim_plot_paper_figures:
         rocs=[str(OUT_ROOT / s / "roc.npz") for s in SIM_PAPER_ROWS],
         compare=str(SIM_OUT / "roc.npz"),
         example=sim_file(SIM["example"]["instance"],
-                         f"gwas/{SIM['paper_figures']['h2opt']}.npz"),
+                         f"gwas/{SIM_PAPER_H2OPT['simulation']}.npz"),
     output:
         figure=str(SIM_PAPER / "simFig.pdf"),
         figure_png=str(SIM_PAPER / "simFig.png"),
@@ -360,25 +361,24 @@ rule sim_plot_paper_figures:
     log:
         str(SIM_PAPER / "plot_paper.log"),
     params:
-        h2opt=SIM["paper_figures"]["h2opt"],
+        compare_h2opt=SIM_PAPER_H2OPT["simulation"],
         baselines=" ".join(SIM["paper_figures"]["baselines"]),
         rows=lambda wc, input: " ".join(
-            f"--row '{label}' {ev} {roc}" for label, ev, roc in
-            zip(SIM_PAPER_ROWS.values(), input.evaluations, input.rocs, strict=True)),
+            f"--row '{label}' {ev} {roc} {SIM_PAPER_H2OPT[s]}" for (s, label), ev, roc in
+            zip(SIM_PAPER_ROWS.items(), input.evaluations, input.rocs, strict=True)),
     threads: 1
     shell:
         "python -u {SIM_SCRIPTS}/plot_paper.py {params.rows}"
-        " --h2opt {params.h2opt} --baselines {params.baselines}"
+        " --compare-h2opt {params.compare_h2opt} --baselines {params.baselines}"
         " --compare-roc {input.compare} --gwas-example {input.example}"
         " --out-figure {output.figure} --out-compare {output.compare}"
         " --out-example {output.example} > {log} 2>&1"
 
 
 # simNull: per simulation of simulation.paper_figures.rows, the real H2-opt traits of the null
-# instance (simulation.paper_figures.null_methods) against the permutation null (sim_null_gwas,
+# instance (simulation.paper_figures.h2opt) against the permutation null (sim_null_gwas,
 # img_null_gwas): test heritability, largest -log10 p, QQ plot of trait 1 and lambda GC of traits
 # 1-3.
-SIM_NULL_SLUGS = SIM["paper_figures"]["null_methods"]
 
 
 def sim_null_files(sim, name):
@@ -392,7 +392,7 @@ def sim_null_perms(sim):
 rule sim_plot_paper_null:
     input:
         evaluations=[str(OUT_ROOT / s / "evaluation.npz") for s in SIM_PAPER_ROWS],
-        gwas=[sim_null_files(s, f"gwas/{SIM_NULL_SLUGS[s]}.npz") for s in SIM_PAPER_ROWS],
+        gwas=[sim_null_files(s, f"gwas/{SIM_PAPER_H2OPT[s]}.npz") for s in SIM_PAPER_ROWS],
         nulls=[f for s in SIM_PAPER_ROWS for f in sim_null_perms(s)],
     output:
         figure=str(SIM_PAPER / "simNull.pdf"),
@@ -401,9 +401,9 @@ rule sim_plot_paper_null:
         str(SIM_PAPER / "plot_paper_null.log"),
     params:
         rows=" ".join(
-            f"--label '{label}' --slug {SIM_NULL_SLUGS[s]}"
+            f"--label '{label}' --slug {SIM_PAPER_H2OPT[s]}"
             f" --evaluation {OUT_ROOT / s / 'evaluation.npz'}"
-            f" --gwas {sim_null_files(s, f'gwas/{SIM_NULL_SLUGS[s]}.npz')}"
+            f" --gwas {sim_null_files(s, f'gwas/{SIM_PAPER_H2OPT[s]}.npz')}"
             f" --null {' '.join(sim_null_perms(s))}"
             for s, label in SIM_PAPER_ROWS.items()),
         instance=SIM["gwas"]["null_instance"],

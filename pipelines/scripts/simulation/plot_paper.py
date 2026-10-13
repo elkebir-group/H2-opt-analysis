@@ -13,14 +13,15 @@ instance (--gwas-example).
 Each figure is also saved as a .png next to its .pdf. The panels use the functions of
 plot_traits.py and plot_gwas.py, which make the same panels as separate files.
 
-The figures show the ground truth, one H2-opt variant (--h2opt) and the baselines (--baselines).
-The H2-opt variant gets the label and the color of H2-opt.
+The figures show the ground truth, one H2-opt variant per row (the last value of --row;
+--compare-h2opt for simCompareSNP) and the baselines (--baselines). The H2-opt variant gets the
+label and the color of H2-opt.
 
     python pipelines/scripts/simulation/plot_paper.py \\
-        --row Hyperspectral simulation/evaluation.npz simulation/roc.npz \\
-        --row Images helios_simulation/evaluation.npz helios_simulation/roc.npz \\
-        --h2opt h2opt_hybrid --baselines pca genetic_pca pch max_features \\
-        --compare-roc simulation/roc.npz --gwas-example instance0/gwas/h2opt_hybrid.npz \\
+        --row Hyperspectral simulation/evaluation.npz simulation/roc.npz h2opt \\
+        --row Images helios_simulation/evaluation.npz helios_simulation/roc.npz h2opt_hybrid \\
+        --compare-h2opt h2opt --baselines pca genetic_pca pch max_features \\
+        --compare-roc simulation/roc.npz --gwas-example instance0/gwas/h2opt.npz \\
         --out-figure figures/paper/simFig.pdf --out-compare figures/paper/simCompareSNP.pdf \\
         --out-example figures/paper/simGWASexample.pdf
 """
@@ -214,11 +215,12 @@ def simulation_row(axes, ev, roc):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--row', nargs=3, action='append', required=True,
-                        metavar=('LABEL', 'EVALUATION', 'ROC'),
-                        help='one row of simFig: label, evaluate.py result, roc.py result')
-    parser.add_argument('--h2opt', required=True,
-                        help='slug of the H2-opt variant shown as H2-opt')
+    parser.add_argument('--row', nargs=4, action='append', required=True,
+                        metavar=('LABEL', 'EVALUATION', 'ROC', 'H2OPT'),
+                        help='one row of simFig: label, evaluate.py result, roc.py result, slug '
+                             'of the H2-opt variant shown as H2-opt')
+    parser.add_argument('--compare-h2opt', required=True,
+                        help='slug of the H2-opt variant shown as H2-opt in simCompareSNP')
     parser.add_argument('--baselines', nargs='+', required=True, help='slugs of the baselines')
     parser.add_argument('--compare-roc', required=True, help='roc.py result of simCompareSNP')
     parser.add_argument('--gwas-example', required=True,
@@ -229,7 +231,6 @@ def main():
     args = parser.parse_args()
     plt.rcParams.update({'font.size': 8, 'axes.labelsize': 8, 'xtick.labelsize': 7,
                          'ytick.labelsize': 7})
-    shown = [args.h2opt] + args.baselines
     roc_axes = {'auc': 1, 'tpr': 1, 'tpr_instances': 1}
     letters = 'abcdefghijklmnop'
     n_rows = len(args.row)
@@ -237,9 +238,10 @@ def main():
     with plt.rc_context(SIM_FIG_RC):
         fig, axes = plt.subplots(n_rows, 4, figsize=SIM_FIG_SIZE, squeeze=False,
                                  gridspec_kw={'width_ratios': WIDTH_RATIOS})
-        for r, (_, evaluation, roc) in enumerate(args.row):
-            ev = select_methods(np.load(evaluation), {'herit': 0, 'cor': 0}, shown, args.h2opt)
-            roc = select_methods(np.load(roc), roc_axes, ['truth'] + shown, args.h2opt)
+        for r, (_, evaluation, roc, h2opt) in enumerate(args.row):
+            shown = [h2opt] + args.baselines
+            ev = select_methods(np.load(evaluation), {'herit': 0, 'cor': 0}, shown, h2opt)
+            roc = select_methods(np.load(roc), roc_axes, ['truth'] + shown, h2opt)
             slugs = simulation_row(axes[r], ev, roc)
         for c in range(4):
             share_y(axes[:, c])
@@ -254,11 +256,12 @@ def main():
         fig.subplots_adjust(left=0.055, right=0.975, top=top,
                             bottom=BOTTOM_MARGIN / SIM_FIG_SIZE[1], wspace=0.35, hspace=0.27)
         top_legend(fig, slugs, top)
-        for r, (label, _, _) in enumerate(args.row):
+        for r, (label, *_) in enumerate(args.row):
             row_label(fig, axes[r, -1], label)
         save(fig, args.out_figure)
 
-    roc = select_methods(np.load(args.compare_roc), roc_axes, ['truth'] + shown, args.h2opt)
+    roc = select_methods(np.load(args.compare_roc), roc_axes,
+                         ['truth', args.compare_h2opt] + args.baselines, args.compare_h2opt)
     # Drawn at the text width in the style of simFig, so that LaTeX does not scale it.
     with plt.rc_context(SIM_FIG_RC):
         fig, axes = plt.subplots(1, 2, figsize=(6.5, 3.0))
