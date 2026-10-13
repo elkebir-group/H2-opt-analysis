@@ -2,12 +2,12 @@
 
 a: example input images (red, green and blue channels) of one plant on three dates, with the
 number of kept plants n and of half-sib families c. b: the narrow-sense test heritability of
-trait 1 per date, H2-opt (hybrid) against linear H2-opt and the baselines (plot_paper_heritability
-.py). c: the median over the folds of |r| between half-sib family means of H2-opt traits of the
-first five dates (date_correlations.py). d: the same with the measured traits of Central Japan,
-the 6 traits with the largest value on these dates (measured_correlations.py). e: the number of
-SNPs that are Bonferroni-significant in the GWAS of at least one fold, per date, first five
-dates. Also saved as a .png next to the .pdf.
+trait 1 per date, clipped at 0, H2-opt (the hybrid) against the baselines
+(plot_paper_heritability.py). c: the median over the folds of |r| between half-sib family means
+of H2-opt traits of the first five dates (date_correlations.py). d: the same with the measured
+traits of Central Japan, the 6 traits with the largest value on these dates
+(measured_correlations.py). e: the number of SNPs that are Bonferroni-significant in the GWAS of
+at least one fold, per date, first five dates. Also saved as a .png next to the .pdf.
 
     python pipelines/scripts/miscanthus/plot_paper_main.py \\
         --images central/images.npy south/images.npy \\
