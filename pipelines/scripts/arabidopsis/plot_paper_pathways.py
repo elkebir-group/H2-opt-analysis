@@ -1,11 +1,13 @@
 """Pathway enrichment of the H2-opt traits on Arabidopsis (images/pathwayAll and panel e of
 images/metabFig).
 
-A heatmap per treatment: the p-value (P(Gamma), MetaboAnalyst's mummichog p-value) of each pathway
-for each trait, on a log color scale; a dot marks p < 0.05. pathwayAll shows every pathway with
-p < 0.05 for a trait of either treatment; panel e shows the TOP pathways with the lowest p-value
-over all traits and treatments. Reads the tables of pathway_enrichment.R, traits 1 to k per
-treatment. Saves each .pdf and a .png next to it.
+A heatmap per treatment: the adjusted Fisher p-value (AdjP.Fisher, adjusted over the pathways of
+one peak list) of each pathway for each trait, on a log color scale; a dot marks p < 0.05. Not the
+mummichog p-value P(Gamma): it is below 0.05 for most pathways also for a peak list ranked without
+a trait (by intensity SD alone), while the adjusted Fisher p-value of that list is at least 0.5.
+pathwayAll shows every pathway with p < 0.05 for a trait of either treatment; panel e shows the TOP
+pathways with the lowest p-value over all traits and treatments. Reads the tables of
+pathway_enrichment.R, traits 1 to k per treatment. Saves each .pdf and a .png next to it.
 
     python pipelines/scripts/arabidopsis/plot_paper_pathways.py --treatments 0d 6d \\
         --tables 0d/enrichment/trait{1..10}_pathways.csv 6d/enrichment/trait{1..10}_pathways.csv \\
@@ -22,7 +24,7 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.colors import LogNorm  # noqa: E402
 
-P_COLUMN = 'P(Gamma)'
+P_COLUMN = 'AdjP.Fisher'
 ALPHA = 0.05
 TOP = 5
 
