@@ -10,7 +10,7 @@ from .methods import LABELS, ordered
 COLORS = {'truth': 'tab:red', 'h2opt_paper': 'tab:blue', 'h2opt': 'tab:blue',
           'h2opt_hybrid': 'tab:cyan',
           'pca': 'tab:orange', 'genetic_pca': 'tab:purple',
-          'pch': 'tab:pink', 'max_features': 'tab:green'}
+          'pch': 'tab:pink', 'max_features': 'tab:green', 'single_band': 'tab:olive'}
 
 
 # Style of the paper figures, drawn at their size in the paper so that LaTeX does not scale them:

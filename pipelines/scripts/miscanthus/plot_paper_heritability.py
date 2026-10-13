@@ -32,7 +32,8 @@ FONT_SIZE = 8
 PAPER_LABELS = {**LABELS, 'h2opt_hybrid': 'H2-opt'}
 NDVI_COLOR = 'black'
 # Markers tell apart curves that overlap.
-MARKERS = {'h2opt_hybrid': 'o', 'pch': 's', 'max_features': '^', 'pca': 'v', 'genetic_pca': 'P',
+MARKERS = {'h2opt_hybrid': 'o', 'pch': 's', 'max_features': '^', 'single_band': 'D', 'pca': 'v',
+           'genetic_pca': 'P',
            'ndvi': 'X'}
 
 

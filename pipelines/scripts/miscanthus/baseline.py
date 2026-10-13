@@ -1,9 +1,11 @@
 """Fit a baseline to the Miscanthus images of every date in one fold.
 
 Each baseline is fitted to all pixels of one date on the fold's training plants
-(h2opt_analysis.methods.BASELINES). PCH maximizes Henderson3 heritability (families, plots within
-families, rep and field column fixed) at the one ridge of all folds and dates (--ridge, the
-output of choose_pch_ridge.py; required for pch only). The other baselines are as for sorghum.
+(h2opt_analysis.methods.BASELINES), except single_band: the single trait baseline (max_features)
+on the mean of each of the 6 channels over the pixels of the plant. PCH maximizes Henderson3
+heritability (families, plots within families, rep and field column fixed) at the one ridge of
+all folds and dates (--ridge, the output of choose_pch_ridge.py; required for pch only). The
+other baselines are as for sorghum.
 Writes an .npz with 'traits' (dates x plants x traits, uncorrelated on the training plants) and,
 for pch, the ridge and ridge_traits (ridges x dates x plants x traits), the traits at every ridge.
 
@@ -24,7 +26,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--population', choices=miscanthus.POPULATIONS, required=True)
     parser.add_argument('--images', required=True)
-    parser.add_argument('--method', choices=list(BASELINES), required=True)
+    parser.add_argument('--method', choices=[*BASELINES, 'single_band'], required=True)
     parser.add_argument('--fold', type=int, required=True)
     parser.add_argument('--traits', type=int, required=True)
     parser.add_argument('--ridge', help='output of choose_pch_ridge.py (pch only)')
@@ -61,8 +63,12 @@ def main():
     else:
         traits = []
         for d in dates:
-            x = pixels(d)
-            baseline = BASELINES[args.method](args.traits)
+            if args.method == 'single_band':
+                x = miscanthus.load_date(args.images, design.keep, d).mean(axis=(2, 3))
+                baseline = BASELINES['max_features'](args.traits)
+            else:
+                x = pixels(d)
+                baseline = BASELINES[args.method](args.traits)
             traits.append(baseline.fit(x[rows], families[rows], environment[rows]).transform(x))
     np.savez(args.out, traits=np.stack(traits), **tuning)
 

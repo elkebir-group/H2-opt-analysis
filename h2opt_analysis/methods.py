@@ -13,11 +13,12 @@ LABELS = {
     'genetic_pca': 'genetic PCA',
     'pch': 'PCH',
     'max_features': 'single trait',
+    'single_band': 'single band',
 }
 
 # Order of the methods in every figure: H2-opt first, then the baselines from the most to the
 # least genetic information.
-ORDER = ['h2opt_hybrid', 'h2opt', 'pch', 'genetic_pca', 'max_features', 'pca']
+ORDER = ['h2opt_hybrid', 'h2opt', 'pch', 'genetic_pca', 'max_features', 'single_band', 'pca']
 # A variant of a method comes right after the method: variant slug -> (method, rank of variant).
 VARIANTS = {'h2opt_paper': ('h2opt', 1)}
 
