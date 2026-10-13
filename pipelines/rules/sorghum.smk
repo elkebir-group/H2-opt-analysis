@@ -287,8 +287,8 @@ rule sorghum_reference_gwas_summary:
 rule sorghum_paper_figures:
     input:
         expand(str(SORGHUM_PAPER_FIGURES / "{stem}.pdf"),
-               stem=["sorFig", "multiTraitHerit_all", "sorCoefficients", "crossGWAS",
-                     "sorGWAS", "sorNull"]),
+               stem=["sorFig", "multiTraitHerit_all", "sorCoefficients", "sorGWAS",
+                     "sorNull"]),
 
 
 rule sorghum_plot_paper_main:
@@ -350,22 +350,21 @@ rule sorghum_plot_paper_coefficients:
 
 rule sorghum_plot_paper_gwas:
     input:
-        [str(SORGHUM_OUT / "gwas" / f"h2opt_fold{f}.npz") for f in SORGHUM_FOLDS],
+        gwas=[str(SORGHUM_OUT / "gwas" / f"h2opt_fold{f}.npz") for f in SORGHUM_FOLDS],
+        crossfit=expand(str(SORGHUM_OUT / "gwas" / "h2opt_crossfit_trait{trait}.npz"),
+                        trait=range(1, SORGHUM["gwas"]["crossfit_traits"] + 1)),
+        genotypes=multiext(str(sorghum.GENOTYPES), ".bed", ".bim", ".fam"),
     output:
-        folds=str(SORGHUM_PAPER_FIGURES / "crossGWAS.pdf"),
-        folds_png=str(SORGHUM_PAPER_FIGURES / "crossGWAS.png"),
-        manhattan=str(SORGHUM_PAPER_FIGURES / "sorGWAS.pdf"),
-        manhattan_png=str(SORGHUM_PAPER_FIGURES / "sorGWAS.png"),
+        pdf=str(SORGHUM_PAPER_FIGURES / "sorGWAS.pdf"),
+        png=str(SORGHUM_PAPER_FIGURES / "sorGWAS.png"),
     log:
-        str(SORGHUM_PAPER_FIGURES / "gwas.log"),
-    params:
-        folds=" ".join(str(f) for f in SORGHUM_FOLDS),
-        example=SORGHUM_FOLDS[0],
+        str(SORGHUM_PAPER_FIGURES / "sorGWAS.log"),
     threads: 1
     shell:
-        "python -u {SORGHUM_SCRIPTS}/plot_paper_gwas.py --folds {params.folds} --gwas {input}"
-        " --trait 1 --example-fold {params.example} --out-folds {output.folds}"
-        " --out-manhattan {output.manhattan} > {log} 2>&1"
+        "python -u {SORGHUM_SCRIPTS}/plot_paper_gwas.py --gwas {input.gwas}"
+        " --crossfit {input.crossfit} --genotypes {sorghum.GENOTYPES}"
+        " --r2 {config[gwas_loci][r2]} --kb {config[gwas_loci][kb]} --out {output.pdf}"
+        " > {log} 2>&1"
 
 
 # sorNull: the GWAS of the H2-opt traits of all folds against their cross-fit and the permutation
