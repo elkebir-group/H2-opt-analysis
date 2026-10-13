@@ -72,12 +72,14 @@ rule sorghum_reference_gwas_all:
 
 
 # The permutation null of the whole H2-opt -> GWAS pipeline, and the GWAS of the cross-fitted
-# trait 1 (each line's phenotype from the fold model that held it out). Run only on request.
+# traits 1 to crossfit_traits (each line's phenotype from the fold model that held it out). Run
+# only on request.
 rule sorghum_null_gwas_all:
     input:
         expand(str(SORGHUM_OUT / "null" / "perm{k}.npz"),
                k=range(SORGHUM["gwas"]["permutations"])),
-        str(SORGHUM_OUT / "gwas" / "h2opt_crossfit.npz"),
+        expand(str(SORGHUM_OUT / "gwas" / "h2opt_crossfit_trait{trait}.npz"),
+               trait=range(1, SORGHUM["gwas"]["crossfit_traits"] + 1)),
 
 
 rule sorghum_choose_linear_h2opt_noise:
@@ -393,25 +395,29 @@ rule sorghum_cross_fit_traits:
     input:
         [str(SORGHUM_OUT / "h2opt" / f"fold{f}.npz") for f in SORGHUM_FOLDS],
     output:
-        str(SORGHUM_OUT / "h2opt" / "crossfit.npz"),
+        str(SORGHUM_OUT / "h2opt" / "crossfit_trait{trait}.npz"),
     log:
-        str(SORGHUM_OUT / "h2opt" / "crossfit.log"),
+        str(SORGHUM_OUT / "h2opt" / "crossfit_trait{trait}.log"),
+    wildcard_constraints:
+        trait=r"\d+",
     threads: 1
     shell:
         "python -u {PIPELINE_DIR}/scripts/shared/cross_fit_traits.py --dataset sorghum"
-        " --traits {input} --out {output} > {log} 2>&1"
+        " --trait {wildcards.trait} --traits {input} --out {output} > {log} 2>&1"
 
 
 rule sorghum_crossfit_gwas:
     input:
-        traits=str(SORGHUM_OUT / "h2opt" / "crossfit.npz"),
+        traits=str(SORGHUM_OUT / "h2opt" / "crossfit_trait{trait}.npz"),
         pcs=str(SORGHUM_OUT / "genotype_pcs.npy"),
     output:
-        str(SORGHUM_OUT / "gwas" / "h2opt_crossfit.npz"),
+        str(SORGHUM_OUT / "gwas" / "h2opt_crossfit_trait{trait}.npz"),
     log:
-        str(SORGHUM_OUT / "gwas" / "h2opt_crossfit.log"),
+        str(SORGHUM_OUT / "gwas" / "h2opt_crossfit_trait{trait}.log"),
+    wildcard_constraints:
+        trait=r"\d+",
     params:
-        work=str(SORGHUM_OUT / "gwas" / "work" / "h2opt_crossfit"),
+        work=lambda wc: str(SORGHUM_OUT / "gwas" / "work" / f"h2opt_crossfit_trait{wc.trait}"),
     threads: SORGHUM["gwas"]["threads"]
     shell:
         "python -u {SORGHUM_SCRIPTS}/gwas.py --h2opt-traits {input.traits} --pcs {input.pcs}"

@@ -456,7 +456,8 @@ rule misc_cross_fit_traits:
     threads: 1
     shell:
         "python -u {PIPELINE_DIR}/scripts/shared/cross_fit_traits.py --dataset miscanthus"
-        " --population {wildcards.population} --traits {input} --out {output} > {log} 2>&1"
+        " --population {wildcards.population} --trait 1 --traits {input} --out {output}"
+        " > {log} 2>&1"
 
 
 rule misc_crossfit_gwas:

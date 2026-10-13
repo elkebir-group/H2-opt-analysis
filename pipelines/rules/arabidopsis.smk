@@ -440,7 +440,7 @@ rule arabi_cross_fit_traits:
     threads: 1
     shell:
         "python -u {PIPELINE_DIR}/scripts/shared/cross_fit_traits.py --dataset arabidopsis"
-        " --treatment {wildcards.treatment} --traits {input} --out {output} > {log} 2>&1"
+        " --treatment {wildcards.treatment} --trait 1 --traits {input} --out {output} > {log} 2>&1"
 
 
 rule arabi_crossfit_gwas:
