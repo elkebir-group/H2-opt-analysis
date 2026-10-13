@@ -3,9 +3,10 @@ per treatment, with the treatment at the right of the row (as in simFig).
 
 a: the binned MS1 input matrices of the first three samples of each treatment as a stack (log
 scale), with the number of samples n and of accessions c. b: test heritability per trait of H2-opt
-and every baseline, mean over the folds. c: coefficients of traits 1-3 of each treatment's model
-(MS1 only), the ones with magnitude at least 2% of the trait's largest, the marker area
-proportional to the magnitude relative to the largest. d: SNPs above the Bonferroni threshold
+and every baseline, the median over the folds and a band from the 25th to the 75th percentile (as
+sorghum). c: coefficients of traits 1-3 of each treatment's model (MS1 only), the ones with
+magnitude at least 2% of the trait's largest, the marker area proportional to the magnitude
+relative to the largest. d: SNPs above the Bonferroni threshold
 0.05 / SNPs, per trait. e: pathway enrichment of each trait, the adjusted Fisher p-value
 (AdjP.Fisher of pathway_enrichment.R, adjusted over the pathways of one peak list) on a log color
 scale, every pathway with p < 0.05 for a trait of either treatment; an asterisk marks p < 0.05.
@@ -41,6 +42,7 @@ from h2opt_analysis.figures import (  # noqa: E402
     MATH_RC,
     SIM_FIG_RC,
     TICK_SIZE,
+    median_bands,
 )
 from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 
@@ -177,16 +179,15 @@ def main():
                      f'$n = {len(accessions)}$, $c = {len(np.unique(accessions))}$',
                      fontsize=TICK_SIZE)
 
-            # b: test heritability per trait, mean over the folds
+            # b: test heritability per trait, median over the folds and a band from the 25th to
+            # the 75th percentile
             results = np.load(args.heritability[row])
             test = results['test']  # methods x folds x traits
             traits = np.arange(1, test.shape[2] + 1)
             methods = list(results['methods'])
             ax = axes(1.47, row, 1.1)
             panels['b'].append(ax)
-            for method in reversed(ordered(methods)):
-                ax.plot(traits, test[methods.index(method)].mean(axis=0), '-o', ms=1.8,
-                        color=COLORS[method], label=LABELS[method])
+            median_bands(ax, traits, test, methods)
             ax.set_ylim(0, 1)
             ax.set_yticks([0, 0.5, 1])
             ax.set_xticks(traits, traits if last else [])
@@ -279,6 +280,11 @@ def main():
         results = np.load(path)
         methods = list(results['methods'])
         means = {m: results['test'][methods.index(m)].mean() for m in ordered(methods)}
+        medians = {m: np.median(results['test'][methods.index(m)], axis=0)
+                   for m in ordered(methods)}
+        print(treatment, 'median test heritability over the folds per trait:')
+        for m, v in medians.items():
+            print(f'  {LABELS[m]:13s}', np.round(v, 3), f'mean over traits {v.mean():.3f}')
         print(treatment, 'mean test heritability over folds and traits:',
               ', '.join(f'{LABELS[m]} {v:.3f}' for m, v in means.items()),
               '| lowest H2-opt trait (fold mean):',
