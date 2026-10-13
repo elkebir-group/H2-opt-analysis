@@ -63,7 +63,7 @@ FIG_SIZE = (6.5, 2.35)
 ROW_BOTTOM = (1.27, 0.33)
 ROW_HEIGHT = 0.6
 # Row labels (the treatments) at the right of the rows, as in simFig.
-ROW_LABEL_X = 6.33
+ROW_LABEL_X = 6.35
 ROW_LABEL_SIZE = 7.5
 
 
@@ -134,10 +134,7 @@ def main():
     with plt.rc_context({**SIM_FIG_RC, **MATH_RC}):
         fig = plt.figure(figsize=FIG_SIZE)
 
-        def letter(x, text):
-            """Panel letter x inches from the left, above the first row."""
-            fig.text(x / FIG_SIZE[0], (ROW_BOTTOM[0] + ROW_HEIGHT + 0.08) / FIG_SIZE[1], text,
-                     fontsize=LETTER_SIZE, fontweight='bold', va='bottom')
+        panels = {text: [] for text in 'abcde'}  # the axes of each panel
 
         def axes(x, row, width, rows=1, height=None, dy=0.0):
             """Axes at x inches from the left, width inches wide, in row 0 (first treatment),
@@ -160,6 +157,7 @@ def main():
                     (2, arabidopsis.N_MZ, arabidopsis.N_RT))[0, MZ_SHOWN:]
                 image = np.ma.masked_less_equal(image, 0)
                 ax = axes(0.42 + step * k, row, size, height=size, dy=step * k)
+                panels['a'].append(ax)
                 ax.imshow(image, aspect='auto', interpolation='none',
                           cmap=plt.get_cmap('magma').with_extremes(bad='black'),
                           norm=LogNorm(vmin=image.min(), vmax=image.max()),
@@ -184,7 +182,8 @@ def main():
             test = results['test']  # methods x folds x traits
             traits = np.arange(1, test.shape[2] + 1)
             methods = list(results['methods'])
-            ax = axes(1.62, row, 1.1)
+            ax = axes(1.47, row, 1.1)
+            panels['b'].append(ax)
             for method in reversed(ordered(methods)):
                 ax.plot(traits, test[methods.index(method)].mean(axis=0), '-o', ms=1.8,
                         color=COLORS[method], label=LABELS[method])
@@ -206,7 +205,8 @@ def main():
 
             # c: coefficients of traits 1-3 (MS1), larger magnitudes on top
             coefficients = np.load(args.coefficients[row])['coefficients'][:3, 0]
-            ax = axes(3.2, row, 0.6)
+            ax = axes(3.12, row, 0.6)
+            panels['c'].append(ax)
             for t, (color, marker) in enumerate(TRAIT_STYLE):
                 magnitude = np.abs(coefficients[t]) / np.abs(coefficients[t]).max()
                 mz, rt = np.nonzero(magnitude >= SHOWN)
@@ -232,7 +232,8 @@ def main():
                     handle.set_alpha(1)
 
             # d: significant SNPs per trait
-            ax = axes(4.27, row, 0.46)
+            ax = axes(4.23, row, 0.46)
+            panels['d'].append(ax)
             ax.bar(traits, counts[row], color=COLORS['h2opt'], width=0.7)
             ax.set_xticks(traits, [t if last and t in (1, 5, 10) else '' for t in traits])
             ax.set_ylim(0, max(c.max() for c in counts) * 1.05)
@@ -242,7 +243,8 @@ def main():
                 ax.set_xlabel('synthetic trait')
 
             # e: pathway enrichment
-            ax = axes(5.29, row, 0.65)
+            ax = axes(5.31, row, 0.65)
+            panels['e'].append(ax)
             norm = LogNorm(vmin=1e-3, vmax=1)
             values = np.clip(p[row].T, 1e-3, 1)  # pathways x traits
             image = ax.pcolormesh(np.arange(values.shape[1] + 1) - 0.5,
@@ -258,7 +260,7 @@ def main():
             ax.tick_params(length=0)
             if last:
                 ax.set_xlabel('synthetic trait')
-            bar = fig.colorbar(image, cax=axes(5.99, row, 0.05), ticks=[1e-3, 1e-2, ALPHA, 1])
+            bar = fig.colorbar(image, cax=axes(6.01, row, 0.05), ticks=[1e-3, 1e-2, ALPHA, 1])
             bar.ax.set_yticklabels(['$10^{-3}$', '$10^{-2}$', '$0.05$', '$1$'])
             bar.ax.tick_params(labelsize=TICK_SIZE - 1, length=1.5)
             bar.outline.set_linewidth(0.6)
@@ -266,8 +268,12 @@ def main():
                      treatment_label(treatment), rotation=-90, ha='left', va='center',
                      fontsize=ROW_LABEL_SIZE, fontweight='bold')
 
-        for x, text in ((0.0, 'a'), (1.3, 'b'), (2.92, 'c'), (4.02, 'd'), (4.75, 'e')):
-            letter(x, text)
+        # each letter at the left edge of its panel, tick and axis labels included
+        renderer = fig.canvas.get_renderer()
+        for text, panel in panels.items():
+            left = min(ax.get_tightbbox(renderer).x0 for ax in panel) / fig.bbox.width
+            fig.text(left, (ROW_BOTTOM[0] + ROW_HEIGHT + 0.08) / FIG_SIZE[1], text,
+                     fontsize=LETTER_SIZE, fontweight='bold', va='bottom', ha='left')
         save(fig, args.out)
 
     for treatment, path, count in zip(args.treatments, args.heritability, counts, strict=True):
