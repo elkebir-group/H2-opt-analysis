@@ -3,6 +3,7 @@ boxplots, median bands, Manhattan and QQ plots."""
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import MultipleLocator
 
 from .methods import LABELS, ordered
 
@@ -240,5 +241,6 @@ def qq_real_vs_null(ax, reals, nulls, mark=None):
     ax.axhline(-np.log10(0.05 / len(reals[0])), color='black', linestyle=':', linewidth=0.8)
     ax.set_xlim(0, None)
     ax.set_ylim(0, None)
+    ax.xaxis.set_major_locator(MultipleLocator(1))
     ax.spines[['top', 'right']].set_visible(False)
     ax.set_xlabel(r'expected $-\log_{10} p$')
