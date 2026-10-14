@@ -256,7 +256,7 @@ GWAS_TOP_MARGIN = 0.1
 GWAS_BOTTOM_MARGIN = 0.34
 # Largest figure height in inches, so that the figure and its caption fit on a page; more rows
 # get a smaller row height.
-GWAS_MAX_HEIGHT = 7.4
+GWAS_MAX_HEIGHT = 7.0
 # A locus label left of a mark closer than this part of the x axis to its left end goes to the
 # right of the mark.
 GWAS_LEFT_EDGE = 0.12
