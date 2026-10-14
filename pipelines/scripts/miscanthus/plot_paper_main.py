@@ -7,15 +7,16 @@ per fold; the neighbor-adjusted run, evaluate_heritability_spatial.py): the medi
 and a band from the 25th to the 75th percentile, H2-opt with a CNN (the hybrid) and with linear
 functions against the baselines; a dotted line before the date of canopy closure. c: the median
 over the folds of |r| between half-sib family means of H2-opt traits of the first five dates
-(date_correlations.py). d: the same with the measured traits of Central Japan, the 6 traits with
-the largest value on these dates (measured_correlations.py). Also saved as a .png next to the
-.pdf.
+(date_correlations.py). d: the same with the measured traits of each population, the 6 traits
+with the largest value on these dates (measured_correlations.py), on one color scale. Also saved
+as a .png next to the .pdf.
 
     python pipelines/scripts/miscanthus/plot_paper_main.py \\
         --images central/images.npy south/images.npy \\
         --heritability central/heritability.npz south/heritability.npz \\
         --dates central/date_correlations.npz south/date_correlations.npz \\
-        --measured central/measured_correlations.npz --out figures/paper/miscFig.pdf
+        --measured central/measured_correlations.npz south/measured_correlations.npz \\
+        --out figures/paper/miscFig.pdf
 """
 
 import argparse
@@ -124,7 +125,7 @@ def main():
     parser.add_argument('--images', nargs=2, required=True, metavar=('CENTRAL', 'SOUTH'))
     parser.add_argument('--heritability', nargs=2, required=True, metavar=('CENTRAL', 'SOUTH'))
     parser.add_argument('--dates', nargs=2, required=True, metavar=('CENTRAL', 'SOUTH'))
-    parser.add_argument('--measured', required=True)
+    parser.add_argument('--measured', nargs=2, required=True, metavar=('CENTRAL', 'SOUTH'))
     parser.add_argument('--out', required=True)
     args = parser.parse_args()
     dates = miscanthus.DATES[:N_DATES]
@@ -173,20 +174,27 @@ def main():
         fig.text(0.05 / FIG_SIZE[0], (ROW_BOTTOM[1] - 0.12) / FIG_SIZE[1],
                  '$G$ = half-sibling groups', va='top', fontsize=TICK_SIZE - 1)
 
-        ax = axes(5.25, 0, 0.85, rows=2)
-        with np.load(args.measured) as f:
-            matrix, names = sort_traits(median_abs(f['family'])[:, :N_DATES], list(f['traits']))
-        matrix, names = matrix[:N_MEASURED], names[:N_MEASURED]
-        image = heatmap(ax, matrix, [name.replace(' ', '\n', 1) if len(name) > 14 else name
-                                     for name in names], dates, vmax=matrix.max(),
-                        font_size=HEATMAP_SIZE)
-        ax.set_title('Central')
-        letter(ax, 'd', -0.95)
-        bar = fig.colorbar(image, cax=axes(6.16, 0, 0.05, rows=2))
-        bar.locator = MaxNLocator(nbins=3)
-        bar.update_ticks()
-        for name, value in zip(names, matrix.max(axis=1), strict=True):
-            print(f'measured trait {name}: largest median |r| of family means {value:.3f}')
+        measured = []
+        for path in args.measured:
+            with np.load(path) as f:
+                matrix, names = sort_traits(median_abs(f['family'])[:, :N_DATES],
+                                            list(f['traits']))
+            measured.append((matrix[:N_MEASURED], names[:N_MEASURED]))
+        vmax = max(matrix.max() for matrix, _ in measured)
+        for p, (population, (matrix, names)) in enumerate(zip(miscanthus.POPULATIONS, measured,
+                                                              strict=True)):
+            ax = axes(5.25, p, 0.85)
+            image = heatmap(ax, matrix, names, dates, vmax=vmax, font_size=HEATMAP_SIZE)
+            ax.tick_params(axis='y', labelsize=TICK_SIZE - 1)
+            ax.set_title(population.capitalize())
+            if p == 0:
+                letter(ax, 'd', -0.85)
+            bar = fig.colorbar(image, cax=axes(6.16, p, 0.05))
+            bar.locator = MaxNLocator(nbins=3)
+            bar.update_ticks()
+            for name, value in zip(names, matrix.max(axis=1), strict=True):
+                print(f'{population} measured trait {name}: largest median |r| of family means '
+                      f'{value:.3f}')
         save(fig, args.out)
 
 if __name__ == '__main__':

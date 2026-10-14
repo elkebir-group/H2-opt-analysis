@@ -363,15 +363,15 @@ rule misc_date_correlations:
 
 rule misc_measured_correlations:
     input:
-        misc_date_files("central", "h2opt_hybrid"),
+        lambda wc: misc_date_files(wc.population, "h2opt_hybrid"),
     output:
-        str(MISC_OUT / "central" / "measured_correlations.npz"),
+        str(MISC_OUT / "{population}" / "measured_correlations.npz"),
     log:
-        str(MISC_OUT / "central" / "measured_correlations.log"),
+        str(MISC_OUT / "{population}" / "measured_correlations.log"),
     threads: 1
     shell:
-        "python -u {MISC_SCRIPTS}/measured_correlations.py --traits {input} --out {output}"
-        " > {log} 2>&1"
+        "python -u {MISC_SCRIPTS}/measured_correlations.py --population {wildcards.population}"
+        " --traits {input} --out {output} > {log} 2>&1"
 
 
 rule misc_plot_paper_heritability:
@@ -428,7 +428,7 @@ rule misc_plot_paper_main:
         images=misc_by_population("images.npy"),
         heritability=[str(MISC_ADJ / p / "heritability.npz") for p in miscanthus.POPULATIONS],
         dates=[str(MISC_ADJ / p / "date_correlations.npz") for p in miscanthus.POPULATIONS],
-        measured=str(MISC_ADJ / "central" / "measured_correlations.npz"),
+        measured=[str(MISC_ADJ / p / "measured_correlations.npz") for p in miscanthus.POPULATIONS],
     output:
         str(MISC_PAPER / "miscFig.pdf"),
     log:
@@ -734,15 +734,16 @@ rule misc_adjusted_date_correlations:
 
 rule misc_adjusted_measured_correlations:
     input:
-        [str(MISC_ADJ / "central" / "h2opt_hybrid" / f"date{d}.npz") for d in MISC_DATES],
+        lambda wc: [str(MISC_ADJ / wc.population / "h2opt_hybrid" / f"date{d}.npz")
+                    for d in MISC_DATES],
     output:
-        str(MISC_ADJ / "central" / "measured_correlations.npz"),
+        str(MISC_ADJ / "{population}" / "measured_correlations.npz"),
     log:
-        str(MISC_ADJ / "central" / "measured_correlations.log"),
+        str(MISC_ADJ / "{population}" / "measured_correlations.log"),
     threads: 1
     shell:
-        "python -u {MISC_SCRIPTS}/measured_correlations.py --traits {input} --out {output}"
-        " > {log} 2>&1"
+        "python -u {MISC_SCRIPTS}/measured_correlations.py --population {wildcards.population}"
+        " --traits {input} --out {output} > {log} 2>&1"
 
 
 # The permutation null of the adjusted run (null_gwas.py --neighbor-width) on selection_date.

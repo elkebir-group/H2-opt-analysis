@@ -69,8 +69,8 @@ def main():
                width=args.width)
 
     if args.population == 'central':
-        names = list(MEASURED_TRAITS)
-        values = measured_traits(design.keep)
+        names = list(MEASURED_TRAITS['central'])
+        values = measured_traits('central', design.keep)
         every = np.ones(len(design.families), bool)
         before, after = [], []
         for y in values:

@@ -1,17 +1,17 @@
-"""Pearson correlations of the Miscanthus synthetic traits with the measured traits (Central Japan).
+"""Pearson correlations of the Miscanthus synthetic traits with the measured traits.
 
-The measured traits are the 16 traits of the paper (MEASURED_TRAITS), from the 2020 columns of the
-plant data table of the Central Japan population (the South Japan table has other traits; the
-paper uses Central only). Dates are converted to days. The synthetic traits are trait 1 of one
-method (one file per date: folds x kept plants x traits), on all kept plants (training and test
-plants, as in the paper). For each measured trait, only the kept plants with a value are used.
-Each correlation is computed per plant and between half-sib family means (over these plants), in
-each fold. Writes an .npz (traits; plants: the plants with a value per trait; dates; plant and
-family: traits x dates x folds) and prints the median |r| over the folds of the family means for
-the first five dates.
+The measured traits (MEASURED_TRAITS) are, for Central Japan, the 16 traits of the paper from the
+2020 columns of its plant data table; for South Japan, the 8 of these that its plant data table
+also has (no biomass, culm or height columns). Dates are converted to days. The synthetic traits
+are trait 1 of one method (one file per date: folds x kept plants x traits), on all kept plants
+(training and test plants, as in the paper). For each measured trait, only the kept plants with
+a value are used. Each correlation is computed per plant and between half-sib family means (over
+these plants), in each fold. Writes an .npz (traits; plants: the plants with a value per trait;
+dates; plant and family: traits x dates x folds) and prints the median |r| over the folds of the
+family means for the first five dates.
 
-    python pipelines/scripts/miscanthus/measured_correlations.py --traits date0.npz ... \\
-        date13.npz --out measured_correlations.npz
+    python pipelines/scripts/miscanthus/measured_correlations.py --population central \\
+        --traits date0.npz ... date13.npz --out measured_correlations.npz
 """
 
 import argparse
@@ -22,26 +22,39 @@ from date_correlations import family_means, load_traits, pearson
 
 from h2opt_analysis import miscanthus
 
-POPULATION = 'central'
-TABLE = miscanthus.INPUTS / 'data_process' / 'Msi_C_Japan_2019-URB-Plant_Data.tsv'
-# Name in the figures -> column of the plant data table (the first column of that name is 2020).
+TABLES = {population: miscanthus.INPUTS / 'data_process' / f'Msi_{p}_Japan_2019-URB-Plant_Data.tsv'
+          for population, p in (('central', 'C'), ('south', 'S'))}
+# Per population: name in the figures -> column of the plant data table (Central: the first column
+# of that name is 2020).
 MEASURED_TRAITS = {
-    'Biomass': 'Biomass Yield dry weight (g)',
-    'Average internode length': 'Average Internode Length (AIL; cm)',
-    'Culm density': 'Culm Density (mass/volume)) (CmDW/V)',
-    'Culm dry weight': 'Culm Dry Weight (CmDW; g)',
-    'Culm node number': 'Culm Node Number (CmN#)',
-    'Basal diameter': 'Culm Outer Diameter at the Basal Internode (CmD_I1; mm)',
-    'Last internode diameter': 'Culm Outer Diameter at Last internode (CmD_LI; mm)',
-    'Height': 'Culm Length (CmL; __ Nov 2020; cm)',
-    'Basal circumference': 'Basal Circumference (BCirc; cm)   2020',
-    'Dormancy date': 'Autumn Dormancy Date 2020',
-    'First heading date': 'First Heading Date 2020 (HD)',
-    '50% heading date': '50% Heading Date 2020 (HD 50%)',
-    'Hardiness score': 'Hardiness score (%) ( July 2020)',
-    'Spring regrowth date': 'Spring Re-growth Date 2020',
-    'Survival Oct. 2019': 'Survival (Oct __07-_ 2019)',
-    'Survival spring 2020': 'Survival (spring 2020)',
+    'central': {
+        'Biomass': 'Biomass Yield dry weight (g)',
+        'Average internode length': 'Average Internode Length (AIL; cm)',
+        'Culm density': 'Culm Density (mass/volume)) (CmDW/V)',
+        'Culm dry weight': 'Culm Dry Weight (CmDW; g)',
+        'Culm node number': 'Culm Node Number (CmN#)',
+        'Basal diameter': 'Culm Outer Diameter at the Basal Internode (CmD_I1; mm)',
+        'Last internode diameter': 'Culm Outer Diameter at Last internode (CmD_LI; mm)',
+        'Height': 'Culm Length (CmL; __ Nov 2020; cm)',
+        'Basal circumference': 'Basal Circumference (BCirc; cm)   2020',
+        'Dormancy date': 'Autumn Dormancy Date 2020',
+        'First heading date': 'First Heading Date 2020 (HD)',
+        '50% heading date': '50% Heading Date 2020 (HD 50%)',
+        'Hardiness score': 'Hardiness score (%) ( July 2020)',
+        'Spring regrowth date': 'Spring Re-growth Date 2020',
+        'Survival Oct. 2019': 'Survival (Oct __07-_ 2019)',
+        'Survival spring 2020': 'Survival (spring 2020)',
+    },
+    'south': {
+        'Basal circumference': 'Basal Circumference (BCirc; cm)   2020',
+        'Dormancy date': 'Autumn Dormancy Date 2020',
+        'First heading date': 'First Heading Date 2020 (HD)',
+        '50% heading date': '50% Heading Date 2020 (HD 50%)',
+        'Hardiness score': 'Hardiness score (%) ( July 2020)',
+        'Spring regrowth date': 'Spring Re-growth Date 2020',
+        'Survival Oct. 2019': 'Survival (Oct 04 - Oct 07 2019)',
+        'Survival spring 2020': 'Survival (spring 2020)',
+    },
 }
 MISSING = ('', '-', 'Missing', 'Missed', 'no stem', 'no stems', 'NA')
 
@@ -63,28 +76,32 @@ def parse_value(text):
     raise ValueError(f'cannot read the table entry {text!r}')
 
 
-def measured_traits(keep):
-    """(traits x kept plants) values of MEASURED_TRAITS, NaN where missing."""
-    header = TABLE.read_text().split('\n', 1)[0].rstrip('\r').split('\t')
-    table = np.loadtxt(TABLE, delimiter='\t', dtype=str, skiprows=1)
-    plants = np.loadtxt(miscanthus.plant_table(POPULATION), delimiter='\t', dtype=str, skiprows=1)
+def measured_traits(population, keep):
+    """(traits x kept plants) values of MEASURED_TRAITS[population], NaN where missing. Rows
+    without a plot ID (a trailing row of the South table) are not plants."""
+    path = TABLES[population]
+    header = path.read_text().split('\n', 1)[0].rstrip('\r').split('\t')
+    table = np.loadtxt(path, delimiter='\t', dtype=str, skiprows=1)
+    table = table[table[:, 0] != '']
+    plants = np.loadtxt(miscanthus.plant_table(population), delimiter='\t', dtype=str, skiprows=1)
     assert (table[:, 2] == plants[:, 2]).all() and (table[:, 3] == plants[:, 3]).all(), \
         'the plant data table is not in the order of the plant table'
-    columns = [header.index(column) for column in MEASURED_TRAITS.values()]
+    columns = [header.index(column) for column in MEASURED_TRAITS[population].values()]
     return np.array([[parse_value(v) for v in table[keep, c]] for c in columns])
 
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--population', choices=miscanthus.POPULATIONS, required=True)
     parser.add_argument('--traits', nargs='+', required=True, help='one file per date')
     parser.add_argument('--out', required=True)
     args = parser.parse_args()
 
-    design = miscanthus.design(POPULATION)
+    design = miscanthus.design(args.population)
     traits = load_traits(args.traits)  # dates x folds x plants
     n_dates, n_folds = traits.shape[:2]
-    values = measured_traits(design.keep)
-    names = list(MEASURED_TRAITS)
+    values = measured_traits(args.population, design.keep)
+    names = list(MEASURED_TRAITS[args.population])
     plant, family = np.zeros((2, len(names), n_dates, n_folds))
     for t in range(len(names)):
         has = np.isfinite(values[t])
