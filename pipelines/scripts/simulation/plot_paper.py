@@ -93,14 +93,16 @@ def manhattan(ax, summary, row):
 
 def qq(ax, summary, row):
     """QQ plot of one run of a gwas.summarize result, with its genomic-control lambda. The dashed
-    line is the diagonal, as in simNull."""
+    line is the diagonal and the dotted line is the Bonferroni threshold 0.05 / SNPs, as in
+    simNull."""
     observed = np.sort(summary['neg_log10_p'][row])
     expected = -np.log10(np.arange(len(observed), 0, -1) / (len(observed) + 1))
     ax.scatter(expected, observed, s=2, color='tab:blue', rasterized=True)
     top = min(expected.max(), observed.max())
     ax.plot([0, top], [0, top], color='black', linewidth=0.6, linestyle='--', zorder=1)
-    ax.text(0.04, 0.96, rf'$\lambda_\mathrm{{GC}}$ = {summary["lambda_gc"][row]:.3f}',
-            transform=ax.transAxes, va='top', ha='left')
+    ax.axhline(-np.log10(0.05 / len(observed)), color='black', linestyle=':', linewidth=0.8)
+    ax.text(0.96, 0.04, rf'$\lambda_\mathrm{{GC}}$ = {summary["lambda_gc"][row]:.3f}',
+            transform=ax.transAxes, va='bottom', ha='right')
     ax.set_xlim(0, None)
     ax.set_ylim(0, None)
     ax.set_xlabel(r'expected $-\log_{10} p$')

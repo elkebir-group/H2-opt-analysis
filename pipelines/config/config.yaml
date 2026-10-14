@@ -91,8 +91,9 @@ simulation:
     # instance, its fold 0 (the test plants), traits 1-3.
     null_instance: 0
     permutations: 10
-  # The GWAS shown as Manhattan and QQ plots (plot_gwas.py). The paper figures use its instance.
-  example: {instance: 0, method: h2opt}
+  # The GWAS shown as Manhattan and QQ plots (plot_gwas.py). The paper figures use its instance:
+  # an H2-opt trait 1 clearly below the significance threshold (PI, 2026-10-14).
+  example: {instance: 8, method: h2opt}
   # The paper figures (plot_paper.py): the baselines and, per simulation, the H2-opt variant they
   # show with the label and color of H2-opt (PI, 2026-10-12: linear for spectra, the hybrid for
   # images). The ground truth is always shown. rows: the simulations of the rows of simFig
