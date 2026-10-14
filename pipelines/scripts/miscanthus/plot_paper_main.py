@@ -152,8 +152,7 @@ def main():
 
             ax = axes(1.4, p, 1.42)
             plot_bands(ax, load_adjusted(args.heritability[p]))
-            ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=90,
-                          fontsize=TICK_SIZE - 1)
+            ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=90)
             ax.set_ylim(0, 1)
             ax.set_yticks([0, 0.5, 1])
             ax.set_ylabel('test heritability')
