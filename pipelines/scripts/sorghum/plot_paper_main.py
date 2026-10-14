@@ -48,7 +48,7 @@ from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 # in the style of the simulation figures. Positions are in inches: the bottom and the top of the
 # panels, and the left and the width of each panel (a: the frame of the stack; d: the heatmap,
 # then its colorbar).
-FIG_SIZE = (6.5, 2.53)
+FIG_SIZE = (6.5, 2.4)
 BOTTOM = 0.47
 TOP = FIG_SIZE[1] - 0.16
 PANELS = {'a': (0.0, 1.15), 'b': (1.75, 0.98), 'c': (3.2, 1.05), 'd': (5.0, 1.05),
