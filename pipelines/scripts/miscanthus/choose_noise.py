@@ -42,7 +42,7 @@ def main():
     parser.add_argument('--out', required=True)
     parser.add_argument('--steps', type=int, required=True)
     parser.add_argument('--max-copies', type=int,
-                        help='models trained at once (GPU memory; a multiple of the levels)')
+                        help='models trained at once (GPU memory)')
     parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
     parser.add_argument('--neighbor-width', type=int,
                         help='train on the heritability after the nearest-neighbor field '
