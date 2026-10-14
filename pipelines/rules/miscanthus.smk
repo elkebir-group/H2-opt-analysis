@@ -662,22 +662,28 @@ rule misc_adjusted_score_later:
         " --dates {params.dates} --width {MISC[spatial_width]} --out {output} > {log} 2>&1"
 
 
-# GWAS of trait 1 of the adjusted run's hybrid H2-opt per date (all folds) and of its cross-fitted trait,
-# with the neighbor mean as a covariate (gwas.py --neighbor-width); genotypes from the main run.
+# GWAS of traits 1 and 2 of the adjusted run's hybrid H2-opt per date (all folds) and of their
+# cross-fitted traits, with the neighbor mean as a covariate (gwas.py --neighbor-width); genotypes
+# from the main run. {trait} is "" for trait 1 (date{date}.npz) and "trait2_" for trait 2.
+MISC_ADJ_GWAS_TRAITS = ["", "trait2_"]
+
+
 rule miscanthus_adjusted_gwas_all:
     input:
-        expand(str(MISC_ADJ / "{population}" / "gwas" / "{kind}date{date}.npz"),
-               population=MISC_POPULATIONS, kind=["", "crossfit_"], date=MISC_ADJ_DATES),
+        expand(str(MISC_ADJ / "{population}" / "gwas" / "{kind}{trait}date{date}.npz"),
+               population=MISC_POPULATIONS, kind=["", "crossfit_"], trait=MISC_ADJ_GWAS_TRAITS,
+               date=MISC_ADJ_DATES),
 
 
 rule misc_adjusted_crossfit_traits:
     input:
-        str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "date{date}.npz"),
+        str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "{trait}date{date}.npz"),
     output:
-        str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "crossfit_date{date}.npz"),
+        str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "crossfit_{trait}date{date}.npz"),
     log:
-        str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "crossfit_date{date}.log"),
+        str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "crossfit_{trait}date{date}.log"),
     wildcard_constraints:
+        trait="|trait2_",
         date=r"\d+",
     threads: 1
     shell:
@@ -688,20 +694,22 @@ rule misc_adjusted_crossfit_traits:
 
 rule misc_adjusted_run_gwas:
     input:
-        traits=str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "{kind}date{date}.npz"),
+        traits=str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "{kind}{trait}date{date}.npz"),
         genotypes=multiext(str(MISC_OUT / "{population}" / "gwas" / "genotypes"),
                            ".bed", ".bim", ".fam"),
         pcs=str(MISC_OUT / "{population}" / "gwas" / "genotype_pcs.npy"),
     output:
-        str(MISC_ADJ / "{population}" / "gwas" / "{kind}date{date}.npz"),
+        str(MISC_ADJ / "{population}" / "gwas" / "{kind}{trait}date{date}.npz"),
     log:
-        str(MISC_ADJ / "{population}" / "gwas" / "{kind}date{date}.log"),
+        str(MISC_ADJ / "{population}" / "gwas" / "{kind}{trait}date{date}.log"),
     wildcard_constraints:
         kind="|crossfit_",
+        trait="|trait2_",
         date=r"\d+",
     params:
         prefix=lambda wc: str(MISC_OUT / wc.population / "gwas" / "genotypes"),
-        work=lambda wc: str(MISC_ADJ / wc.population / "gwas" / "work" / f"{wc.kind}date{wc.date}"),
+        work=lambda wc: str(MISC_ADJ / wc.population / "gwas" / "work"
+                            / f"{wc.kind}{wc.trait}date{wc.date}"),
     threads: MISC["gwas"]["jobs"] * MISC["gwas"]["threads"]
     shell:
         "python -u {MISC_SCRIPTS}/gwas.py --population {wildcards.population}"
