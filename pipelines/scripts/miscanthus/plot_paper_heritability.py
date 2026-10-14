@@ -1,9 +1,9 @@
 """The Miscanthus heritability and NDVI figures of the paper's supplement.
 
 --out-train (trainHeritMisc): the narrow-sense train heritability of trait 1 per date after the
-nearest-neighbor field adjustment, H2-opt (the hybrid) and the baselines
+nearest-neighbor field adjustment, H2-opt (CNN), H2-opt (linear) and the baselines
 (--heritability-adjusted), the median over the folds and a band from the 25th to the 75th
-percentile; H2-opt is drawn on top.
+percentile, with a dotted line before the date of canopy closure; in the style of miscFig b.
 --out-ndvi-heritability (miscVegIndex): a, the mean NDVI of the plants per date, both populations;
 b, the test heritability per date after the nearest-neighbor field adjustment of H2-opt with a CNN
 (--heritability-adjusted, evaluate_heritability_spatial.py) and of NDVI (ndvi.py, test_adjusted),
@@ -30,14 +30,12 @@ from h2opt_analysis import miscanthus  # noqa: E402
 from h2opt_analysis.figures import COLORS, MATH_RC, SIM_FIG_RC, TICK_SIZE, letter  # noqa: E402
 from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 
-FONT_SIZE = 8
-# The paper's H2-opt on Miscanthus is the hybrid; linear H2-opt is not shown.
-PAPER_LABELS = {**LABELS, 'h2opt_hybrid': 'H2-opt'}
+PAPER_LABELS = {**LABELS, 'h2opt_hybrid': 'H2-opt (CNN)', 'h2opt': 'H2-opt (linear)'}
 # The first date after canopy closure (from the mean NDVI, miscVegIndex a).
 CANOPY_CLOSURE = '07/24'
 NDVI_COLOR = 'black'
 # Markers tell apart curves that overlap.
-MARKERS = {'h2opt_hybrid': 'o', 'pch': 's', 'max_features': '^', 'single_band': 'D',
+MARKERS = {'h2opt_hybrid': 'o', 'h2opt': 'o', 'pch': 's', 'max_features': '^', 'single_band': 'D',
            'pca': 'v', 'genetic_pca': 'P', 'ndvi': 'X'}
 
 
@@ -48,25 +46,28 @@ def narrow(values):
 
 def load_heritability(path, split):
     """{method: narrow-sense heritability of trait 1, dates x folds} of split 'train' or 'test' of
-    an evaluate_heritability_spatial.py result, in figure order, without linear H2-opt."""
+    an evaluate_heritability_spatial.py result, in figure order."""
     with np.load(path) as f:
         values = dict(zip(f['methods'], narrow(f[split]), strict=True))
-    return {m: values[m] for m in ordered(values) if m != 'h2opt'}
+    return {m: values[m] for m in ordered(values)}
 
 
-def plot_dates(ax, curves, colors, labels, dates=miscanthus.DATES):
+def plot_dates(ax, curves, dates=miscanthus.DATES):
     """One line with markers per curve: the median over the folds of curves[key] (dates x
-    folds), with a band from the 25th to the 75th percentile. The first curve is drawn on top."""
+    folds), with a band from the 25th to the 75th percentile, and a dotted line before the date
+    of canopy closure. The first curve is drawn on top."""
     x = np.arange(len(dates))
     for z, (key, values) in enumerate(curves.items()):
         low, median, high = np.percentile(values, [25, 50, 75], axis=1)
         zorder = len(curves) - z
-        ax.fill_between(x, low, high, color=colors[key], alpha=0.15, linewidth=0, zorder=zorder)
-        ax.plot(x, median, '-', color=colors[key], alpha=0.6, lw=1, zorder=zorder)
-        ax.plot(x, median, MARKERS[key], color=colors[key], ms=3, label=labels[key],
+        ax.fill_between(x, low, high, color=COLORS[key], alpha=0.2, linewidth=0, zorder=zorder)
+        ax.plot(x, median, '-', color=COLORS[key], alpha=0.6, lw=1, zorder=zorder)
+        ax.plot(x, median, MARKERS[key], color=COLORS[key], ms=3, label=PAPER_LABELS[key],
                 zorder=zorder)
-    ax.axhline(0, color='0.6', lw=0.5)
-    ax.set_xticks(x, dates, rotation=60)
+    ax.axvline(dates.index(CANOPY_CLOSURE) - 0.5, color='0.5', ls=':', lw=0.8)
+    ax.set_xticks(x, dates, rotation=90)
+    ax.set_ylim(0, 1.02)
+    ax.set_yticks(np.arange(0, 1.01, 0.2))
     ax.spines[['top', 'right']].set_visible(False)
 
 
@@ -77,16 +78,16 @@ def save(fig, path):
 
 
 def population_panels(heritability, ylabel):
-    """A figure with one plot_dates panel per population."""
-    fig, axes = plt.subplots(1, 2, figsize=(7.5, 2.8), sharey=True)
+    """A figure with one plot_dates panel per population and the legend above. Draw and save it
+    under SIM_FIG_RC and MATH_RC."""
+    fig, axes = plt.subplots(1, 2, figsize=(6.5, 2.3), sharey=True)
     for p, (ax, population) in enumerate(zip(axes, miscanthus.POPULATIONS, strict=True)):
-        plot_dates(ax, heritability[p], COLORS, PAPER_LABELS)
-        ax.set_title(population.capitalize(), fontsize=FONT_SIZE + 1)
-        ax.set_xlabel('date')
+        plot_dates(ax, heritability[p])
+        ax.set_title(population.capitalize())
     axes[0].set_ylabel(ylabel)
     handles, names = axes[0].get_legend_handles_labels()
     fig.legend(handles, names, loc='upper center', ncol=len(names), frameon=False,
-               fontsize=FONT_SIZE, handletextpad=0.2, columnspacing=1)
+               fontsize=TICK_SIZE, handletextpad=0.2, columnspacing=1)
     fig.tight_layout(rect=(0, 0, 1, 0.9))
     return fig
 
@@ -140,11 +141,10 @@ def main():
     parser.add_argument('--out-train', required=True)
     parser.add_argument('--out-ndvi-heritability', required=True)
     args = parser.parse_args()
-    plt.rcParams.update({'font.size': FONT_SIZE})
-
     ndvi = [np.load(f) for f in args.ndvi]
     train = [load_heritability(f, 'train') for f in args.heritability_adjusted]
-    save(population_panels(train, 'train heritability'), args.out_train)
+    with plt.rc_context({**SIM_FIG_RC, **MATH_RC}):
+        save(population_panels(train, 'train heritability'), args.out_train)
     cnn = []
     for path in args.heritability_adjusted:
         with np.load(path) as f:
