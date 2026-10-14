@@ -62,11 +62,11 @@ def csm_image(images, row, date):
     return np.clip((image - low) / (high - low), 0, 1)
 
 
-def panel_a(fig, box, images_path, population):
+def panel_a(fig, box, images_path, population, input_label):
     """Three images of one plant (three dates, crop surface model) as a stack of cards in box
     (figure coordinates: left, bottom, width, height): the front card at the bottom left, the
     cards behind it up and to the right, dots for the other images; the population above the
-    stack, n and c to its left."""
+    stack, n and c to its left, and with input_label the input name X on the population's line."""
     design = miscanthus.design(population)
     images = np.load(images_path, mmap_mode='r')
     row = np.flatnonzero(design.keep)[EXAMPLE_PLANT]
@@ -93,6 +93,8 @@ def panel_a(fig, box, images_path, population):
                               transform=fig.transFigure, ls='', marker='o', ms=0.8, color='0.3'))
     fig.text((card_left + right) / 2, top + 0.04 * height, population.capitalize(), ha='center',
              va='bottom')
+    if input_label:
+        fig.text(card_left - 0.06 * width, top + 0.04 * height, '$X$:', ha='right', va='bottom')
     n, c = int(design.keep.sum()), len(np.unique(design.families))
     n_text = f'{n:,}'.replace(',', '{,}')
     fig.text(card_left - 0.06 * width, bottom + 0.45 * size, f'$n = {n_text}$\n$c = {c}$',
@@ -146,7 +148,7 @@ def main():
 
         for p, population in enumerate(miscanthus.POPULATIONS):
             box = (0, ROW_BOTTOM[p] / FIG_SIZE[1], 0.98 / FIG_SIZE[0], ROW_HEIGHT / FIG_SIZE[1])
-            panel_a(fig, box, args.images[p], population)
+            panel_a(fig, box, args.images[p], population, input_label=p == 0)
 
             ax = axes(1.4, p, 1.42)
             plot_bands(ax, load_adjusted(args.heritability[p]))
@@ -171,8 +173,6 @@ def main():
             if p == 0:
                 letter(ax, 'c', -0.4)
 
-        fig.text(0.2 / FIG_SIZE[0], (ROW_BOTTOM[0] + ROW_HEIGHT + 0.07) / FIG_SIZE[1], '$X$:',
-                 va='bottom')
         fig.text(0.05 / FIG_SIZE[0], (ROW_BOTTOM[1] - 0.12) / FIG_SIZE[1],
                  '$G$ = half-sibling groups', va='top', fontsize=TICK_SIZE - 1)
 
