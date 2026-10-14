@@ -152,12 +152,12 @@ miscanthus:
   # The run of the paper (miscanthus_adjusted_all, outputs under miscanthus_adjusted/): linear and
   # hybrid H2-opt trained on the heritability after the nearest-neighbor adjustment
   # (spatial_width), the linear level selected again under it; the CNN level of
-  # cnn_level_population for both populations; the baselines of the main run without PCH, which
-  # cannot maximize the adjusted heritability. Scored after the adjustment.
+  # cnn_level_population for both populations; the baselines of the main run, fitted without the
+  # adjustment (PCH cannot maximize the adjusted heritability). Scored after the adjustment.
   adjusted:
     dates: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
     cnn_level_population: central
-    baselines: [pca, genetic_pca, max_features, single_band]
+    baselines: [pch, pca, genetic_pca, max_features, single_band]
     # Hybrid traits per fold and date (miscanthus_adjusted_later_traits_all): trait k is trained
     # on top of the fixed traits 1 to k - 1.
     traits: 5
