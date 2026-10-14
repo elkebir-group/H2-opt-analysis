@@ -19,14 +19,14 @@ import numpy as np  # noqa: E402
 from h2opt_analysis.figures import MATH_RC, SIM_FIG_RC, letter  # noqa: E402
 
 LABELS = {'sorghum': 'Sorghum (ANOVA)',
-          'miscanthus-central': 'Miscanthus Central\npixels\n(Henderson3)',
-          'miscanthus-south': 'Miscanthus South\npixels\n(Henderson3)',
+          'miscanthus-central': "Miscanthus Central\npixels\n(Henderson's Method III)",
+          'miscanthus-south': "Miscanthus South\npixels\n(Henderson's Method III)",
           'arabidopsis-0d': 'Arabidopsis 0 day (ANOVA)',
           'arabidopsis-6d': 'Arabidopsis 6 day (ANOVA)',
           'miscanthus-traits-central': ('Miscanthus Central\n'
-                                        'H2-opt traits\n(Henderson3, clipped at 0)'),
+                                        "H2-opt traits\n(Henderson's Method III,\nclipped at 0)"),
           'miscanthus-traits-south': ('Miscanthus South\n'
-                                      'H2-opt traits\n(Henderson3, clipped at 0)')}
+                                      "H2-opt traits\n(Henderson's Method III,\nclipped at 0)")}
 CLIPPED = {'miscanthus-traits-central', 'miscanthus-traits-south'}
 ROWS = [['sorghum', 'arabidopsis-0d', 'arabidopsis-6d'],
         ['miscanthus-central', 'miscanthus-south', 'miscanthus-traits-central',
