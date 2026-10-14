@@ -65,16 +65,17 @@ def csm_image(images, row, date):
 def panel_a(fig, box, images_path, population):
     """Three images of one plant (three dates, crop surface model) as a stack of cards in box
     (figure coordinates: left, bottom, width, height): the front card at the bottom left, the
-    cards behind it up and to the right, dots for the other images; the population above the
-    stack, n and c to its left."""
+    cards behind it up and to the right, dots for the other images; n and c above the stack, as
+    in the other figures."""
     design = miscanthus.design(population)
     images = np.load(images_path, mmap_mode='r')
     row = np.flatnonzero(design.keep)[EXAMPLE_PLANT]
     left, bottom, width, height = box
-    size = 0.62 * height  # card height in figure coordinates
+    bottom -= 0.3 * height  # below the row: room for n and c above the stack
+    size = 0.72 * height  # card height in figure coordinates
     aspect = fig.get_figheight() / fig.get_figwidth()
     step = 0.13 * size
-    card_left = left + width - size * aspect - 2 * step * aspect
+    card_left = left + 0.03 * width
     for k in reversed(range(len(EXAMPLE_DATES))):
         ax = fig.add_axes((card_left + step * aspect * k, bottom + step * k, size * aspect, size))
         ax.imshow(csm_image(images, row, EXAMPLE_DATES[k]), cmap='magma', aspect='auto')
@@ -91,12 +92,10 @@ def panel_a(fig, box, images_path, population):
         fig.add_artist(Line2D([x + 0.45 * step * aspect * i for i in (0, 1, 2)],
                               [y + 0.45 * step * i + 0.2 * step for i in (0, 1, 2)],
                               transform=fig.transFigure, ls='', marker='o', ms=0.8, color='0.3'))
-    fig.text((card_left + right) / 2, top + 0.04 * height, population.capitalize(), ha='center',
-             va='bottom', fontsize=TICK_SIZE)
     n, c = int(design.keep.sum()), len(np.unique(design.families))
     n_text = f'{n:,}'.replace(',', '{,}')
-    fig.text(card_left - 0.06 * width, bottom + 0.45 * size, f'$n = {n_text}$\n$c = {c}$',
-             ha='right', va='center', fontsize=TICK_SIZE)
+    fig.text(card_left, top + 0.04 * height, f'$n = {n_text}$\n$c = {c}$ half-sibling groups',
+             ha='left', va='bottom', fontsize=TICK_SIZE)
     return n, c
 
 
@@ -170,8 +169,6 @@ def main():
             if p == 0:
                 letter(ax, 'c', -0.4)
 
-        fig.text(0.05 / FIG_SIZE[0], (ROW_BOTTOM[1] - 0.12) / FIG_SIZE[1],
-                 '$G$ = half-sibling groups', va='top', fontsize=TICK_SIZE)
 
         measured = []
         for path in args.measured:
