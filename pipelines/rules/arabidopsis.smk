@@ -301,10 +301,11 @@ rule arabi_paper_heritability:
         str(ARABI_PAPER / "ArabiHeritTrain.log"),
     params:
         treatments=" ".join(ARABI["treatments"]),
+        traits=ARABI["h2opt"]["traits"],
     threads: 1
     shell:
         "python -u {ARABI_SCRIPTS}/plot_paper_heritability.py --treatments {params.treatments}"
-        " --heritability {input} --out {output.pdf} > {log} 2>&1"
+        " --heritability {input} --out {output.pdf} --traits {params.traits} > {log} 2>&1"
 
 
 # coef_0day for treatment 0d, coef_6day for 6d.

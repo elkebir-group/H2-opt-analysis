@@ -1,14 +1,20 @@
-"""Train and test heritability of every method's traits on Arabidopsis (images/ArabiHeritTrain).
+"""Train and test heritability of traits 1 to --traits of each method on Arabidopsis: median over
+the folds and a band from the 25th to the 75th percentile (paper figure ArabiHeritTrain), in the
+style of the sorghum figure (multiTraitHerit_all).
 
-One row per treatment, train heritability left and test heritability right: boxplots over the
-folds per trait, H2-opt and every baseline side by side. Reads the .npz of
-evaluate_heritability.py, one per treatment. Saves --out (.pdf) and a .png next to it.
+Reads the .npz of evaluate_heritability.py, one per treatment; method labels and colors come from
+the slugs saved with the values. One row of panels: per treatment, train accessions and then test
+accessions. Each panel has the size of a sorghum panel, so the figure is drawn at the text width of
+the paper (6.5 in) and LaTeX does not scale it. Writes the figure as .pdf and, beside it, .png, and
+prints the median, 25th and 75th percentiles and mean per method.
 
     python pipelines/scripts/arabidopsis/plot_paper_heritability.py --treatments 0d 6d \\
-        --heritability 0d/heritability.npz 6d/heritability.npz --out ArabiHeritTrain.pdf
+        --heritability 0d/heritability.npz 6d/heritability.npz --out ArabiHeritTrain.pdf \\
+        --traits 10
 """
 
 import argparse
+from pathlib import Path
 
 import matplotlib
 
@@ -16,45 +22,64 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
-from h2opt_analysis.figures import grouped_boxplot, legend  # noqa: E402
-from h2opt_analysis.methods import ordered  # noqa: E402
+from h2opt_analysis.figures import (  # noqa: E402
+    MATH_RC,
+    SIM_FIG_RC,
+    median_bands,
+    ordered_legend,
+)
+from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
+
+FIG_SIZE = (6.5, 2.1)
+# Panel titles at the text size of the figure.
+RC = {**SIM_FIG_RC, **MATH_RC, 'axes.titlesize': 'medium'}
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--treatments', nargs='+', required=True)
     parser.add_argument('--heritability', nargs='+', required=True, help='one per treatment')
-    parser.add_argument('--out', required=True)
+    parser.add_argument('--out', required=True, help='.pdf; a .png is written beside it')
+    parser.add_argument('--traits', type=int, required=True)
     args = parser.parse_args()
     if len(args.treatments) != len(args.heritability):
         parser.error('give one heritability file per treatment')
 
-    fig, axes = plt.subplots(len(args.treatments), 2, figsize=(11, 2.8 * len(args.treatments)),
-                             sharey=True, squeeze=False)
-    for row, (treatment, path) in enumerate(zip(args.treatments, args.heritability,
-                                                strict=True)):
+    order = np.arange(1, args.traits + 1)
+    plt.rcParams.update(RC)
+    fig, axes = plt.subplots(1, 2 * len(args.treatments), figsize=FIG_SIZE, sharey=True)
+    panels = [(treatment, path, split)
+              for treatment, path in zip(args.treatments, args.heritability, strict=True)
+              for split in ('train', 'test')]
+    for ax, (treatment, path, split) in zip(axes, panels, strict=True):
         results = np.load(path)
-        saved = list(results['methods'])
-        methods = ordered(saved)
-        for ax, split in zip(axes[row], ('train', 'test'), strict=True):
-            values = results[split]  # methods x folds x traits
-            boxes = {m: {t: values[i, :, t] for t in range(values.shape[2])}
-                     for i, m in enumerate(saved)}
-            grouped_boxplot(ax, [str(t + 1) for t in range(values.shape[2])], methods, boxes)
-            ax.set_title(f'{treatment.removesuffix("d")} day, {split}', fontsize=10)
-            ax.set_xlabel('trait')
-            ax.set_ylim(-0.02, 1.02)
-            print(treatment, split, 'mean over folds per trait:')
-            for m in methods:
-                i = saved.index(m)
-                print(f'  {m:13s}', np.round(values[i].mean(axis=0), 3).tolist(),
-                      f'mean {values[i].mean():.3f}')
-        axes[row, 0].set_ylabel('heritability (ANOVA)')
-    legend(fig, methods)
-    fig.tight_layout(rect=(0, 0, 1, 0.94))
-    fig.savefig(args.out)
-    fig.savefig(args.out.removesuffix('.pdf') + '.png', dpi=200)
-    plt.close(fig)
+        methods = list(results['methods'])
+        values = results[split][:, :, :args.traits]  # methods x folds x traits
+        median_bands(ax, order, values, methods)
+        print(f'{treatment} {split} heritability over the folds, traits 1-{args.traits} '
+              '(median, 25th and 75th percentile, mean)')
+        for method in ordered(methods):
+            v = values[methods.index(method)]
+            print(f'  {LABELS[method]:16s} median', np.round(np.median(v, axis=0), 3))
+            print(f'  {"":16s} 25th  ', np.round(np.percentile(v, 25, axis=0), 3))
+            print(f'  {"":16s} 75th  ', np.round(np.percentile(v, 75, axis=0), 3))
+            print(f'  {"":16s} mean  ', np.round(v.mean(axis=0), 3))
+        ax.set_xticks(order)
+        ax.set_xlabel('synthetic trait')
+        ax.set_title(f'{treatment.removesuffix("d")} day, {split} accessions')
+        ax.grid(axis='y', color='0.9', linewidth=0.6)
+        ax.set_axisbelow(True)
+        ax.spines[['top', 'right']].set_visible(False)
+    axes[0].set_ylabel('heritability (median over folds)')
+    axes[0].set_ylim(0, 1)
+    # the legend at the bottom right of the last train panel, where no line or band is
+    ordered_legend(axes[-2], [LABELS[m] for m in ordered(methods)], frameon=False,
+                   loc='lower right', fontsize=plt.rcParams['xtick.labelsize'],
+                   handlelength=1.2, handletextpad=0.4, borderaxespad=0, labelspacing=0.2)
+    fig.tight_layout(pad=0.3, w_pad=0.6)
+    out = Path(args.out)
+    fig.savefig(out)
+    fig.savefig(out.with_suffix('.png'), dpi=300)
 
 
 if __name__ == '__main__':
