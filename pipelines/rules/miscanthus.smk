@@ -318,7 +318,7 @@ rule misc_plot_heritability:
 MISC_PAPER = MISC_OUT / "figures" / "paper"
 MISC_PAPER_FIGURES = ["miscFig", "miscVegIndex", "trainHeritMisc",
                       "miscCorTimeSimple", "miscCorTime", "traitCorrelation_allTraits",
-                      "traitCorrelation_simplePearson", "miscGWAS"]
+                      "traitCorrelation_simplePearson", "miscGWAS", "miscNull"]
 
 
 def misc_by_population(name):
@@ -421,6 +421,29 @@ rule misc_plot_paper_gwas:
     threads: 1
     shell:
         "python -u {MISC_SCRIPTS}/plot_paper_gwas.py --gwas {input} --out {output} > {log} 2>&1"
+
+
+# miscNull: the adjusted run's GWAS of H2-opt (CNN) trait 1 of all folds and dates against its
+# cross-fit and the permutation null (largest -log10 p, lambda GC, QQ plot), in the style of sorNull.
+rule misc_plot_paper_null:
+    input:
+        **{f"{kind}{p}": [str(MISC_ADJ / p / "gwas" / f"{prefix}date{d}.npz") for d in MISC_DATES]
+           for p in miscanthus.POPULATIONS
+           for kind, prefix in (("gwas_", ""), ("crossfit_", "crossfit_"))},
+        **{f"null_{p}": [str(MISC_ADJ / p / "null" / f"perm{k}.npz")
+                         for k in range(MISC["gwas"]["permutations"])]
+           for p in miscanthus.POPULATIONS},
+    output:
+        str(MISC_PAPER / "miscNull.pdf"),
+    log:
+        str(MISC_PAPER / "miscNull.log"),
+    threads: 1
+    shell:
+        "python -u {MISC_SCRIPTS}/plot_paper_null.py"
+        " --gwas-central {input.gwas_central} --crossfit-central {input.crossfit_central}"
+        " --null-central {input.null_central} --gwas-south {input.gwas_south}"
+        " --crossfit-south {input.crossfit_south} --null-south {input.null_south}"
+        " --null-date {MISC[selection_date]} --out {output} > {log} 2>&1"
 
 
 rule misc_plot_paper_main:
