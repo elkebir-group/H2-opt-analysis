@@ -92,13 +92,14 @@ def panel_a(fig, box, images_path, population, input_label):
                               [y + 0.45 * step * i + 0.2 * step for i in (0, 1, 2)],
                               transform=fig.transFigure, ls='', marker='o', ms=0.8, color='0.3'))
     fig.text((card_left + right) / 2, top + 0.04 * height, population.capitalize(), ha='center',
-             va='bottom')
+             va='bottom', fontsize=TICK_SIZE)
     if input_label:
-        fig.text(card_left - 0.06 * width, top + 0.04 * height, '$X$:', ha='right', va='bottom')
+        fig.text(card_left - 0.06 * width, top + 0.04 * height, '$X$:', ha='right', va='bottom',
+                 fontsize=TICK_SIZE)
     n, c = int(design.keep.sum()), len(np.unique(design.families))
     n_text = f'{n:,}'.replace(',', '{,}')
     fig.text(card_left - 0.06 * width, bottom + 0.45 * size, f'$n = {n_text}$\n$c = {c}$',
-             ha='right', va='center')
+             ha='right', va='center', fontsize=TICK_SIZE)
     return n, c
 
 
@@ -173,7 +174,7 @@ def main():
                 letter(ax, 'c', -0.4)
 
         fig.text(0.05 / FIG_SIZE[0], (ROW_BOTTOM[1] - 0.12) / FIG_SIZE[1],
-                 '$G$ = half-sibling groups', va='top', fontsize=TICK_SIZE - 1)
+                 '$G$ = half-sibling groups', va='top', fontsize=TICK_SIZE)
 
         measured = []
         for path in args.measured:
