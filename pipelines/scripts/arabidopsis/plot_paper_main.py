@@ -178,11 +178,6 @@ def main():
                      (ROW_BOTTOM[row] + size + step * (STACK - 1) + 0.04) / FIG_SIZE[1],
                      f'$n = {len(accessions)}$, $c = {len(np.unique(accessions))}$ accessions',
                      fontsize=TICK_SIZE)
-            if row == 0:
-                # the input name X on the line of n and c
-                fig.text(0.17 / FIG_SIZE[0],
-                         (ROW_BOTTOM[row] + size + step * (STACK - 1) + 0.04) / FIG_SIZE[1],
-                         '$X$:', ha='right', fontsize=TICK_SIZE)
 
             # b: test heritability per trait, median over the folds and a band from the 25th to
             # the 75th percentile
@@ -195,7 +190,7 @@ def main():
             median_bands(ax, traits, test, methods)
             ax.set_ylim(0, 1)
             ax.set_yticks([0, 0.5, 1])
-            ax.set_xticks(traits, traits if last else [])
+            ax.set_xticks(traits)
             ax.set_ylabel('test heritability')
             ax.spines[['top', 'right']].set_visible(False)
             if last:
@@ -223,7 +218,7 @@ def main():
             ax.set_xlim(0, arabidopsis.N_RT * RT_BIN)
             ax.set_ylim(MZ_SHOWN, 1300)
             ax.set_yticks([MZ_SHOWN, 500, 1000])
-            ax.set_xticks([0, 10, 20], [0, 10, 20] if last else [])
+            ax.set_xticks([0, 10, 20])
             ax.set_ylabel('$m/z$ (Da)')
             ax.spines[['top', 'right']].set_visible(False)
             if last:
@@ -240,7 +235,7 @@ def main():
             ax = axes(4.23, row, 0.46)
             panels['d'].append(ax)
             ax.bar(traits, counts[row], color=COLORS['h2opt'], width=0.7)
-            ax.set_xticks(traits, [t if last and t in (1, 5, 10) else '' for t in traits])
+            ax.set_xticks(traits, [t if t in (1, 5, 10) else '' for t in traits])
             ax.set_ylim(0, max(c.max() for c in counts) * 1.05)
             ax.set_ylabel('significant SNPs')
             ax.spines[['top', 'right']].set_visible(False)
@@ -259,10 +254,10 @@ def main():
             r, c = np.nonzero(p[row].T < ALPHA)
             ax.scatter(c, r + 0.25, marker='*', s=5, c='white', linewidths=0)
             ax.set_xticks(range(len(traits)),
-                          [t if last and t in (1, 5, 10) else '' for t in traits])
+                          [t if t in (1, 5, 10) else '' for t in traits])
             ax.set_yticks(range(len(pathways)), [short_name(n) for n in pathways],
                           fontsize=TICK_SIZE - 1.5, linespacing=0.9)
-            ax.tick_params(length=0)
+            ax.tick_params(axis='y', length=0)
             if last:
                 ax.set_xlabel('synthetic trait')
             bar = fig.colorbar(image, cax=axes(6.01, row, 0.05), ticks=[1e-3, 1e-2, ALPHA, 1])

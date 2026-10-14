@@ -100,8 +100,7 @@ def spectra_stack(frame, wavelengths, X, n_plants, n_genotypes):
     """Draw the input as a stack of cards in the axes frame: the front card is an axes with the
     spectrum of the first plant, the cards behind it are offset up and to the right, and the last
     card shows part of the spectrum of the second plant, clipped to the card. The depth of the
-    stack is labeled with the number of plants, its top with the number of genotypes (clones) and
-    the input name X.
+    stack is labeled with the number of plants, its top with the number of genotypes (clones).
 
     The data coordinates of frame are inches from its bottom left (STACK gives the geometry)."""
     width, height = (frame.get_position().size * frame.figure.get_size_inches())
@@ -139,8 +138,6 @@ def spectra_stack(frame, wavelengths, X, n_plants, n_genotypes):
                va='bottom', fontsize=TICK_SIZE)
     frame.text(bx + 0.12, by + h + 0.03, f'$c = {n_genotypes}$ clones', ha='left', va='bottom',
                fontsize=TICK_SIZE)
-    # the input name X on the line of c
-    frame.text(0.12, by + h + 0.03, '$X$:', ha='left', va='bottom', fontsize=TICK_SIZE)
     # the front card
     ax = frame.inset_axes([x0, y0, w, h], transform=frame.transData, zorder=3)
     ax.plot(wavelengths, X[0], color=COLORS['h2opt'])
