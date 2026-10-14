@@ -151,14 +151,16 @@ def write_snp_subset(prefix, snps, out_prefix, chunk=20000):
     """Complete PLINK set (.bed, .bim, .fam) with only the SNPs where snps (boolean, .bim order) is
     true; all individuals are kept."""
     snps = np.asarray(snps, bool)
+    with open(f'{prefix}.bim') as src:
+        n_snps = sum(1 for _ in src)
+    if n_snps != len(snps):
+        raise ValueError(f'{len(snps)} SNP flags for {n_snps} SNPs in {prefix}.bim')
     start = 0
     with open(new_file(f'{out_prefix}.bed'), 'wb') as dst:
         dst.write(BED_MAGIC)
         for raw in _bed_blocks(prefix, len(read_fam(prefix)), chunk):
             dst.write(raw[snps[start:start + len(raw)]].tobytes())
             start += len(raw)
-    if start != len(snps):
-        raise ValueError(f'{len(snps)} SNP flags for {start} SNPs in {prefix}.bed')
     with open(f'{prefix}.bim') as src, open(new_file(f'{out_prefix}.bim'), 'w') as dst:
         dst.writelines(line for line, kept in zip(src, snps, strict=True) if kept)
     shutil.copyfile(f'{prefix}.fam', new_file(f'{out_prefix}.fam'))
@@ -308,7 +310,7 @@ def bim_rows(prefix, chrom, ps):
     bad = [(int(c), int(p)) for c, p, f in zip(chrom, ps, found, strict=True) if len(f) != 1]
     if bad:
         raise ValueError(f'SNPs missing or ambiguous in {prefix}.bim: {bad[:5]}')
-    return np.array([f[0] for f in found])
+    return np.array([f[0] for f in found], dtype=np.int64)
 
 
 def clump(prefix, chrom, ps, neg_log10_p, r2=0.5, kb=250):
@@ -317,31 +319,37 @@ def clump(prefix, chrom, ps, neg_log10_p, r2=0.5, kb=250):
     neg_log10_p: (rows, SNPs), e.g. the traits of several folds stacked, all of the same SNPs
     (chrom, ps); each SNP takes its largest value over the rows. The strongest remaining hit is
     the lead SNP of a new locus, and every remaining hit on its chromosome within kb kilobases and
-    with r^2 above r2 (genotypes of the PLINK set prefix, pairwise complete) joins it. The SNPs are
-    found in the .bim by chromosome and position: GEMMA leaves out some SNPs of the set, so an
-    index into its results is not a .bim row. Returns the loci, strongest first, as dicts: lead
-    (SNP index), snps (SNP indices) and rows (the rows with a hit at a SNP of the locus)."""
+    with r^2 above r2 (genotypes of the PLINK set prefix, pairwise complete) joins it. Chromosome
+    0 holds the SNPs of unknown or unplaced position (e.g. the scaffolds of write_plink_set), so a
+    hit on it is a locus of its own. The SNPs are found in the .bim by chromosome and position:
+    GEMMA leaves out some SNPs of the set, so an index into its results is not a .bim row. Returns
+    the loci, strongest first, as dicts: lead (SNP index), snps (SNP indices) and rows (the rows
+    with a hit at a SNP of the locus); no loci without hits."""
     neg_log10_p = np.atleast_2d(neg_log10_p)
     hit = neg_log10_p > -np.log10(0.05 / neg_log10_p.shape[1])
     snps = np.flatnonzero(hit.any(axis=0))
+    if not len(snps):
+        return []
     G = read_bed(prefix, bim_rows(prefix, chrom[snps], ps[snps]))
+    hit_chrom = np.asarray(chrom)[snps].astype(int)
+    hit_ps = np.asarray(ps)[snps].astype(np.int64)
     best = neg_log10_p[:, snps].max(axis=0)
-    remaining = list(np.argsort(-best))
+    remaining = np.argsort(-best)
     loci = []
-    while remaining:
+    while len(remaining):
         lead = remaining[0]
+        near = remaining[(hit_chrom[remaining] == hit_chrom[lead]) & (hit_chrom[lead] != 0)
+                         & (np.abs(hit_ps[remaining] - hit_ps[lead]) <= kb * 1000)]
         x = G[:, lead]
-        members = []
-        for k in remaining:
+        members = [lead]
+        for k in near[near != lead]:
             y = G[:, k]
             ok = ~np.isnan(x) & ~np.isnan(y)
-            near = (chrom[snps[k]] == chrom[snps[lead]]
-                    and abs(int(ps[snps[k]]) - int(ps[snps[lead]])) <= kb * 1000)
-            if k == lead or (near and np.corrcoef(x[ok], y[ok])[0, 1] ** 2 > r2):
+            if np.corrcoef(x[ok], y[ok])[0, 1] ** 2 > r2:
                 members.append(k)
         loci.append({'lead': snps[lead], 'snps': snps[members],
                      'rows': np.flatnonzero(hit[:, snps[members]].any(axis=1))})
-        remaining = [k for k in remaining if k not in members]
+        remaining = remaining[~np.isin(remaining, members)]
     return loci
 
 

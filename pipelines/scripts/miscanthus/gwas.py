@@ -50,6 +50,9 @@ def main():
 
     with ThreadPoolExecutor(args.jobs) as pool:
         runs = list(pool.map(run, range(Y.shape[1])))
+    for r in runs[1:]:
+        if not all(np.array_equal(r[k], runs[0][k]) for k in ('chr', 'rs', 'ps')):
+            raise ValueError('the GEMMA runs of the folds report different SNPs')
     result = {k: v for k, v in runs[0].items() if k not in gwas.ASSOC_FIELDS}
     result.update({k: np.concatenate([r[k] for r in runs]) for k in gwas.ASSOC_FIELDS})
     summary = gwas.summarize(result)

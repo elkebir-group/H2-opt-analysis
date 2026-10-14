@@ -189,3 +189,27 @@ def test_bim_rows_skips_snps_left_out_of_the_results(tmp_path):
     assert rows.tolist() == [0, 2, 5]
     with pytest.raises(ValueError):
         gwas.bim_rows(tmp_path / 'g', np.array([1]), np.array([99]))
+
+
+def test_clump_without_hits_finds_no_loci():
+    assert gwas.clump('g', np.ones(3, dtype=int), np.arange(3), np.zeros((2, 3))) == []
+
+
+def test_clump_never_joins_hits_on_chromosome_zero():
+    # chromosome 0 holds unplaced scaffolds: two of its hits at nearby positions may be far apart
+    G = np.tile(np.random.default_rng(1).binomial(2, 0.5, size=(200, 1)).astype(float), (1, 2))
+    chrom = np.zeros(2, dtype=int)
+    ps = np.array([1_000, 2_000])
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(gwas, 'read_bed', lambda prefix, snps: G[:, snps])
+        patch.setattr(gwas, 'bim_rows', lambda prefix, c, p: np.searchsorted(ps, p))
+        loci = gwas.clump('g', chrom, ps, np.array([[12.0, 10.0]]), r2=0.5, kb=250)
+    assert [locus['snps'].tolist() for locus in loci] == [[0], [1]]
+
+
+def test_snp_subset_refuses_a_mask_of_the_wrong_length(tmp_path):
+    G = genotypes()
+    write_plink(tmp_path / 'g', G)
+    with pytest.raises(ValueError, match='SNP flags'):
+        gwas.write_snp_subset(tmp_path / 'g', np.ones(G.shape[1] - 1, bool), tmp_path / 's')
+    assert not (tmp_path / 's.bed').exists()

@@ -79,6 +79,9 @@ def main():
 
     folds = [np.load(path) for path in args.gwas]
     chrom, ps = folds[0]['chr'], folds[0]['ps']
+    for f in folds[1:]:
+        assert np.array_equal(f['chr'], chrom) and np.array_equal(f['ps'], ps), \
+            'the folds have different SNPs'
     score = np.stack([f['neg_log10_p'] for f in folds])  # folds x traits x SNPs
     n_folds, n_traits, n_snps = score.shape
     threshold = -np.log10(0.05 / n_snps)

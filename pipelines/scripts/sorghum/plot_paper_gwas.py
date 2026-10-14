@@ -44,7 +44,8 @@ def main():
     folds = [np.load(path) for path in args.gwas]
     chrom, ps = folds[0]['chr'], folds[0]['ps']
     for f in folds[1:]:
-        assert np.array_equal(f['ps'], ps), 'the folds have different SNPs'
+        assert np.array_equal(f['chr'], chrom) and np.array_equal(f['ps'], ps), \
+            'the folds have different SNPs'
     score = np.stack([f['neg_log10_p'] for f in folds])  # folds x traits x SNPs
     n_folds, n_traits, n_snps = score.shape
     loci = gwas.clump(args.genotypes, chrom, ps, score.reshape(-1, n_snps), r2=args.r2,
@@ -59,7 +60,8 @@ def main():
     crossfit = []
     for path in args.crossfit:
         with np.load(path) as z:
-            assert np.array_equal(z['ps'], ps), 'the cross-fit has different SNPs'
+            assert np.array_equal(z['chr'], chrom) and np.array_equal(z['ps'], ps), \
+                'the cross-fit has different SNPs'
             crossfit.append((z['neg_log10_p'][0], z['lambda_gc'][0]))
     lambdas = np.stack([f['lambda_gc'] for f in folds])
     panels = gwas_fold_rows(args.out, chrom, ps, score, lambdas, [c[0] for c in crossfit],
