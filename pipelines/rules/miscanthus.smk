@@ -316,7 +316,7 @@ rule misc_plot_heritability:
 # The Miscanthus figures of the paper, in figures/paper/ (file names as in the paper). miscFig and
 # miscGWAS need the GWAS (miscanthus_gwas_all). miscSecondTrait is not made: it needs trait 2.
 MISC_PAPER = MISC_OUT / "figures" / "paper"
-MISC_PAPER_FIGURES = ["miscFig", "NDVI_canopy", "miscVegIndex", "trainHeritMisc",
+MISC_PAPER_FIGURES = ["miscFig", "miscVegIndex", "trainHeritMisc",
                       "miscCorTimeSimple", "miscCorTime", "traitCorrelation_allTraits",
                       "traitCorrelation_simplePearson", "miscGWAS"]
 
@@ -382,14 +382,13 @@ rule misc_plot_paper_heritability:
     output:
         train=str(MISC_PAPER / "trainHeritMisc.pdf"),
         ndvi=str(MISC_PAPER / "miscVegIndex.pdf"),
-        canopy=str(MISC_PAPER / "NDVI_canopy.pdf"),
     log:
         str(MISC_PAPER / "heritability.log"),
     threads: 1
     shell:
         "python -u {MISC_SCRIPTS}/plot_paper_heritability.py --heritability {input.heritability}"
-        " --heritability-adjusted {input.adjusted} --ndvi {input.ndvi} --out-train {output.train} --out-ndvi-heritability {output.ndvi}"
-        " --out-canopy {output.canopy} > {log} 2>&1"
+        " --heritability-adjusted {input.adjusted} --ndvi {input.ndvi}"
+        " --out-train {output.train} --out-ndvi-heritability {output.ndvi} > {log} 2>&1"
 
 
 rule misc_plot_paper_correlations:

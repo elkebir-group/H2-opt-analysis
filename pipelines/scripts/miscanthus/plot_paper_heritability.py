@@ -2,21 +2,19 @@
 
 --out-train (trainHeritMisc): the narrow-sense train heritability of trait 1 per date, H2-opt
 (the hybrid) and the baselines (--heritability), the median over the folds.
---out-ndvi-heritability (miscVegIndex): the test heritability per date after the nearest-neighbor
-field adjustment of H2-opt with a CNN (--heritability-adjusted, evaluate_heritability_spatial.py)
-and of NDVI (ndvi.py, test_adjusted), the median over the folds and a band from the 25th to the
-75th percentile, with a dotted line before the date of canopy closure, in the style of miscFig.
---out-canopy (NDVI_canopy): the mean NDVI of the plants per date, both populations. The
-heritability is 4 x Henderson3, clipped to [0, 1] per fold. Each figure is also saved as a .png
-next to its .pdf.
+--out-ndvi-heritability (miscVegIndex): a, the mean NDVI of the plants per date, both populations;
+b, the test heritability per date after the nearest-neighbor field adjustment of H2-opt with a CNN
+(--heritability-adjusted, evaluate_heritability_spatial.py) and of NDVI (ndvi.py, test_adjusted),
+the median over the folds and a band from the 25th to the 75th percentile; a dotted line before
+the date of canopy closure; in the style of miscFig. The heritability is 4 x Henderson3, clipped
+to [0, 1] per fold. Each figure is also saved as a .png next to its .pdf.
 
     python pipelines/scripts/miscanthus/plot_paper_heritability.py \\
         --heritability central/heritability.npz south/heritability.npz \\
         --heritability-adjusted adjusted/central/heritability.npz \\
         adjusted/south/heritability.npz --ndvi central/ndvi.npz south/ndvi.npz \\
         --out-train figures/paper/trainHeritMisc.pdf \\
-        --out-ndvi-heritability figures/paper/miscVegIndex.pdf \\
-        --out-canopy figures/paper/NDVI_canopy.pdf
+        --out-ndvi-heritability figures/paper/miscVegIndex.pdf
 """
 
 import argparse
@@ -28,13 +26,13 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 from h2opt_analysis import miscanthus  # noqa: E402
-from h2opt_analysis.figures import COLORS, MATH_RC, SIM_FIG_RC, TICK_SIZE  # noqa: E402
+from h2opt_analysis.figures import COLORS, MATH_RC, SIM_FIG_RC, TICK_SIZE, letter  # noqa: E402
 from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 
 FONT_SIZE = 8
 # The paper's H2-opt on Miscanthus is the hybrid; linear H2-opt is not shown.
 PAPER_LABELS = {**LABELS, 'h2opt_hybrid': 'H2-opt'}
-# The first date after canopy closure (from the mean NDVI, NDVI_canopy).
+# The first date after canopy closure (from the mean NDVI, miscVegIndex a).
 CANOPY_CLOSURE = '07/24'
 NDVI_COLOR = 'black'
 # Markers tell apart curves that overlap.
@@ -89,14 +87,26 @@ def population_panels(heritability, ylabel):
     return fig
 
 
-def ndvi_figure(cnn, ndvi):
-    """miscVegIndex: per population, H2-opt with a CNN and NDVI (narrow-sense test heritability,
-    dates x folds): the median over the folds and a band from the 25th to the 75th percentile.
-    Draw and save it under SIM_FIG_RC and MATH_RC."""
+def ndvi_figure(mean_ndvi, cnn, ndvi):
+    """miscVegIndex. a: the mean NDVI of the plants per date (mean_ndvi: one array per
+    population). b: per population, the narrow-sense test heritability (dates x folds) of H2-opt
+    with a CNN and of NDVI: the median over the folds and a band from the 25th to the 75th
+    percentile. A dotted line before the date of canopy closure in every panel. Draw and save it
+    under SIM_FIG_RC and MATH_RC."""
     x = np.arange(len(miscanthus.DATES))
-    fig, axes = plt.subplots(1, 2, figsize=(6.5, 2.2), layout='constrained')
-    for ax, population, curves in zip(axes, miscanthus.POPULATIONS, zip(cnn, ndvi, strict=True),
-                                      strict=True):
+    closure = miscanthus.DATES.index(CANOPY_CLOSURE) - 0.5
+    fig, axes = plt.subplots(1, 3, figsize=(6.5, 2.0), layout='constrained')
+    ax = axes[0]
+    for population, values, color in zip(miscanthus.POPULATIONS, mean_ndvi,
+                                         ('0.2', '0.6'), strict=True):
+        ax.plot(x, values, '-', color=color, lw=1)
+        ax.plot(x, values, 'o', color=color, ms=3, label=population.capitalize())
+    ax.set_ylabel('mean NDVI')
+    ax.set_ylim(0, 1)
+    ax.legend(loc='upper left', frameon=False, fontsize=TICK_SIZE - 1)
+    letter(ax, 'a', -0.3)
+    for ax, population, curves in zip(axes[1:], miscanthus.POPULATIONS,
+                                      zip(cnn, ndvi, strict=True), strict=True):
         for values, color, marker, label in zip(
                 curves, (COLORS['h2opt_hybrid'], NDVI_COLOR),
                 (MARKERS['h2opt_hybrid'], MARKERS['ndvi']), ('H2-opt (CNN)', 'NDVI'),
@@ -105,14 +115,16 @@ def ndvi_figure(cnn, ndvi):
             ax.fill_between(x, low, high, color=color, alpha=0.2, linewidth=0)
             ax.plot(x, median, '-', color=color, alpha=0.6, lw=1)
             ax.plot(x, median, marker, color=color, ms=3, label=label)
-        ax.axvline(miscanthus.DATES.index(CANOPY_CLOSURE) - 0.5, color='0.5', ls=':', lw=0.8)
-        ax.set_xticks(x, miscanthus.DATES, rotation=90)
         ax.set_ylim(0, 1)
+        ax.set_title(population.capitalize())
+    axes[1].set_ylabel('test heritability')
+    axes[2].legend(loc='upper right', frameon=False, fontsize=TICK_SIZE - 1)
+    letter(axes[1], 'b', -0.3)
+    for ax in axes:
+        ax.axvline(closure, color='0.5', ls=':', lw=0.8)
+        ax.set_xticks(x, miscanthus.DATES, rotation=90)
         ax.set_yticks(np.arange(0, 1.01, 0.2))
         ax.spines[['top', 'right']].set_visible(False)
-        ax.set_title(population.capitalize())
-    axes[0].set_ylabel('test heritability')
-    axes[1].legend(loc='upper right', frameon=False, fontsize=TICK_SIZE - 1)
     return fig
 
 
@@ -124,7 +136,6 @@ def main():
     parser.add_argument('--ndvi', nargs=2, required=True, metavar=('CENTRAL', 'SOUTH'))
     parser.add_argument('--out-train', required=True)
     parser.add_argument('--out-ndvi-heritability', required=True)
-    parser.add_argument('--out-canopy', required=True)
     args = parser.parse_args()
     plt.rcParams.update({'font.size': FONT_SIZE})
 
@@ -136,22 +147,8 @@ def main():
         with np.load(path) as f:
             cnn.append(narrow(f['test'][list(f['methods']).index('h2opt_hybrid')]))
     with plt.rc_context({**SIM_FIG_RC, **MATH_RC}):
-        save(ndvi_figure(cnn, [narrow(n['test_adjusted']) for n in ndvi]),
-             args.out_ndvi_heritability)
-
-    fig, ax = plt.subplots(figsize=(4.5, 2.6))
-    x = np.arange(len(miscanthus.DATES))
-    for population, values, color in zip(miscanthus.POPULATIONS, ndvi, ('tab:blue', 'tab:orange'),
-                                         strict=True):
-        ax.plot(x, values['ndvi'].mean(axis=1), 'o-', color=color, ms=3, lw=1,
-                label=population.capitalize())
-    ax.set_xticks(x, miscanthus.DATES, rotation=60)
-    ax.set_xlabel('date')
-    ax.set_ylabel('mean NDVI')
-    ax.spines[['top', 'right']].set_visible(False)
-    ax.legend(frameon=False)
-    fig.tight_layout()
-    save(fig, args.out_canopy)
+        save(ndvi_figure([n['ndvi'].mean(axis=1) for n in ndvi], cnn,
+                         [narrow(n['test_adjusted']) for n in ndvi]), args.out_ndvi_heritability)
 
     print('median narrow-sense test heritability of NDVI per date, after the adjustment')
     for population, values in zip(miscanthus.POPULATIONS, ndvi, strict=True):
