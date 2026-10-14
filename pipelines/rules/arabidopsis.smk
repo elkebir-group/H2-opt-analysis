@@ -265,7 +265,8 @@ rule arabi_paper_main_figure:
         heritability=expand(str(ARABI_OUT / "{treatment}" / "heritability.npz"),
                             treatment=ARABI["treatments"]),
         coefficients=[arabi_paper_coefficients(t) for t in ARABI["treatments"]],
-        gwas=[arabi_paper_gwas(t) for t in ARABI["treatments"]],
+        gwas=[str(ARABI_OUT / t / "gwas" / f"fold{f}.npz") for t in ARABI["treatments"]
+              for f in ARABI_FOLDS],
         genotypes=[str(ARABI_OUT / t / "gwas" / f"genotypes{e}") for t in ARABI["treatments"]
                    for e in (".bed", ".bim", ".fam")],
         pathways=expand(str(ARABI_OUT / "{treatment}" / "enrichment" / "trait{k}_pathways.csv"),
