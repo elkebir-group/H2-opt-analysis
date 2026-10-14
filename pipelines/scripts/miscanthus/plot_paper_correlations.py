@@ -5,14 +5,14 @@ arbitrary) of trait 1 of hybrid H2-opt (date_correlations.py, measured_correlati
 --out-dates (miscCorTime): between the dates, both populations (columns); per plant (a, b) and
 between half-sib family means (c, d), with one color bar. --out-measured-family
 (traitCorrelation_allTraits) and --out-measured-plant (traitCorrelation_simplePearson): with the
-measured traits of Central Japan, between family means and per plant; the traits are sorted by
-their largest value. The panel function heatmap also makes panels c and d of miscFig
-(plot_paper_main.py). Drawn at the text width of the paper (6.5 in) in the style of simFig. Each
-figure is also saved as a .png next to its .pdf.
+measured traits of each population (a: Central, b: South), between family means and per plant;
+the traits are sorted by their largest value. The panel function heatmap also makes panels c and
+d of miscFig (plot_paper_main.py). Drawn at the text width of the paper (6.5 in) in the style of
+simFig. Each figure is also saved as a .png next to its .pdf.
 
     python pipelines/scripts/miscanthus/plot_paper_correlations.py \\
         --dates central/date_correlations.npz south/date_correlations.npz \\
-        --measured central/measured_correlations.npz \\
+        --measured central/measured_correlations.npz south/measured_correlations.npz \\
         --out-dates figures/paper/miscCorTime.pdf \\
         --out-measured-family figures/paper/traitCorrelation_allTraits.pdf \\
         --out-measured-plant figures/paper/traitCorrelation_simplePearson.pdf
@@ -37,6 +37,7 @@ COLORBAR_LABEL = r'$|r|$, median over the folds'
 # coordinates.
 DATE_ROWS = [('plant', 'individual plants'), ('family', 'half-sibling group means')]
 DATE_LETTER_X = -0.2
+MEASURED_LETTER_X = -0.27
 
 
 def median_abs(values):
@@ -77,22 +78,30 @@ def date_figure(files, path):
     save(fig, path)
 
 
-def measured_figure(file, key, path):
-    with np.load(file) as f:
-        matrix, names = sort_traits(median_abs(f[key]), list(f['traits']))
-    fig, ax = plt.subplots(figsize=(WIDTH, 3.4), layout='constrained')
-    image = heatmap(ax, matrix, names, miscanthus.DATES, vmax=max(matrix.max(), 0.05),
-                    font_size=CELL_SIZE)
-    ax.set_xlabel('date')
-    ax.set_title('Central')
-    fig.colorbar(image, ax=ax, label=COLORBAR_LABEL)
+def measured_figure(files, key, path):
+    """One heatmap per population, its height proportional to its number of traits, all on the
+    color scale of the largest value."""
+    panels = []
+    for file in files:
+        with np.load(file) as f:
+            panels.append(sort_traits(median_abs(f[key]), list(f['traits'])))
+    vmax = max(max(matrix.max() for matrix, _ in panels), 0.05)
+    fig, axes = plt.subplots(len(panels), 1, figsize=(WIDTH, 5.4), layout='constrained',
+                             gridspec_kw={'height_ratios': [len(n) + 3 for _, n in panels]})
+    for ax, population, (matrix, names), text in zip(axes, miscanthus.POPULATIONS, panels, 'ab',
+                                                     strict=True):
+        image = heatmap(ax, matrix, names, miscanthus.DATES, vmax=vmax, font_size=CELL_SIZE)
+        ax.set_xlabel('date')
+        ax.set_title(population.capitalize())
+        letter(ax, text, MEASURED_LETTER_X)
+    fig.colorbar(image, ax=axes, shrink=0.6, label=COLORBAR_LABEL)
     save(fig, path)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dates', nargs=2, required=True, metavar=('CENTRAL', 'SOUTH'))
-    parser.add_argument('--measured', required=True)
+    parser.add_argument('--measured', nargs=2, required=True, metavar=('CENTRAL', 'SOUTH'))
     parser.add_argument('--out-dates', required=True)
     parser.add_argument('--out-measured-family', required=True)
     parser.add_argument('--out-measured-plant', required=True)
