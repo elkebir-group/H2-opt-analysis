@@ -37,6 +37,7 @@ from h2opt_analysis.figures import (  # noqa: E402
     COLORS,
     MATH_RC,
     SIM_FIG_RC,
+    TICK_SIZE,
     letter,
     median_bands,
     ordered_legend,
@@ -47,8 +48,8 @@ from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 # in the style of the simulation figures. Positions are in inches: the bottom and the top of the
 # panels, and the left and the width of each panel (a: the frame of the stack; d: the heatmap,
 # then its colorbar).
-FIG_SIZE = (6.5, 2.4)
-BOTTOM = 0.34
+FIG_SIZE = (6.5, 2.53)
+BOTTOM = 0.47
 TOP = FIG_SIZE[1] - 0.16
 PANELS = {'a': (0.0, 1.15), 'b': (1.75, 0.98), 'c': (3.2, 1.05), 'd': (5.0, 1.05),
           'colorbar': (6.1, 0.06)}
@@ -99,7 +100,8 @@ def spectra_stack(frame, wavelengths, X, n_plants, n_genotypes):
     """Draw the input as a stack of cards in the axes frame: the front card is an axes with the
     spectrum of the first plant, the cards behind it are offset up and to the right, and the last
     card shows part of the spectrum of the second plant, clipped to the card. The depth of the
-    stack is labeled with the number of plants, its top with the number of genotypes (clones).
+    stack is labeled with the number of plants, its top with the number of genotypes (clones) and
+    the input name X; the groups G (clones) are named below the panel.
 
     The data coordinates of frame are inches from its bottom left (STACK gives the geometry)."""
     width, height = (frame.get_position().size * frame.figure.get_size_inches())
@@ -132,9 +134,14 @@ def spectra_stack(frame, wavelengths, X, n_plants, n_genotypes):
     angle = np.degrees(np.arctan2(dy, dx))
     along = np.array([dx, dy]) / np.hypot(dx, dy)
     start = np.array([x0, y0 + h]) - 0.05 * along + 0.07 * np.array([-along[1], along[0]])
-    frame.text(*start, f'$n = {n_plants}$', rotation=angle, rotation_mode='anchor', ha='left',
-               va='bottom')
-    frame.text(bx + 0.12, by + h + 0.03, f'$c = {n_genotypes}$ clones', ha='left', va='bottom')
+    n_text = f'{n_plants:,}'.replace(',', '{,}')
+    frame.text(*start, f'$n = {n_text}$', rotation=angle, rotation_mode='anchor', ha='left',
+               va='bottom', fontsize=TICK_SIZE)
+    frame.text(bx + 0.12, by + h + 0.03, f'$c = {n_genotypes}$', ha='left', va='bottom',
+               fontsize=TICK_SIZE)
+    # the input name X on the line of c, and the groups G below the panel
+    frame.text(0.12, by + h + 0.03, '$X$:', ha='left', va='bottom', fontsize=TICK_SIZE)
+    frame.text(0.05, 0.05, '$G$ = clones', ha='left', va='bottom', fontsize=TICK_SIZE)
     # the front card
     ax = frame.inset_axes([x0, y0, w, h], transform=frame.transData, zorder=3)
     ax.plot(wavelengths, X[0], color=COLORS['h2opt'])
@@ -245,7 +252,8 @@ def main():
     ax.set_xticks(range(k), order)
     ax.set_yticks(range(len(labels)), labels)
     ax.set_xlabel('synthetic trait')
-    fig.colorbar(image, cax=panel('colorbar'), label='median |r|')
+    bar = fig.colorbar(image, cax=panel('colorbar'))
+    bar.ax.set_xlabel('$|r|$')
 
     for name, x in LETTERS.items():
         left, width = PANELS[name]
