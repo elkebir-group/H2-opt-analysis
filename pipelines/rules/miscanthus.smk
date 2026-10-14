@@ -345,7 +345,7 @@ rule misc_score_ndvi:
     threads: 2
     shell:
         "python -u {MISC_SCRIPTS}/ndvi.py --population {wildcards.population} --images {input}"
-        " --out {output} > {log} 2>&1"
+        " --width {MISC[spatial_width]} --out {output} > {log} 2>&1"
 
 
 rule misc_date_correlations:
@@ -377,6 +377,7 @@ rule misc_measured_correlations:
 rule misc_plot_paper_heritability:
     input:
         heritability=misc_by_population("heritability.npz"),
+        adjusted=[str(MISC_ADJ / p / "heritability.npz") for p in miscanthus.POPULATIONS],
         ndvi=misc_by_population("ndvi.npz"),
     output:
         train=str(MISC_PAPER / "trainHeritMisc.pdf"),
@@ -387,7 +388,7 @@ rule misc_plot_paper_heritability:
     threads: 1
     shell:
         "python -u {MISC_SCRIPTS}/plot_paper_heritability.py --heritability {input.heritability}"
-        " --ndvi {input.ndvi} --out-train {output.train} --out-ndvi-heritability {output.ndvi}"
+        " --heritability-adjusted {input.adjusted} --ndvi {input.ndvi} --out-train {output.train} --out-ndvi-heritability {output.ndvi}"
         " --out-canopy {output.canopy} > {log} 2>&1"
 
 
