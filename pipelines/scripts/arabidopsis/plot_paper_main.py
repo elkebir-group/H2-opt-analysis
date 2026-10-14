@@ -60,9 +60,9 @@ SHORT = {'Alanine, aspartate and glutamate metabolism': 'Ala, Asp and Glu',
          'Citrate cycle (TCA cycle)': 'TCA cycle',
          'Glyoxylate and dicarboxylate metabolism': 'glyoxylate'}
 TRAIT_STYLE = (('tab:cyan', 's'), ('tab:pink', 'X'), ('tab:olive', 'P'))
-FIG_SIZE = (6.5, 2.13)
+FIG_SIZE = (6.5, 2.26)
 # Rows of panels in inches: the bottoms of the first and the second treatment, and their height.
-ROW_BOTTOM = (1.27, 0.33)
+ROW_BOTTOM = (1.4, 0.46)
 ROW_HEIGHT = 0.6
 # Row labels (the treatments) at the right of the rows, as in simFig.
 ROW_LABEL_X = 6.35
@@ -178,6 +178,11 @@ def main():
                      (ROW_BOTTOM[row] + size + step * (STACK - 1) + 0.04) / FIG_SIZE[1],
                      f'$n = {len(accessions)}$, $c = {len(np.unique(accessions))}$',
                      fontsize=TICK_SIZE)
+            if row == 0:
+                # the input name X on the line of n and c
+                fig.text(0.38 / FIG_SIZE[0],
+                         (ROW_BOTTOM[row] + size + step * (STACK - 1) + 0.04) / FIG_SIZE[1],
+                         '$X$:', ha='right', fontsize=TICK_SIZE)
 
             # b: test heritability per trait, median over the folds and a band from the 25th to
             # the 75th percentile
@@ -267,6 +272,9 @@ def main():
             fig.text(ROW_LABEL_X / FIG_SIZE[0], (ROW_BOTTOM[row] + ROW_HEIGHT / 2) / FIG_SIZE[1],
                      treatment_label(treatment), rotation=-90, ha='left', va='center',
                      fontsize=ROW_LABEL_SIZE, fontweight='bold')
+
+        # the groups G below panel a
+        fig.text(0.05 / FIG_SIZE[0], 0.05 / FIG_SIZE[1], '$G$ = accessions', fontsize=TICK_SIZE)
 
         # each letter at the left edge of its panel, tick and axis labels included
         renderer = fig.canvas.get_renderer()
