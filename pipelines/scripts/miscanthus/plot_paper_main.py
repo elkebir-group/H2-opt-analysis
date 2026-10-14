@@ -171,7 +171,7 @@ def main():
         fig.text(0.2 / FIG_SIZE[0], (ROW_BOTTOM[0] + ROW_HEIGHT + 0.07) / FIG_SIZE[1], '$X$:',
                  va='bottom')
         fig.text(0.05 / FIG_SIZE[0], (ROW_BOTTOM[1] - 0.12) / FIG_SIZE[1],
-                 '$G$ = half-sibling\ngroups', va='top', fontsize=TICK_SIZE - 1)
+                 '$G$ = half-sibling groups', va='top', fontsize=TICK_SIZE - 1)
 
         ax = axes(5.25, 0, 0.85, rows=2)
         with np.load(args.measured) as f:
