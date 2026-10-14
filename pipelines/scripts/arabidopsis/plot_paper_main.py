@@ -62,8 +62,8 @@ SHORT = {'Alanine, aspartate and glutamate metabolism': 'Ala, Asp and Glu',
 TRAIT_STYLE = (('tab:cyan', 's'), ('tab:pink', 'X'), ('tab:olive', 'P'))
 FIG_SIZE = (6.5, 2.13)
 # Rows of panels in inches: the bottoms of the first and the second treatment, and their height.
-ROW_BOTTOM = (1.335, 0.46)
-ROW_HEIGHT = 0.535
+ROW_BOTTOM = (1.27, 0.33)
+ROW_HEIGHT = 0.6
 # Row labels (the treatments) at the right of the rows, as in simFig.
 ROW_LABEL_X = 6.35
 ROW_LABEL_SIZE = 7.5
@@ -153,7 +153,7 @@ def main():
             # a: a stack of input matrices, the first sample in front
             samples = np.flatnonzero(sample_treatments == treatment)
             _, accessions, _ = arabidopsis.design(treatment)
-            size, step = 0.415, 0.06
+            size, step = 0.46, 0.06
             for k in reversed(range(STACK)):
                 image = np.asarray(features[samples[k]]).reshape(
                     (2, arabidopsis.N_MZ, arabidopsis.N_RT))[0, MZ_SHOWN:]
@@ -174,13 +174,13 @@ def main():
             ax.set_ylabel('$m/z$ (Da)')
             if last:
                 ax.set_xlabel('retention time (min)')
-            fig.text(0.42 / FIG_SIZE[0],
+            fig.text(0.2 / FIG_SIZE[0],
                      (ROW_BOTTOM[row] + size + step * (STACK - 1) + 0.04) / FIG_SIZE[1],
-                     f'$n = {len(accessions)}$, $c = {len(np.unique(accessions))}$',
+                     f'$n = {len(accessions)}$, $c = {len(np.unique(accessions))}$ accessions',
                      fontsize=TICK_SIZE)
             if row == 0:
                 # the input name X on the line of n and c
-                fig.text(0.38 / FIG_SIZE[0],
+                fig.text(0.17 / FIG_SIZE[0],
                          (ROW_BOTTOM[row] + size + step * (STACK - 1) + 0.04) / FIG_SIZE[1],
                          '$X$:', ha='right', fontsize=TICK_SIZE)
 
@@ -272,9 +272,6 @@ def main():
             fig.text(ROW_LABEL_X / FIG_SIZE[0], (ROW_BOTTOM[row] + ROW_HEIGHT / 2) / FIG_SIZE[1],
                      treatment_label(treatment), rotation=-90, ha='left', va='center',
                      fontsize=ROW_LABEL_SIZE, fontweight='bold')
-
-        # the groups G below panel a
-        fig.text(0.05 / FIG_SIZE[0], 0.05 / FIG_SIZE[1], '$G$ = accessions', fontsize=TICK_SIZE)
 
         # each letter at the left edge of its panel, tick and axis labels included
         renderer = fig.canvas.get_renderer()

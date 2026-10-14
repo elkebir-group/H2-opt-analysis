@@ -49,7 +49,7 @@ from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 # panels, and the left and the width of each panel (a: the frame of the stack; d: the heatmap,
 # then its colorbar).
 FIG_SIZE = (6.5, 2.4)
-BOTTOM = 0.47
+BOTTOM = 0.34
 TOP = FIG_SIZE[1] - 0.16
 PANELS = {'a': (0.0, 1.15), 'b': (1.75, 0.98), 'c': (3.2, 1.05), 'd': (5.0, 1.05),
           'colorbar': (6.1, 0.06)}
@@ -101,7 +101,7 @@ def spectra_stack(frame, wavelengths, X, n_plants, n_genotypes):
     spectrum of the first plant, the cards behind it are offset up and to the right, and the last
     card shows part of the spectrum of the second plant, clipped to the card. The depth of the
     stack is labeled with the number of plants, its top with the number of genotypes (clones) and
-    the input name X; the groups G (clones) are named below the panel.
+    the input name X.
 
     The data coordinates of frame are inches from its bottom left (STACK gives the geometry)."""
     width, height = (frame.get_position().size * frame.figure.get_size_inches())
@@ -137,11 +137,10 @@ def spectra_stack(frame, wavelengths, X, n_plants, n_genotypes):
     n_text = f'{n_plants:,}'.replace(',', '{,}')
     frame.text(*start, f'$n = {n_text}$', rotation=angle, rotation_mode='anchor', ha='left',
                va='bottom', fontsize=TICK_SIZE)
-    frame.text(bx + 0.12, by + h + 0.03, f'$c = {n_genotypes}$', ha='left', va='bottom',
+    frame.text(bx + 0.12, by + h + 0.03, f'$c = {n_genotypes}$ clones', ha='left', va='bottom',
                fontsize=TICK_SIZE)
-    # the input name X on the line of c, and the groups G below the panel
+    # the input name X on the line of c
     frame.text(0.12, by + h + 0.03, '$X$:', ha='left', va='bottom', fontsize=TICK_SIZE)
-    frame.text(0.05, 0.05, '$G$ = clones', ha='left', va='bottom', fontsize=TICK_SIZE)
     # the front card
     ax = frame.inset_axes([x0, y0, w, h], transform=frame.transData, zorder=3)
     ax.plot(wavelengths, X[0], color=COLORS['h2opt'])
