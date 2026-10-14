@@ -49,7 +49,6 @@ def heatmap(ax, matrix, rows, columns, vmax=1, font_size=FONT_SIZE - 2):
                 color='black' if value > 0.6 * vmax else 'white')
     ax.set_xticks(range(len(columns)), columns, rotation=90)
     ax.set_yticks(range(len(rows)), rows)
-    ax.tick_params(length=0)
     return image
 
 

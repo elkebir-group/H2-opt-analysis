@@ -257,12 +257,11 @@ def main():
                           [t if t in (1, 5, 10) else '' for t in traits])
             ax.set_yticks(range(len(pathways)), [short_name(n) for n in pathways],
                           fontsize=TICK_SIZE - 1.5, linespacing=0.9)
-            ax.tick_params(axis='y', length=0)
             if last:
                 ax.set_xlabel('synthetic trait')
             bar = fig.colorbar(image, cax=axes(6.01, row, 0.05), ticks=[1e-3, 1e-2, ALPHA, 1])
             bar.ax.set_yticklabels(['$10^{-3}$', '$10^{-2}$', '$0.05$', '$1$'])
-            bar.ax.tick_params(labelsize=TICK_SIZE - 1, length=1.5)
+            bar.ax.tick_params(labelsize=TICK_SIZE - 1)
             bar.outline.set_linewidth(0.6)
             fig.text(ROW_LABEL_X / FIG_SIZE[0], (ROW_BOTTOM[row] + ROW_HEIGHT / 2) / FIG_SIZE[1],
                      treatment_label(treatment), rotation=-90, ha='left', va='center',
