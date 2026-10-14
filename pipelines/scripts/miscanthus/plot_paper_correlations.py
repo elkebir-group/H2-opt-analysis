@@ -25,13 +25,14 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
-from plot_paper_heritability import FONT_SIZE, save  # noqa: E402
+from plot_paper_heritability import save  # noqa: E402
 
 from h2opt_analysis import miscanthus  # noqa: E402
 from h2opt_analysis.figures import MATH_RC, SIM_FIG_RC, letter  # noqa: E402
 
 WIDTH = 6.5  # inches
 CELL_SIZE = 4  # points, the values in the cells
+HEATMAP_FONT_SIZE = 6  # points, the default size of the heatmap labels
 COLORBAR_LABEL = r'$|r|$, median over the folds'
 # miscCorTime: the rows (key of date_correlations.py, title) and x of the panel letters in axes
 # coordinates.
@@ -45,7 +46,7 @@ def median_abs(values):
     return np.median(np.abs(values), axis=-1)
 
 
-def heatmap(ax, matrix, rows, columns, vmax=1, font_size=FONT_SIZE - 2):
+def heatmap(ax, matrix, rows, columns, vmax=1, font_size=HEATMAP_FONT_SIZE):
     """Annotated heatmap of matrix (rows x columns) from 0 to vmax; returns the image."""
     image = ax.imshow(matrix, cmap='magma', vmin=0, vmax=vmax, aspect='auto')
     for (r, c), value in np.ndenumerate(matrix):
