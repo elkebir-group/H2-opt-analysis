@@ -8,16 +8,13 @@ choose_noise.py; the CNN branch has the CNN level of choose_cnn_level.py, times 
 fold's training pixels of the date. Both levels serve all folds and dates.
 Henderson3 heritability (families, plots within families, rep and field column fixed). Writes the
 fold models (a list, torch.save) to --out-models and an .npz with 'traits' (folds x plants x
-traits, uncorrelated on each fold's training plants). With --earlier (the .npz files of earlier
-runs, e.g. traits 1 and 2), the new traits are trained on top of each fold's earlier traits, all
-files together (the loss uses the
-residual after regression on them, h2opt.train_models), and saved as that residual on the fold's
-training plants, standardized there.
+traits, uncorrelated on each fold's training plants). Training uses the heritability after the
+nearest-neighbor field adjustment (--neighbor-width, h2opt.spatial).
 
     python pipelines/scripts/miscanthus/train_hybrid.py --population central --images images.npy \\
         --noise noise.npz --cnn-level cnn_level.npz --date 0 --traits 1 --linear-steps 10000 \\
         --steps 1000 --max-copies 4 --device cuda --out date0.npz \\
-        --out-models date0.pt
+        --out-models date0.pt --neighbor-width 3
 """
 
 import argparse
@@ -45,11 +42,9 @@ def main():
     parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
     parser.add_argument('--out', required=True)
     parser.add_argument('--out-models', required=True, help='.pt: the list of fold models')
-    parser.add_argument('--neighbor-width', type=int,
+    parser.add_argument('--neighbor-width', type=int, required=True,
                         help='train on the heritability after the nearest-neighbor field '
                              'adjustment (h2opt.spatial), neighbors within this many columns')
-    parser.add_argument('--earlier', nargs='+',
-                        help='.npz files of this script: train on top of their traits')
     args = parser.parse_args()
 
     torch.manual_seed(args.date)
@@ -61,8 +56,6 @@ def main():
     with np.load(args.cnn_level) as f:
         level = float(f['chosen'])
     folds = np.arange(miscanthus.N_FOLDS)
-    earlier = None if args.earlier is None else np.concatenate(
-        [np.load(path)['traits'] for path in args.earlier], axis=-1)
     train_test = np.array([(design.fold == f).astype(int) for f in folds])
     conv_sd = np.array([level * noise_scale(flat[design.fold != f]) for f in folds])
     models = train_linear_conv_models(
@@ -70,19 +63,10 @@ def main():
         design.environment, train_test, noise_sd[:, None], conv_sd[:, None], n_traits=args.traits,
         n_linear_iter=args.linear_steps, n_iter=args.steps, device=args.device,
         subgroups=design.plots, estimator='henderson3', max_copies=args.max_copies,
-        neighbors=None if args.neighbor_width is None
-        else miscanthus.neighbor_weights(design, args.neighbor_width),
-        earlier=earlier)
+        neighbors=miscanthus.neighbor_weights(design, args.neighbor_width))
     torch.save(models, args.out_models)
-    traits = []
-    for f, (model, tt) in enumerate(zip(models, train_test, strict=True)):
-        Y = synthetic_traits(model, x, tt == 0)
-        if earlier is not None:
-            train = tt == 0
-            basis = np.column_stack([np.ones(len(Y)), earlier[f]])
-            Y = Y - basis @ np.linalg.lstsq(basis[train], Y[train], rcond=None)[0]
-            Y = (Y - Y[train].mean(axis=0)) / Y[train].std(axis=0)
-        traits.append(Y)
+    traits = [synthetic_traits(model, x, tt == 0)
+              for model, tt in zip(models, train_test, strict=True)]
     np.savez(args.out, traits=np.stack(traits))
 
 

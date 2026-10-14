@@ -41,14 +41,11 @@ def sim_method_args(name_pattern):
 rule simulation_all:
     input:
         str(SIM_OUT / "evaluation.npz"),
-        str(SIM_OUT / "figures" / "heritability.pdf"),
-        str(SIM_OUT / "figures" / "noise_sweep.pdf"),
 
 
 rule simulation_gwas_all:
     input:
         str(SIM_OUT / "roc.npz"),
-        str(SIM_OUT / "figures" / "auc.pdf"),
 
 
 rule sim_simulate_spectra:
@@ -162,46 +159,6 @@ rule sim_train_hybrid_h2opt:
         " --device {params.device} > {log} 2>&1"
 
 
-rule sim_sweep_linear_h2opt_noise:
-    input:
-        sim_file("{instance}", "spectra.npz"),
-    output:
-        sim_file("{instance}", "h2opt_noise_sweep.npz"),
-    log:
-        sim_file("{instance}", "h2opt_noise_sweep.log"),
-    params:
-        traits=SIM["traits"],
-        steps=SIM["h2opt"]["steps"],
-        device=SIM["h2opt"]["device"],
-    threads: 1
-    resources:
-        gpu=lambda wc: 1 if SIM["h2opt"]["device"] == "cuda" else 0,
-    shell:
-        "python -u {SIM_SCRIPTS}/noise_sweep.py --spectra {input} --out {output}"
-        " --traits {params.traits} --steps {params.steps} --seed {wildcards.instance}"
-        " --device {params.device} > {log} 2>&1"
-
-
-rule sim_plot_linear_h2opt_noise_sweep:
-    input:
-        sweep=sim_files("h2opt_noise_sweep.npz"),
-        truth=sim_files("truth.npz"),
-        spectra=sim_files("spectra.npz"),
-        h2opt=sim_files("h2opt.npz"),
-        noise=sim_files("noise.npz"),
-    output:
-        npz=str(SIM_OUT / "noise_sweep.npz"),
-        pdf=str(SIM_OUT / "figures" / "noise_sweep.pdf"),
-        png=str(SIM_OUT / "figures" / "noise_sweep.png"),
-    log:
-        str(SIM_OUT / "noise_sweep.log"),
-    threads: 1
-    shell:
-        "python -u {SIM_SCRIPTS}/plot_noise_sweep.py --sweep {input.sweep} --truth {input.truth}"
-        " --spectra {input.spectra} --h2opt {input.h2opt} --noise {input.noise}"
-        " --out {output.npz} --figure {output.pdf} > {log} 2>&1"
-
-
 rule sim_train_baselines:
     input:
         sim_file("{instance}", "spectra.npz"),
@@ -288,44 +245,6 @@ rule sim_score_gwas:
     shell:
         "python -u {SIM_SCRIPTS}/roc.py --instances {params.instances} {params.methods}"
         " --out {output} > {log} 2>&1"
-
-
-rule sim_plot_traits:
-    input:
-        str(SIM_OUT / "evaluation.npz"),
-    output:
-        str(SIM_OUT / "figures" / "heritability.pdf"),
-        str(SIM_OUT / "figures" / "correlation.pdf"),
-    log:
-        str(SIM_OUT / "figures" / "plot_traits.log"),
-    params:
-        out_dir=str(SIM_OUT / "figures"),
-    threads: 1
-    shell:
-        "python -u {SIM_SCRIPTS}/plot_traits.py --evaluation {input}"
-        " --out-dir {params.out_dir} > {log} 2>&1"
-
-
-rule sim_plot_gwas:
-    input:
-        roc=str(SIM_OUT / "roc.npz"),
-        example=sim_file(SIM["example"]["instance"], f"gwas/{SIM['example']['method']}.npz"),
-    output:
-        [str(SIM_OUT / "figures" / name) for name in
-         ["auc.pdf", "roc_trait1.pdf", "roc_trait2.pdf", "roc_trait3.pdf",
-          f"gwas_{SIM['example']['method']}_instance{SIM['example']['instance']}.png"]],
-    log:
-        str(SIM_OUT / "figures" / "plot_gwas.log"),
-    params:
-        out_dir=str(SIM_OUT / "figures"),
-        name=f"{SIM['example']['method']}_instance{SIM['example']['instance']}",
-        label=(f"{LABELS[SIM['example']['method']]}, "
-               f"instance {SIM['example']['instance']}"),
-    threads: 1
-    shell:
-        "python -u {SIM_SCRIPTS}/plot_gwas.py --roc {input.roc}"
-        " --gwas-example {input.example} --example-name {params.name}"
-        " --example-label '{params.label}' --out-dir {params.out_dir} > {log} 2>&1"
 
 
 # The simulation figures of the paper (file stems as in the paper's images/), from the saved

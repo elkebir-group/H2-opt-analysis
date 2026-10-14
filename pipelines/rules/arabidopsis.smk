@@ -25,8 +25,6 @@ def arabi_method_args(treatment):
 
 rule arabidopsis_all:
     input:
-        expand(str(ARABI_OUT / "{treatment}" / "figures" / "heritability_test.pdf"),
-               treatment=ARABI["treatments"]),
         expand(str(ARABI_OUT / "{treatment}" / "figures" / "noise.pdf"),
                treatment=ARABI["treatments"]),
 
@@ -174,20 +172,6 @@ rule arabi_score_heritability:
         "python -u {ARABI_SCRIPTS}/evaluate_heritability.py --treatment {wildcards.treatment}"
         " --folds {params.folds} {params.methods} --out {output} --traits {ARABI[traits]}"
         " > {log} 2>&1"
-
-
-rule arabi_plot_heritability:
-    input:
-        str(ARABI_OUT / "{treatment}" / "heritability.npz"),
-    output:
-        test=str(ARABI_OUT / "{treatment}" / "figures" / "heritability_test.pdf"),
-        train=str(ARABI_OUT / "{treatment}" / "figures" / "heritability_train.pdf"),
-    log:
-        str(ARABI_OUT / "{treatment}" / "figures" / "heritability.log"),
-    threads: 1
-    shell:
-        "python -u {ARABI_SCRIPTS}/plot_heritability.py --heritability {input}"
-        " --out-test {output.test} --out-train {output.train} > {log} 2>&1"
 
 
 # Figures of the paper (main.tex image names). The coefficients are from fold ARABI_PAPER_FOLD
@@ -431,7 +415,6 @@ rule arabi_enrichment_inputs:
         "python -u {ARABI_SCRIPTS}/enrichment_inputs.py --precise {input.precise}"
         " --coefficients {input.coefficients} --peaks {ARABI[enrichment_peaks]}"
         " --out-dir {params.out_dir} > {log} 2>&1"
-
 
 
 # MS peaks to pathways of each peak list, offline with MetaboAnalystR, with the settings of the

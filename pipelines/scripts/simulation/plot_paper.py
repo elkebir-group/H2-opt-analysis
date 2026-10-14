@@ -10,8 +10,7 @@ row labels are at the right of the rows.
 bands, one row per simulation (--row), with the row labels of simFig.
 --out-example (simGWASexample): QQ and Manhattan plots of the GWAS of trait 1 of one method on one
 instance (--gwas-example).
-Each figure is also saved as a .png next to its .pdf. The panels use the functions of
-plot_traits.py and plot_gwas.py, which make the same panels as separate files.
+Each figure is also saved as a .png next to its .pdf.
 
 The figures show the ground truth, one H2-opt variant per row (the last value of --row) and the
 baselines (--baselines). The H2-opt variant gets the
@@ -35,11 +34,10 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 from matplotlib.ticker import MaxNLocator  # noqa: E402
-from plot_gwas import auc_values, plot_roc  # noqa: E402
-from plot_traits import correlation_values, heritability_values  # noqa: E402
 
+from h2opt_analysis import simulation  # noqa: E402
 from h2opt_analysis.figures import COLORS, MATH_RC, SIM_FIG_RC, letter  # noqa: E402
-from h2opt_analysis.methods import LABELS  # noqa: E402
+from h2opt_analysis.methods import LABELS, ordered  # noqa: E402
 
 # simFig is drawn at the text width of the paper (6.5 in), so that LaTeX does not scale it. Its
 # text is SIM_FIG_RC (h2opt_analysis.figures). simCompareSNP and simGWASexample have the same
@@ -63,6 +61,55 @@ BOTTOM_MARGIN = 0.32
 LEGEND_GAP = 0.11
 # Part of the unit between two traits that the boxes of one trait span.
 GROUP_SPAN = 0.84
+
+
+def heritability_values(ev):
+    """Test heritability (clipped at 0) of the true traits and of each method's traits.
+
+    ev: an evaluate.py result. Returns the slugs ('truth' first, then the methods in figure order),
+    the values (values[slug][t] is an array over the instances) and the number of synthetic
+    traits."""
+    methods = list(ev['methods'])
+    herit = np.clip(ev['herit'][:, :, 1], 0, None)  # methods x instances x traits, test plants
+    values = {'truth': {t: np.clip(ev['herit_truth'][:, 1, t], 0, None)
+                        for t in range(simulation.N_TRAITS)}}
+    values.update({m: {t: herit[j, :, t] for t in range(herit.shape[2])}
+                   for j, m in enumerate(methods)})
+    return ['truth'] + ordered(methods), values, herit.shape[2]
+
+
+def correlation_values(ev):
+    """|r| of true trait t with synthetic trait t of each method: the slugs (in figure order) and
+    the values (values[slug][t] is an array over the instances)."""
+    methods = list(ev['methods'])
+    n_t = simulation.N_TRAITS
+    diagonal = np.abs(ev['cor'][:, :, np.arange(n_t), np.arange(n_t)])
+    return ordered(methods), {m: {t: diagonal[j, :, t] for t in range(n_t)}
+                              for j, m in enumerate(methods)}
+
+
+def auc_values(roc):
+    """AUC per method and trait of a roc.py result: the slugs (in figure order) and the values
+    (values[slug][t] is an array over the instances)."""
+    methods = list(roc['methods'])
+    return ordered(methods), {m: {t: roc['auc'][t, j] for t in range(simulation.N_TRAITS)}
+                              for j, m in enumerate(methods)}
+
+
+def plot_roc(ax, roc, t):
+    """Mean ROC curves of trait t (0-based) for each method of a roc.py result, in figure order,
+    with the median AUC over the instances in the legend."""
+    methods = list(roc['methods'])
+    for m in ordered(methods):
+        j = methods.index(m)
+        median = np.median(roc['auc'][t, j])
+        ax.plot(roc['fpr'], roc['tpr'][t, j], color=COLORS[m],
+                label=f'{LABELS[m]}: AUC {median:.3f}')
+    ax.plot([0, 1], [0, 1], 'k:', linewidth=1)
+    ax.set_xlabel('false positive rate')
+    ax.set_ylabel('true positive rate')
+    ax.legend(fontsize=7, frameon=False)
+    ax.spines[['top', 'right']].set_visible(False)
 
 
 def manhattan(ax, summary, row):

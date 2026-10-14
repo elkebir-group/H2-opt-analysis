@@ -36,32 +36,6 @@ def misc_images(wildcards):
     return str(MISC_OUT / wildcards.population / "images.npy")
 
 
-rule miscanthus_all:
-    input:
-        expand(str(MISC_OUT / "{population}" / "figures" / "heritability.pdf"),
-               population=MISC_POPULATIONS),
-        expand(str(MISC_OUT / "{population}" / "heritability_spatial.npz"),
-               population=MISC_POPULATIONS),
-
-
-# GWAS of trait 1 of hybrid H2-opt, every date and fold. Run only on request.
-rule miscanthus_gwas_all:
-    input:
-        expand(str(MISC_OUT / "{population}" / "gwas" / "date{date}.npz"),
-               population=MISC_POPULATIONS, date=MISC_DATES),
-
-
-# The permutation null of the whole hybrid H2-opt -> GWAS pipeline on selection_date, and the GWAS
-# of the cross-fitted trait 1 (each plant's phenotype from the fold model that held it out) on
-# every date. Run only on request.
-rule miscanthus_null_gwas_all:
-    input:
-        expand(str(MISC_OUT / "{population}" / "null" / "perm{k}.npz"),
-               population=MISC_POPULATIONS, k=range(MISC["gwas"]["permutations"])),
-        expand(str(MISC_OUT / "{population}" / "gwas" / "crossfit_date{date}.npz"),
-               population=MISC_POPULATIONS, date=MISC_DATES),
-
-
 rule misc_prepare_genotypes:
     output:
         multiext(str(MISC_OUT / "{population}" / "gwas" / "genotypes"), ".bed", ".bim", ".fam"),
@@ -74,29 +48,6 @@ rule misc_prepare_genotypes:
     shell:
         "python -u {MISC_SCRIPTS}/genotypes.py --population {wildcards.population}"
         " --out {params.prefix} --out-pcs {output.pcs} --pcs {MISC[gwas][pcs]} > {log} 2>&1"
-
-
-rule misc_run_gwas:
-    input:
-        traits=str(MISC_OUT / "{population}" / "h2opt_hybrid" / "date{date}.npz"),
-        genotypes=multiext(str(MISC_OUT / "{population}" / "gwas" / "genotypes"),
-                           ".bed", ".bim", ".fam"),
-        pcs=str(MISC_OUT / "{population}" / "gwas" / "genotype_pcs.npy"),
-    output:
-        str(MISC_OUT / "{population}" / "gwas" / "date{date}.npz"),
-    log:
-        str(MISC_OUT / "{population}" / "gwas" / "date{date}.log"),
-    wildcard_constraints:
-        date=r"\d+",
-    params:
-        prefix=lambda wc: str(MISC_OUT / wc.population / "gwas" / "genotypes"),
-        work=lambda wc: str(MISC_OUT / wc.population / "gwas" / "work" / f"date{wc.date}"),
-    threads: MISC["gwas"]["jobs"] * MISC["gwas"]["threads"]
-    shell:
-        "python -u {MISC_SCRIPTS}/gwas.py --population {wildcards.population}"
-        " --h2opt-traits {input.traits} --genotypes {params.prefix} --pcs {input.pcs}"
-        " --out {output} --work {params.work} --jobs {MISC[gwas][jobs]}"
-        " --threads {MISC[gwas][threads]} > {log} 2>&1"
 
 
 rule misc_choose_pch_ridge:
@@ -143,14 +94,10 @@ rule misc_train_baselines:
         " --traits {MISC[traits]} --out {output} > {log} 2>&1"
 
 
-# Linear and hybrid H2-opt: one linear noise level (choose_noise.py) and one CNN noise level
-# (choose_cnn_level.py, on one fold), each for all folds and dates, chosen on one date; then one
-# job per date with all 5 folds.
+# The noise levels of linear and hybrid H2-opt without the field adjustment: one linear level
+# (choose_noise.py) and one CNN level (choose_cnn_level.py, on one fold), each for all folds and
+# dates, chosen on one date. The adjusted run takes its CNN level from here.
 MISC_H2OPT_METHODS = ["h2opt", "h2opt_hybrid"]
-
-
-def misc_date_files(population, method):
-    return [str(MISC_OUT / population / method / f"date{d}.npz") for d in MISC_DATES]
 
 
 rule misc_choose_linear_h2opt_noise:
@@ -171,30 +118,6 @@ rule misc_choose_linear_h2opt_noise:
         "python -u {MISC_SCRIPTS}/choose_noise.py --population {wildcards.population}"
         " --images {input} --date {MISC[selection_date]} --out {output} --steps {params.steps}"
         " --max-copies {params.max_copies} --device {params.device} > {log} 2>&1"
-
-
-rule misc_train_linear_h2opt:
-    input:
-        images=misc_images,
-        noise=str(MISC_OUT / "{population}" / "h2opt" / "noise.npz"),
-    output:
-        traits=str(MISC_OUT / "{population}" / "h2opt" / "date{date}.npz"),
-        models=str(MISC_OUT / "{population}" / "h2opt" / "date{date}.pt"),
-    log:
-        str(MISC_OUT / "{population}" / "h2opt" / "date{date}.log"),
-    wildcard_constraints:
-        date=r"\d+",
-    params:
-        steps=MISC["h2opt"]["steps"],
-        device=MISC["h2opt"]["device"],
-    threads: 2
-    resources:
-        gpu=lambda wc: 2 if MISC["h2opt"]["device"] == "cuda" else 0,
-    shell:
-        "python -u {MISC_SCRIPTS}/train_h2opt.py --population {wildcards.population}"
-        " --images {input.images} --noise {input.noise} --date {wildcards.date}"
-        " --traits {MISC[traits]} --steps {params.steps} --device {params.device}"
-        " --out {output.traits} --out-models {output.models} > {log} 2>&1"
 
 
 rule misc_choose_hybrid_cnn_level:
@@ -221,100 +144,8 @@ rule misc_choose_hybrid_cnn_level:
         " --max-copies {params.max_copies} --seed 0 --device {params.device} > {log} 2>&1"
 
 
-rule misc_train_hybrid_h2opt:
-    input:
-        images=misc_images,
-        noise=str(MISC_OUT / "{population}" / "h2opt" / "noise.npz"),
-        cnn_level=str(MISC_OUT / "{population}" / "h2opt_hybrid" / "cnn_level.npz"),
-    output:
-        traits=str(MISC_OUT / "{population}" / "h2opt_hybrid" / "date{date}.npz"),
-        models=str(MISC_OUT / "{population}" / "h2opt_hybrid" / "date{date}.pt"),
-    log:
-        str(MISC_OUT / "{population}" / "h2opt_hybrid" / "date{date}.log"),
-    wildcard_constraints:
-        date=r"\d+",
-    params:
-        linear_steps=MISC["hybrid"]["linear_steps"],
-        steps=MISC["hybrid"]["steps"],
-        max_copies=MISC["hybrid"]["max_copies"],
-        device=MISC["hybrid"]["device"],
-    threads: 2
-    resources:
-        gpu=lambda wc: 4 if MISC["hybrid"]["device"] == "cuda" else 0,
-    shell:
-        "python -u {MISC_SCRIPTS}/train_hybrid.py --population {wildcards.population}"
-        " --images {input.images} --noise {input.noise} --cnn-level {input.cnn_level}"
-        " --date {wildcards.date} --traits {MISC[traits]}"
-        " --linear-steps {params.linear_steps} --steps {params.steps}"
-        " --max-copies {params.max_copies} --device {params.device} --out {output.traits}"
-        " --out-models {output.models} > {log} 2>&1"
-
-
-def misc_method_args(wildcards):
-    """'--by-date method date files ... --by-fold baseline fold files ...' for one population."""
-    out = MISC_OUT / wildcards.population
-    args = " ".join(f"--by-date {m} " + " ".join(misc_date_files(wildcards.population, m))
-                    for m in MISC_H2OPT_METHODS)
-    for baseline in MISC_BASELINES:
-        args += f" --by-fold {baseline} " + " ".join(
-            str(out / baseline / f"fold{f}.npz") for f in MISC_FOLDS)
-    return args
-
-
-rule misc_score_heritability:
-    input:
-        h2opt=lambda wc: [f for m in MISC_H2OPT_METHODS for f in misc_date_files(wc.population, m)],
-        baselines=lambda wc: [str(MISC_OUT / wc.population / b / f"fold{f}.npz")
-                              for b in MISC_BASELINES for f in MISC_FOLDS],
-    output:
-        str(MISC_OUT / "{population}" / "heritability.npz"),
-    log:
-        str(MISC_OUT / "{population}" / "heritability.log"),
-    params:
-        methods=misc_method_args,
-    threads: 2
-    shell:
-        "python -u {MISC_SCRIPTS}/evaluate_heritability.py --population {wildcards.population}"
-        " {params.methods} --traits {MISC[traits]} --out {output} > {log} 2>&1"
-
-
-# The test heritability after a nearest-neighbor field adjustment (Papadakis 1937), with the
-# measured traits of Central as a control.
-rule misc_score_heritability_spatial:
-    input:
-        h2opt=lambda wc: [f for m in MISC_H2OPT_METHODS for f in misc_date_files(wc.population, m)],
-        baselines=lambda wc: [str(MISC_OUT / wc.population / b / f"fold{f}.npz")
-                              for b in MISC_BASELINES for f in MISC_FOLDS],
-    output:
-        str(MISC_OUT / "{population}" / "heritability_spatial.npz"),
-    log:
-        str(MISC_OUT / "{population}" / "heritability_spatial.log"),
-    params:
-        methods=misc_method_args,
-        dates=" ".join(str(d) for d in MISC_DATES),
-    threads: 2
-    shell:
-        "python -u {MISC_SCRIPTS}/evaluate_heritability_spatial.py"
-        " --population {wildcards.population} {params.methods}"
-        " --dates {params.dates} --width {MISC[spatial_width]} --out {output} > {log} 2>&1"
-
-
-rule misc_plot_heritability:
-    input:
-        str(MISC_OUT / "{population}" / "heritability.npz"),
-    output:
-        pdf=str(MISC_OUT / "{population}" / "figures" / "heritability.pdf"),
-        png=str(MISC_OUT / "{population}" / "figures" / "heritability.png"),
-    log:
-        str(MISC_OUT / "{population}" / "figures" / "heritability.log"),
-    threads: 1
-    shell:
-        "python -u {MISC_SCRIPTS}/plot_heritability.py --heritability {input}"
-        " --out {output.pdf} > {log} 2>&1"
-
-
-# The Miscanthus figures of the paper, in figures/paper/ (file names as in the paper). miscFig and
-# miscGWAS need the GWAS (miscanthus_gwas_all). miscSecondTrait is not made: it needs trait 2.
+# The Miscanthus figures of the paper, in figures/paper/ (file names as in the paper). miscGWAS and
+# miscNull need the GWAS of the adjusted run (miscanthus_adjusted_gwas_all).
 MISC_PAPER = MISC_OUT / "figures" / "paper"
 MISC_PAPER_FIGURES = ["miscFig", "miscVegIndex", "trainHeritMisc",
                       "miscCorTime", "traitCorrelation_allTraits",
@@ -342,32 +173,6 @@ rule misc_score_ndvi:
     shell:
         "python -u {MISC_SCRIPTS}/ndvi.py --population {wildcards.population} --images {input}"
         " --width {MISC[spatial_width]} --out {output} > {log} 2>&1"
-
-
-rule misc_date_correlations:
-    input:
-        lambda wc: misc_date_files(wc.population, "h2opt_hybrid"),
-    output:
-        str(MISC_OUT / "{population}" / "date_correlations.npz"),
-    log:
-        str(MISC_OUT / "{population}" / "date_correlations.log"),
-    threads: 1
-    shell:
-        "python -u {MISC_SCRIPTS}/date_correlations.py --population {wildcards.population}"
-        " --traits {input} --out {output} > {log} 2>&1"
-
-
-rule misc_measured_correlations:
-    input:
-        lambda wc: misc_date_files(wc.population, "h2opt_hybrid"),
-    output:
-        str(MISC_OUT / "{population}" / "measured_correlations.npz"),
-    log:
-        str(MISC_OUT / "{population}" / "measured_correlations.log"),
-    threads: 1
-    shell:
-        "python -u {MISC_SCRIPTS}/measured_correlations.py --population {wildcards.population}"
-        " --traits {input} --out {output} > {log} 2>&1"
 
 
 rule misc_plot_paper_heritability:
@@ -469,75 +274,6 @@ rule misc_plot_paper_main:
         " --measured {input.measured} --out {output} > {log} 2>&1"
 
 
-rule misc_null_gwas:
-    input:
-        images=misc_images,
-        noise=str(MISC_OUT / "{population}" / "h2opt" / "noise.npz"),
-        cnn_level=str(MISC_OUT / "{population}" / "h2opt_hybrid" / "cnn_level.npz"),
-        genotypes=multiext(str(MISC_OUT / "{population}" / "gwas" / "genotypes"),
-                           ".bed", ".bim", ".fam"),
-        pcs=str(MISC_OUT / "{population}" / "gwas" / "genotype_pcs.npy"),
-    output:
-        str(MISC_OUT / "{population}" / "null" / "perm{k}.npz"),
-    log:
-        str(MISC_OUT / "{population}" / "null" / "perm{k}.log"),
-    wildcard_constraints:
-        k=r"\d+",
-    params:
-        prefix=lambda wc: str(MISC_OUT / wc.population / "gwas" / "genotypes"),
-        work=lambda wc: str(MISC_OUT / wc.population / "null" / "work" / f"perm{wc.k}"),
-    threads: MISC["gwas"]["threads"]
-    resources:
-        gpu=lambda wc: 4 if MISC["hybrid"]["device"] == "cuda" else 0,
-    shell:
-        "python -u {MISC_SCRIPTS}/null_gwas.py --population {wildcards.population}"
-        " --images {input.images} --noise {input.noise} --cnn-level {input.cnn_level}"
-        " --date {MISC[selection_date]} --permutation {wildcards.k}"
-        " --genotypes {params.prefix} --pcs {input.pcs} --out {output} --work {params.work}"
-        " --linear-steps {MISC[hybrid][linear_steps]} --steps {MISC[hybrid][steps]}"
-        " --max-copies {MISC[hybrid][max_copies]} --device {MISC[hybrid][device]}"
-        " --threads {MISC[gwas][threads]} > {log} 2>&1"
-
-
-rule misc_cross_fit_traits:
-    input:
-        str(MISC_OUT / "{population}" / "h2opt_hybrid" / "date{date}.npz"),
-    output:
-        str(MISC_OUT / "{population}" / "h2opt_hybrid" / "crossfit_date{date}.npz"),
-    log:
-        str(MISC_OUT / "{population}" / "h2opt_hybrid" / "crossfit_date{date}.log"),
-    wildcard_constraints:
-        date=r"\d+",
-    threads: 1
-    shell:
-        "python -u {PIPELINE_DIR}/scripts/shared/cross_fit_traits.py --dataset miscanthus"
-        " --population {wildcards.population} --trait 1 --traits {input} --out {output}"
-        " > {log} 2>&1"
-
-
-rule misc_crossfit_gwas:
-    input:
-        traits=str(MISC_OUT / "{population}" / "h2opt_hybrid" / "crossfit_date{date}.npz"),
-        genotypes=multiext(str(MISC_OUT / "{population}" / "gwas" / "genotypes"),
-                           ".bed", ".bim", ".fam"),
-        pcs=str(MISC_OUT / "{population}" / "gwas" / "genotype_pcs.npy"),
-    output:
-        str(MISC_OUT / "{population}" / "gwas" / "crossfit_date{date}.npz"),
-    log:
-        str(MISC_OUT / "{population}" / "gwas" / "crossfit_date{date}.log"),
-    wildcard_constraints:
-        date=r"\d+",
-    params:
-        prefix=lambda wc: str(MISC_OUT / wc.population / "gwas" / "genotypes"),
-        work=lambda wc: str(MISC_OUT / wc.population / "gwas" / "work" / f"crossfit_date{wc.date}"),
-    threads: MISC["gwas"]["threads"]
-    shell:
-        "python -u {MISC_SCRIPTS}/gwas.py --population {wildcards.population}"
-        " --h2opt-traits {input.traits} --genotypes {params.prefix} --pcs {input.pcs}"
-        " --out {output} --work {params.work} --jobs 1 --threads {MISC[gwas][threads]}"
-        " > {log} 2>&1"
-
-
 # The run of the paper: H2-opt trained on the heritability after the nearest-neighbor field
 # adjustment (config miscanthus.adjusted). Outputs under miscanthus_adjusted/ (MISC_ADJ); the
 # baselines and images come from the main run.
@@ -632,92 +368,23 @@ rule misc_adjusted_train_hybrid_h2opt:
         " --out-models {output.models} > {log} 2>&1"
 
 
-# Traits 2, 3, ... of the adjusted run's hybrid H2-opt: trait k trained on top of each fold's
-# traits 1 to k - 1 (train_hybrid.py --earlier), and the adjusted test heritability of each.
-MISC_ADJ_LATER = range(2, MISC_ADJ_CONFIG["traits"] + 1)
-
-
-def misc_adjusted_earlier(wildcards):
-    hybrid = MISC_ADJ / wildcards.population / "h2opt_hybrid"
-    return ([str(hybrid / f"date{wildcards.date}.npz")]
-            + [str(hybrid / f"trait{j}_date{wildcards.date}.npz")
-               for j in range(2, int(wildcards.k))])
-
-
-rule miscanthus_adjusted_later_traits_all:
-    input:
-        expand(str(MISC_ADJ / "{population}" / "heritability_trait{k}.npz"),
-               population=MISC_POPULATIONS, k=MISC_ADJ_LATER),
-
-
-rule misc_adjusted_train_hybrid_later:
-    input:
-        images=misc_images,
-        noise=str(MISC_ADJ / "{population}" / "h2opt" / "noise.npz"),
-        cnn_level=misc_adjusted_cnn_level,
-        earlier=misc_adjusted_earlier,
-    output:
-        traits=str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "trait{k}_date{date}.npz"),
-        models=str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "trait{k}_date{date}.pt"),
-    log:
-        str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "trait{k}_date{date}.log"),
-    wildcard_constraints:
-        k=r"\d+",
-        date=r"\d+",
-    threads: 2
-    resources:
-        gpu=lambda wc: 4 if MISC["hybrid"]["device"] == "cuda" else 0,
-    shell:
-        "python -u {MISC_SCRIPTS}/train_hybrid.py --population {wildcards.population}"
-        " --images {input.images} --noise {input.noise} --cnn-level {input.cnn_level}"
-        " --date {wildcards.date} --traits 1 --earlier {input.earlier}"
-        " --linear-steps {MISC[hybrid][linear_steps]} --steps {MISC[hybrid][steps]}"
-        " --max-copies {MISC[hybrid][max_copies]} --device {MISC[hybrid][device]}"
-        " --neighbor-width {MISC[spatial_width]} --out {output.traits}"
-        " --out-models {output.models} > {log} 2>&1"
-
-
-rule misc_adjusted_score_later:
-    input:
-        lambda wc: [str(MISC_ADJ / wc.population / "h2opt_hybrid" / f"trait{wc.k}_date{d}.npz")
-                    for d in MISC_ADJ_DATES],
-    output:
-        str(MISC_ADJ / "{population}" / "heritability_trait{k}.npz"),
-    log:
-        str(MISC_ADJ / "{population}" / "heritability_trait{k}.log"),
-    wildcard_constraints:
-        k=r"\d+",
-    params:
-        dates=" ".join(str(d) for d in MISC_ADJ_DATES),
-    threads: 2
-    shell:
-        "python -u {MISC_SCRIPTS}/evaluate_heritability_spatial.py"
-        " --population {wildcards.population} --by-date h2opt_hybrid {input}"
-        " --dates {params.dates} --width {MISC[spatial_width]} --out {output} > {log} 2>&1"
-
-
-# GWAS of traits 1 and 2 of the adjusted run's hybrid H2-opt per date (all folds) and of their
-# cross-fitted traits, with the neighbor mean as a covariate (gwas.py --neighbor-width); genotypes
-# from the main run. {trait} is "" for trait 1 (date{date}.npz) and "trait2_" for trait 2.
-MISC_ADJ_GWAS_TRAITS = ["", "trait2_"]
-
-
+# GWAS of trait 1 of the adjusted run's hybrid H2-opt per date (all folds) and of its cross-fitted
+# trait, with the neighbor mean as a covariate (gwas.py --neighbor-width); genotypes from the main
+# run.
 rule miscanthus_adjusted_gwas_all:
     input:
-        expand(str(MISC_ADJ / "{population}" / "gwas" / "{kind}{trait}date{date}.npz"),
-               population=MISC_POPULATIONS, kind=["", "crossfit_"], trait=MISC_ADJ_GWAS_TRAITS,
-               date=MISC_ADJ_DATES),
+        expand(str(MISC_ADJ / "{population}" / "gwas" / "{kind}date{date}.npz"),
+               population=MISC_POPULATIONS, kind=["", "crossfit_"], date=MISC_ADJ_DATES),
 
 
 rule misc_adjusted_crossfit_traits:
     input:
-        str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "{trait}date{date}.npz"),
+        str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "date{date}.npz"),
     output:
-        str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "crossfit_{trait}date{date}.npz"),
+        str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "crossfit_date{date}.npz"),
     log:
-        str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "crossfit_{trait}date{date}.log"),
+        str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "crossfit_date{date}.log"),
     wildcard_constraints:
-        trait="|trait2_",
         date=r"\d+",
     threads: 1
     shell:
@@ -728,22 +395,21 @@ rule misc_adjusted_crossfit_traits:
 
 rule misc_adjusted_run_gwas:
     input:
-        traits=str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "{kind}{trait}date{date}.npz"),
+        traits=str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "{kind}date{date}.npz"),
         genotypes=multiext(str(MISC_OUT / "{population}" / "gwas" / "genotypes"),
                            ".bed", ".bim", ".fam"),
         pcs=str(MISC_OUT / "{population}" / "gwas" / "genotype_pcs.npy"),
     output:
-        str(MISC_ADJ / "{population}" / "gwas" / "{kind}{trait}date{date}.npz"),
+        str(MISC_ADJ / "{population}" / "gwas" / "{kind}date{date}.npz"),
     log:
-        str(MISC_ADJ / "{population}" / "gwas" / "{kind}{trait}date{date}.log"),
+        str(MISC_ADJ / "{population}" / "gwas" / "{kind}date{date}.log"),
     wildcard_constraints:
         kind="|crossfit_",
-        trait="|trait2_",
         date=r"\d+",
     params:
         prefix=lambda wc: str(MISC_OUT / wc.population / "gwas" / "genotypes"),
         work=lambda wc: str(MISC_ADJ / wc.population / "gwas" / "work"
-                            / f"{wc.kind}{wc.trait}date{wc.date}"),
+                            / f"{wc.kind}date{wc.date}"),
     threads: MISC["gwas"]["jobs"] * MISC["gwas"]["threads"]
     shell:
         "python -u {MISC_SCRIPTS}/gwas.py --population {wildcards.population}"

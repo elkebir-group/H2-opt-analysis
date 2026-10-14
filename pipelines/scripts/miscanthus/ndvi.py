@@ -3,9 +3,9 @@
 NDVI = (NIR - red) / (NIR + red), with red (channel 3) and NIR (channel 5) the mean of the
 pixels of each plant (as the paper: the bands are summed over the pixels first). The images are
 the values as received (images.npy: not clipped, not scaled). NDVI is a fixed index, not a trained
-method: its heritability is scored as in evaluate_heritability.py (Henderson3 on the training and
-the test plants of each fold), and on the test plants after the nearest-neighbor field adjustment
-of the other methods (evaluate_heritability_spatial.py; --width field columns, the slope fitted on
+method: its heritability is scored by Henderson3 on the training and the test plants of each fold,
+and on the test plants after the nearest-neighbor field adjustment of the other methods
+(evaluate_heritability_spatial.py; --width field columns, the slope fitted on
 the test plants). Writes an .npz (dates; ndvi: dates x kept plants; train, test and
 test_adjusted: dates x folds, Henderson3) and prints the mean NDVI and the mean narrow-sense test
 heritability (4 x Henderson3, capped at 1) per date, before and after the adjustment.

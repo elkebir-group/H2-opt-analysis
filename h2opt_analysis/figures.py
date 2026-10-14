@@ -7,7 +7,7 @@ from matplotlib.ticker import MultipleLocator
 
 from .methods import LABELS, ordered
 
-COLORS = {'truth': 'tab:red', 'h2opt_paper': 'tab:blue', 'h2opt': 'tab:blue',
+COLORS = {'truth': 'tab:red', 'h2opt': 'tab:blue',
           'h2opt_hybrid': 'tab:cyan',
           'pca': 'tab:orange', 'genetic_pca': 'tab:purple',
           'pch': 'tab:pink', 'max_features': 'tab:green', 'single_band': 'tab:olive'}
@@ -36,23 +36,6 @@ def letter(ax, text, x):
             va='bottom', ha='left')
 
 
-def grouped_boxplot(ax, groups, slugs, values):
-    """Boxplots of values[slug][group] (a list per group), side by side within each group."""
-    width = 0.8 / len(slugs)
-    for s, slug in enumerate(slugs):
-        positions = [g + (s - (len(slugs) - 1) / 2) * width for g in range(len(groups))]
-        data = [values[slug].get(g, []) for g in range(len(groups))]
-        keep = [k for k, d in enumerate(data) if len(d)]
-        boxes = ax.boxplot([data[k] for k in keep], positions=[positions[k] for k in keep],
-                           widths=width * 0.9, patch_artist=True, showfliers=False,
-                           medianprops={'color': 'black'})
-        for box in boxes['boxes']:
-            box.set(facecolor=COLORS[slug], edgecolor=COLORS[slug], alpha=0.8)
-    ax.set_xticks(range(len(groups)), groups)
-    ax.spines[['top', 'right']].set_visible(False)
-    ax.grid(axis='y', color='0.9')
-    ax.set_axisbelow(True)
-
 
 def median_bands(ax, x, values, slugs):
     """Per method, a line through the median over the folds and a band from the 25th to the 75th
@@ -71,24 +54,6 @@ def ordered_legend(ax, labels, **kwargs):
     keep = [names.index(label) for label in labels]
     ax.legend([handles[i] for i in keep], [names[i] for i in keep], **kwargs)
 
-
-def legend(fig, slugs):
-    """Figure legend with one colored patch per method."""
-    handles = [plt.Rectangle((0, 0), 1, 1, color=COLORS[s]) for s in slugs]
-    fig.legend(handles, [LABELS[s] for s in slugs], loc='upper center',
-               ncol=min(len(slugs), 4), frameon=False, fontsize=8)
-
-
-def save_trait_boxplots(path, n_traits, slugs, values, ylabel, width=5):
-    """Figure of grouped boxplots per trait (values[slug][trait] is a list over instances)."""
-    fig, ax = plt.subplots(figsize=(width, 3.2))
-    grouped_boxplot(ax, [str(t + 1) for t in range(n_traits)], slugs, values)
-    ax.set_xlabel('trait')
-    ax.set_ylabel(ylabel)
-    legend(fig, slugs)
-    fig.tight_layout(rect=(0, 0, 1, 0.85))
-    fig.savefig(path)
-    plt.close(fig)
 
 
 def plot_noise_choices(levels, chosen, scores, path, series='trait', series_labels=None):
@@ -123,47 +88,6 @@ def plot_noise_choices(levels, chosen, scores, path, series='trait', series_labe
     fig.tight_layout()
     fig.savefig(path)
     fig.savefig(str(path).removesuffix('.pdf') + '.png', dpi=200)
-    plt.close(fig)
-
-
-def plot_gwas(path, summary, rows, row_labels, title, dpi=150):
-    """Manhattan (left) and QQ (right) plots of rows of a gwas.summarize result, one row each.
-
-    summary: dict or .npz with chr, ps, neg_log10_p (runs x SNPs) and lambda_gc. rows: indices
-    into its runs; row_labels: their y labels. The dotted line is the Bonferroni threshold
-    0.05 / SNPs. Chromosomes alternate red and blue in their sorted order."""
-    chromosome, position, score = summary['chr'], summary['ps'], summary['neg_log10_p']
-    offset = np.zeros(len(position), dtype=np.int64)
-    start = 0
-    for c in np.unique(chromosome):
-        on = chromosome == c
-        offset[on] = start
-        start += position[on].max() + 1
-    parity = np.searchsorted(np.unique(chromosome), chromosome) % 2
-    threshold = -np.log10(0.05 / score.shape[1])
-    fig, axes = plt.subplots(len(rows), 2, figsize=(8, 1.9 * len(rows)), squeeze=False,
-                             gridspec_kw={'width_ratios': [3, 1]})
-    for ax_row, r, label in zip(axes, rows, row_labels, strict=True):
-        ax = ax_row[0]
-        ax.scatter(position + offset, score[r], s=1, c=np.where(parity, 'tab:red', 'tab:blue'),
-                   rasterized=True)
-        ax.axhline(threshold, color='black', linestyle=':', linewidth=1)
-        ax.set_ylabel(f'{label}\n-log10 p')
-        ax.set_xticks([])
-        ax.spines[['top', 'right']].set_visible(False)
-        ax = ax_row[1]
-        observed = np.sort(score[r])
-        expected = -np.log10(np.arange(len(observed), 0, -1) / (len(observed) + 1))
-        ax.scatter(expected, observed, s=1, rasterized=True)
-        top = min(expected.max(), observed.max())
-        ax.plot([0, top], [0, top], 'r--', linewidth=1)
-        ax.set_title(f'lambda GC {summary["lambda_gc"][r]:.3f}', fontsize=8)
-        ax.spines[['top', 'right']].set_visible(False)
-    axes[-1, 0].set_xlabel('genome position')
-    axes[-1, 1].set_xlabel('expected -log10 p')
-    fig.suptitle(title, fontsize=9)
-    fig.tight_layout()
-    fig.savefig(path, dpi=dpi)
     plt.close(fig)
 
 

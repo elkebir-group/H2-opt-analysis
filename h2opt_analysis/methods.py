@@ -2,11 +2,9 @@
 
 from h2opt import baselines
 
-# Figure label of each method. 'truth' are the simulated traits themselves; 'h2opt_paper' the
-# predictions behind the paper.
+# Figure label of each method. 'truth' are the simulated traits themselves.
 LABELS = {
     'truth': 'ground truth',
-    'h2opt_paper': 'H2-opt (paper)',
     'h2opt': 'H2-opt',
     'h2opt_hybrid': 'H2-opt hybrid',
     'pca': 'PCA',
@@ -19,23 +17,16 @@ LABELS = {
 # Order of the methods in every figure: H2-opt first, then the baselines from the most to the
 # least genetic information.
 ORDER = ['h2opt_hybrid', 'h2opt', 'pch', 'genetic_pca', 'max_features', 'single_band', 'pca']
-# A variant of a method comes right after the method: variant slug -> (method, rank of variant).
-VARIANTS = {'h2opt_paper': ('h2opt', 1)}
 
 
 def ordered(slugs):
-    """The slugs as a list, with the methods of ORDER and their VARIANTS in figure order.
+    """The slugs as a list, with the methods of ORDER in figure order.
 
     The methods move only among their own positions. Other entries (such as 'truth' or 'ndvi')
     keep their positions."""
     slugs = list(slugs)
-    slots = [i for i, s in enumerate(slugs) if s in ORDER or s in VARIANTS]
-
-    def key(slug):
-        method, rank = VARIANTS.get(slug, (slug, 0))
-        return ORDER.index(method), rank
-
-    for i, slug in zip(slots, sorted((slugs[i] for i in slots), key=key), strict=True):
+    slots = [i for i, s in enumerate(slugs) if s in ORDER]
+    for i, slug in zip(slots, sorted((slugs[i] for i in slots), key=ORDER.index), strict=True):
         slugs[i] = slug
     return slugs
 

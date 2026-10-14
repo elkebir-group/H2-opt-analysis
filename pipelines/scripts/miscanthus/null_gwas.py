@@ -2,21 +2,21 @@
 
 The plants are permuted within reps, as the sorghum and Arabidopsis nulls (h2opt_analysis.nulls):
 a plant takes the family and the genotypes of another plant of its rep; its plot, rep and column
-stay with its images. On the permuted families: hybrid H2-opt on fold 0 as
-train_hybrid.py (the linear noise that choose_noise.py chose for fold 0 and the CNN level of
-choose_cnn_level.py; no new selection), Henderson3 heritability, and the GWAS of gwas.py (GEMMA of
-trait 1 with an intercept and the genotype PCs). No genotype-phenotype relation is left, so the
-GWAS hits measure what the pipeline makes from nothing. With --neighbor-width, as the
-neighbor-adjusted run: training on the heritability after the nearest-neighbor field adjustment,
-the heritability scored after it (slope fitted on each split) and the neighbor mean as a GWAS
-covariate (gwas.py), with the neighbors of the permuted families. Writes an .npz: the source
+stay with its images. On the permuted families, as the neighbor-adjusted run: hybrid H2-opt on
+fold 0 as train_hybrid.py (the linear noise that choose_noise.py chose for fold 0 and the CNN level
+of choose_cnn_level.py; no new selection), trained on the heritability after the nearest-neighbor
+field adjustment (--neighbor-width), Henderson3 heritability scored after it (slope fitted on each
+split), and the GWAS of gwas.py (GEMMA of trait 1 with an intercept, the genotype PCs and the
+neighbor mean), with the neighbors of the permuted families. No genotype-phenotype relation is
+left, so the GWAS hits measure what the pipeline makes from nothing. Writes an .npz: the source
 plant of each plant (the permutation), the traits, the GWAS phenotypes and the -log10 p of every
 SNP, so that a new GWAS step needs no new training, and the summary (nulls.null_summary).
 
     python pipelines/scripts/miscanthus/null_gwas.py --population central --images images.npy \\
         --noise noise.npz --cnn-level cnn_level.npz --date 2 --permutation 0 \\
         --genotypes gwas/genotypes --pcs gwas/genotype_pcs.npy --out perm0.npz --work work/perm0 \\
-        --linear-steps 10000 --steps 1000 --max-copies 4 --device cuda --threads 1
+        --linear-steps 10000 --steps 1000 --max-copies 4 --device cuda --threads 1 \\
+        --neighbor-width 3
 """
 
 import argparse
@@ -49,7 +49,7 @@ def main():
     parser.add_argument('--max-copies', type=int, help='models trained at once (GPU memory)')
     parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
     parser.add_argument('--threads', type=int, required=True, help='OpenBLAS threads per run')
-    parser.add_argument('--neighbor-width', type=int,
+    parser.add_argument('--neighbor-width', type=int, required=True,
                         help='the nearest-neighbor field adjustment (field columns), as in '
                              'train_hybrid.py and gwas.py')
     args = parser.parse_args()
@@ -59,10 +59,8 @@ def main():
     source = nulls.permute_genotypes(np.arange(len(design.families)), design.environment[:, 0],
                                      seed=args.permutation)
     families, rows = design.families[source], rows[source]
-    weights = None
-    if args.neighbor_width is not None:
-        weights = miscanthus.neighbor_weights(
-            types.SimpleNamespace(**{**vars(design), 'families': families}), args.neighbor_width)
+    weights = miscanthus.neighbor_weights(
+        types.SimpleNamespace(**{**vars(design), 'families': families}), args.neighbor_width)
 
     torch.manual_seed(args.permutation)
     x = miscanthus.load_date(args.images, design.keep, args.date)
@@ -82,16 +80,14 @@ def main():
     Y = synthetic_traits(model, x, train_test == 0)
 
     def h2(on):
-        y = Y if weights is None else miscanthus.papadakis(Y, weights, on)
+        y = miscanthus.papadakis(Y, weights, on)
         return heritability(y[on], families[on], design.environment[on], design.plots[on],
                             'henderson3')
 
     n_lines = len(gwas.read_fam(args.genotypes))
     phenotypes = gwas.line_means(Y, rows, n_lines)
-    covariates = np.load(args.pcs)
-    if weights is not None:
-        covariates = np.column_stack([covariates,
-                                      miscanthus.neighbor_covariates(Y, weights, rows, n_lines)])
+    covariates = np.column_stack([np.load(args.pcs),
+                                  miscanthus.neighbor_covariates(Y, weights, rows, n_lines)])
     result = gwas.run_gemma(args.genotypes, phenotypes, args.work, covariates=covariates,
                             jobs=1, threads=args.threads)
     scores = gwas.summarize(result)

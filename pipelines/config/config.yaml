@@ -17,9 +17,6 @@ gwas_loci:
 
 sorghum:
   folds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-  # The predictions behind the paper (raw data): the traits per fold.
-  paper:
-    traits: 10
   # H2-opt retrained (train_h2opt.py, all folds in one job), trained with Adam (h2opt.train's
   # default optimizer), no clipping, with normal input noise whose level is chosen per fold, one for
   # all traits, by held-out heritability on the fold's training plants (choose_noise.py,
@@ -66,9 +63,8 @@ simulation:
   # H2-opt trained with Adam, no clipping, and normal input noise whose level is chosen per
   # instance on the training plants (choose_noise.py: h2opt.selection.select_noise_level, the
   # highest level within one SE of the best held-out heritability of trait 1 over 20 splits of
-  # the lines, with the same steps). PCH
-  # chooses its ridge by the same procedure and rule (PCH.tune). noise_sweep.py retrains H2-opt
-  # at every level of h2opt.selection.NOISE_LEVELS for the sensitivity figure.
+  # the lines, with the same steps). PCH chooses its ridge by the same procedure and rule
+  # (PCH.tune).
   h2opt:
     steps: 10000
     device: cuda
@@ -106,8 +102,6 @@ simulation:
 # The image simulation: plot images rendered with Helios (outputs under helios_simulation/).
 image_simulation:
   instances: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-  # The Manhattan plot of plot_gwas.py.
-  example: {instance: 0, method: h2opt_hybrid}
   # Methods compared with the true traits (slugs of h2opt_analysis.methods.LABELS).
   methods: [h2opt, h2opt_hybrid, pca, genetic_pca, pch, max_features]
   traits: 5
@@ -161,9 +155,6 @@ miscanthus:
     dates: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
     cnn_level_population: {central: central, south: central}
     baselines: [pch, pca, genetic_pca, max_features, single_band]
-    # Hybrid traits per fold and date (miscanthus_adjusted_later_traits_all): trait k is trained
-    # on top of the fixed traits 1 to k - 1.
-    traits: 5
   # Linear H2-opt (choose_noise.py, train_h2opt.py) and the hybrid (train_hybrid.py:
   # h2opt.LinearConvModel with h2opt.PositionImageConvModel), Henderson3 loss, Adam. Two noise
   # levels of h2opt.selection.NOISE_LEVELS, each one for all folds and all dates: the linear level

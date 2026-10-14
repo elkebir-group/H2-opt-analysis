@@ -1,10 +1,6 @@
 # Sorghum hyperspectral analyses: the H2-opt noise level per genotype fold and
 # trait, H2-opt per fold, heritability of H2-opt and the baselines, and GWAS of the per-line
 # trait means.
-#
-# A trait source is one way to get the H2-opt traits of a fold:
-#   paper - the predictions behind the paper (raw data, not built here)
-#   h2opt - retrained here (train_h2opt.py)
 
 from h2opt_analysis import sorghum
 from h2opt_analysis.methods import BASELINES
@@ -18,20 +14,15 @@ SORGHUM_PAPER_FIGURES = SORGHUM_OUT / "figures" / "paper"
 SORGHUM_MEASURED_TRAITS = sorghum.MEASURED_TRAITS
 # Reference traits of the GWAS: NDVI and every measured trait.
 SORGHUM_REFERENCE_TRAITS = ["ndvi"] + [sorghum.trait_slug(n) for n in sorghum.measured_traits()[0]]
-# Method slug (h2opt_analysis.methods.LABELS) of each trait source.
-SORGHUM_SOURCES = {"paper": "h2opt_paper", "h2opt": "h2opt"}
-assert all(SORGHUM[s]["traits"] <= SORGHUM["baselines"]["traits"] for s in SORGHUM_SOURCES), \
-    "sorghum.baselines.traits must cover the traits of every source"
+assert SORGHUM["h2opt"]["traits"] <= SORGHUM["baselines"]["traits"], \
+    "sorghum.baselines.traits must cover the traits of H2-opt"
 
 wildcard_constraints:
     fold=r"\d+",
-    source="|".join(SORGHUM_SOURCES),
 
 
-def sorghum_traits(source, fold):
-    """Traits file of one fold for one trait source."""
-    if source == "paper":
-        return str(sorghum.paper_traits(fold))
+def sorghum_traits(fold):
+    """H2-opt traits file of one fold."""
     return str(SORGHUM_OUT / "h2opt" / f"fold{fold}.npz")
 
 
@@ -40,9 +31,9 @@ def sorghum_baseline(baseline, fold):
     return str(SORGHUM_OUT / baseline / f"fold{fold}.npz")
 
 
-def sorghum_method_args(source):
-    """'--method slug file0 ... file9' for the H2-opt source and every baseline."""
-    files = {SORGHUM_SOURCES[source]: [sorghum_traits(source, f) for f in SORGHUM_FOLDS]}
+def sorghum_method_args():
+    """'--method slug file0 ... file9' for H2-opt and every baseline."""
+    files = {"h2opt": [sorghum_traits(f) for f in SORGHUM_FOLDS]}
     files.update({b: [sorghum_baseline(b, f) for f in SORGHUM_FOLDS] for b in BASELINES})
     return " ".join(f"--method {m} " + " ".join(fs) for m, fs in files.items())
 
@@ -51,8 +42,6 @@ def sorghum_method_args(source):
 # on request once the methods and their tuning are settled.
 rule sorghum_all:
     input:
-        expand(str(SORGHUM_OUT / "figures" / "top_trait_heritability_{source}.pdf"),
-               source=SORGHUM_SOURCES),
         str(SORGHUM_OUT / "figures" / "noise.pdf"),
         str(SORGHUM_OUT / "ndvi.npz"),
         expand(str(SORGHUM_OUT / "pch_coefficients" / "fold{fold}.npz"), fold=SORGHUM_FOLDS),
@@ -60,8 +49,7 @@ rule sorghum_all:
 
 rule sorghum_gwas_all:
     input:
-        expand(str(SORGHUM_OUT / "gwas" / "{source}_fold{fold}.npz"),
-               source=["paper", "h2opt"], fold=SORGHUM_FOLDS),
+        expand(str(SORGHUM_OUT / "gwas" / "h2opt_fold{fold}.npz"), fold=SORGHUM_FOLDS),
 
 
 # The GWAS of the reference traits (NDVI and the measured traits) at the loci of the H2-opt traits.
@@ -149,7 +137,7 @@ rule sorghum_pch_coefficients:
     input:
         pch=[sorghum_baseline("pch", f) for f in SORGHUM_FOLDS],
         models=[str(SORGHUM_OUT / "h2opt" / f"fold{f}.pt") for f in SORGHUM_FOLDS],
-        traits=[sorghum_traits("h2opt", f) for f in SORGHUM_FOLDS],
+        traits=[sorghum_traits(f) for f in SORGHUM_FOLDS],
     output:
         [str(SORGHUM_OUT / "pch_coefficients" / f"fold{f}.npz") for f in SORGHUM_FOLDS],
     log:
@@ -164,16 +152,16 @@ rule sorghum_pch_coefficients:
 
 rule sorghum_score_heritability:
     input:
-        h2opt=lambda wc: [sorghum_traits(wc.source, fold) for fold in SORGHUM_FOLDS],
+        h2opt=[sorghum_traits(fold) for fold in SORGHUM_FOLDS],
         baselines=[sorghum_baseline(b, f) for b in BASELINES for f in SORGHUM_FOLDS],
     output:
-        str(SORGHUM_OUT / "heritability_{source}.npz"),
+        str(SORGHUM_OUT / "heritability_h2opt.npz"),
     log:
-        str(SORGHUM_OUT / "heritability_{source}.log"),
+        str(SORGHUM_OUT / "heritability_h2opt.log"),
     params:
-        traits=lambda wc: SORGHUM[wc.source]["traits"],
+        traits=SORGHUM["h2opt"]["traits"],
         folds=" ".join(str(f) for f in SORGHUM_FOLDS),
-        methods=lambda wc: sorghum_method_args(wc.source),
+        methods=sorghum_method_args(),
     threads: 1
     shell:
         "python -u {SORGHUM_SCRIPTS}/evaluate_heritability.py --folds {params.folds}"
@@ -193,20 +181,6 @@ rule sorghum_score_ndvi:
         "python -u {SORGHUM_SCRIPTS}/ndvi.py --folds {params.folds} --out {output} > {log} 2>&1"
 
 
-rule sorghum_plot_heritability:
-    input:
-        str(SORGHUM_OUT / "heritability_{source}.npz"),
-    output:
-        pdf=str(SORGHUM_OUT / "figures" / "top_trait_heritability_{source}.pdf"),
-        png=str(SORGHUM_OUT / "figures" / "top_trait_heritability_{source}.png"),
-    log:
-        str(SORGHUM_OUT / "figures" / "top_trait_heritability_{source}.log"),
-    threads: 1
-    shell:
-        "python -u {SORGHUM_SCRIPTS}/plot_heritability.py --heritability {input}"
-        " --out {output.pdf} > {log} 2>&1"
-
-
 rule sorghum_prepare_genotype_pcs:
     input:
         multiext(str(sorghum.GENOTYPES), ".bed", ".bim", ".fam"),
@@ -224,14 +198,14 @@ rule sorghum_prepare_genotype_pcs:
 
 rule sorghum_run_gwas:
     input:
-        traits=lambda wc: sorghum_traits(wc.source, wc.fold),
+        traits=lambda wc: sorghum_traits(wc.fold),
         pcs=str(SORGHUM_OUT / "genotype_pcs.npy"),
     output:
-        str(SORGHUM_OUT / "gwas" / "{source}_fold{fold}.npz"),
+        str(SORGHUM_OUT / "gwas" / "h2opt_fold{fold}.npz"),
     log:
-        str(SORGHUM_OUT / "gwas" / "{source}_fold{fold}.log"),
+        str(SORGHUM_OUT / "gwas" / "h2opt_fold{fold}.log"),
     params:
-        work=lambda wc: str(SORGHUM_OUT / "gwas" / "work" / f"{wc.source}_fold{wc.fold}"),
+        work=lambda wc: str(SORGHUM_OUT / "gwas" / "work" / f"h2opt_fold{wc.fold}"),
         traits=SORGHUM["gwas"]["traits"],
         jobs=SORGHUM["gwas"]["jobs"],
         threads=SORGHUM["gwas"]["threads"],
@@ -282,7 +256,7 @@ rule sorghum_reference_gwas_summary:
         " --window {params.window} --out {output} > {log} 2>&1"
 
 
-# The figures of the paper, made from the h2opt source (linear H2-opt retrained here). They need
+# The figures of the paper, made from linear H2-opt retrained here. They need
 # the GWAS, so they are not part of sorghum_all.
 rule sorghum_paper_figures:
     input:
@@ -295,7 +269,7 @@ rule sorghum_plot_paper_main:
     input:
         heritability=str(SORGHUM_OUT / "heritability_h2opt.npz"),
         coefficients=str(SORGHUM_OUT / "pch_coefficients" / f"fold{SORGHUM_FOLDS[0]}.npz"),
-        traits=[sorghum_traits("h2opt", f) for f in SORGHUM_FOLDS],
+        traits=[sorghum_traits(f) for f in SORGHUM_FOLDS],
         measured=str(SORGHUM_MEASURED_TRAITS),
         ndvi=str(SORGHUM_OUT / "ndvi.npz"),
     output:
@@ -304,7 +278,7 @@ rule sorghum_plot_paper_main:
     log:
         str(SORGHUM_PAPER_FIGURES / "sorFig.log"),
     params:
-        fold_traits=sorghum_traits("h2opt", SORGHUM_FOLDS[0]),
+        fold_traits=sorghum_traits(SORGHUM_FOLDS[0]),
     threads: 1
     shell:
         "python -u {SORGHUM_SCRIPTS}/plot_paper_main.py --heritability {input.heritability}"
@@ -327,7 +301,6 @@ rule sorghum_plot_paper_heritability:
     shell:
         "python -u {SORGHUM_SCRIPTS}/plot_paper_heritability.py --heritability {input}"
         " --out {output.pdf} --traits {params.traits} > {log} 2>&1"
-
 
 
 # sorCoefficients: wavelength coefficients of H2-opt and of the paired PCH traits in the first fold,

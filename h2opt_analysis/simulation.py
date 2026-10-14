@@ -34,7 +34,6 @@ from .paths import data
 
 N_INSTANCES = 10
 N_TRAITS = 3
-HERITABILITY = (0.6, 0.4, 0.2)
 N_QTNS = 100  # per trait
 N_LATENT = 5
 PAPER_AUTOENCODER = data('plant', 'models', 'autoencode_2.pt')  # pickled model of the paper code

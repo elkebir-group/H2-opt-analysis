@@ -67,18 +67,16 @@ GPU training jobs share the GPU, 8 at a time (`--gpu-jobs N`).
 
 ### Sorghum
 
-All outputs are under `data/derived/sorghum/`. A trait source is one way to get
-the H2-opt traits of a genotype fold: `paper` (the predictions behind the paper)
-or `h2opt` (retrained here with Adam, with the noise level of each fold, one for all traits, chosen by held-out heritability).
+All outputs are under `data/derived/sorghum/`. H2-opt is retrained here with Adam, with the noise
+level of each fold, one for all traits, chosen by held-out heritability.
 
 | Rule | Output | Content |
 |---|---|---|
 | `sorghum_choose_linear_h2opt_noise` | `h2opt/noise.npz`, `h2opt/noise_traits.npz`, `figures/noise.{pdf,png}` | the H2-opt noise level of each fold (one for all traits), chosen on the fold's training plants by the highest level within one SE of the best held-out heritability of the first trait over 20 validation splits of the genotypes (`h2opt.selection.select_noise_level`, all folds in one batch); `noise_traits.npz` keeps the trained validation traits, to examine other selection rules without training again |
 | `sorghum_train_linear_h2opt` | `h2opt/fold{k}.{npz,pt}` | H2-opt with the chosen noise, all folds in one job |
-| `sorghum_train_baselines` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | baselines fitted on the training genotypes of fold k, once for all sources |
-| `sorghum_score_heritability` | `heritability_{source}.npz` | train and test heritability of the source's H2-opt traits and the baselines' |
-| `sorghum_plot_heritability` | `figures/top_trait_heritability_{source}.{pdf,png}` | boxplots of the top trait over the folds |
-| `sorghum_run_gwas` | `gwas/{source}_fold{k}.npz` | GEMMA LMM of the per-line trait means (intercept + 5 genotype PCs) |
+| `sorghum_train_baselines` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | baselines fitted on the training genotypes of fold k |
+| `sorghum_score_heritability` | `heritability_h2opt.npz` | train and test heritability of the H2-opt traits and the baselines' |
+| `sorghum_run_gwas` | `gwas/h2opt_fold{k}.npz` | GEMMA LMM of the per-line trait means (intercept + 5 genotype PCs) |
 | `sorghum_plot_paper_main` | `figures/paper/sorFig.{pdf,png}` | paper Fig. (sorghum): example spectra; mean test heritability of traits 1-4 of `h2opt` and the baselines; wavelength coefficients of traits 1-4, fold 0; median over folds of \|r\| between genotype means of traits 1-4 and the measured traits (Ferguson et al. 2021, Table S12); Bonferroni-significant SNPs per trait, fold 0 |
 | `sorghum_plot_paper_heritability` | `figures/paper/multiTraitHerit_all.{pdf,png}` | mean train and test heritability of traits 1-10 of `h2opt` and the baselines |
 | `sorghum_plot_paper_gwas` | `figures/paper/{crossGWAS,sorGWAS}.{pdf,png}` | Pearson r of -log10 p of trait 1 between the folds; Manhattan and QQ plots of the fold 0 traits with significant SNPs |
@@ -99,15 +97,11 @@ the lines) and everything after are rebuilt here. All outputs are under `data/de
 | `sim_train_linear_h2opt` | `instance{i}/h2opt.{npz,pt}` | H2-opt with the chosen noise (device from the config) |
 | `sim_choose_hybrid_cnn_level` | `instance{i}/cnn_level.npz` | the CNN noise level of the hybrid: the highest level within one SE of the best held-out heritability of trait 1 (`h2opt.selection.score_linear_conv_levels`, `highest_level_within_one_se`) |
 | `sim_train_hybrid_h2opt` | `instance{i}/h2opt_hybrid.{npz,pt}` | H2-opt with the linear + CNN model (`h2opt.LinearConvModel`, 1D `ConvModel`), warm started from linear H2-opt, at the chosen noise and CNN level (device from the config) |
-| `sim_sweep_linear_h2opt_noise` | `instance{i}/h2opt_noise_sweep.npz` | H2-opt at every level of `h2opt.selection.NOISE_LEVELS`, all levels in one job |
-| `sim_plot_linear_h2opt_noise_sweep` | `noise_sweep.npz`, `figures/noise_sweep.{pdf,png}` | \|r\| of traits 1-3 with the true traits against the noise level |
 | `sim_train_baselines` | `instance{i}/{pca,genetic_pca,pch,max_features}.npz` | baselines fitted on the training lines (PCH's ridge chosen by `PCH.tune`, the procedure and rule of H2-opt's noise level) |
 | `sim_prepare_gwas_genotypes` | `instance{i}/genotypes.{bed,bim,fam}`, `genotype_pcs.npy` | genotypes without the instance's QTNs, and their PCs |
 | `sim_run_gwas` | `instance{i}/gwas/{method}.npz` | GEMMA LMM of the line means of traits 1-3 (intercept + 5 PCs) |
 | `sim_score_traits` | `evaluation.npz` | correlation with the true traits, train/test heritability |
 | `sim_score_gwas` | `roc.npz` | AUC and ROC curves of causal 100 kb bins |
-| `sim_plot_traits` | `figures/{heritability,correlation}.pdf` | test heritability and \|r\| with the true traits per method (Fig. 3 and Fig. S2 panels) |
-| `sim_plot_gwas` | `figures/{auc,roc_trait1-3}.pdf`, `figures/gwas_{method}_instance{i}.png` | AUC, ROC curves, and Manhattan and QQ plots of one example (Fig. 3 and Fig. S2 panels) |
 | `sim_plot_paper_figures` (target `simulation_paper_figures`) | `figures/paper/{simFig,simCompareSNP}.{pdf,png}` | the paper's Fig. 3 (a-e: heritability, \|r\|, QQ and Manhattan plots of the example, ROC of trait 1, AUC) and Fig. S2 (ROC of traits 2 and 3), from `evaluation.npz`, `roc.npz` and the example GWAS |
 
 ### Image simulation
@@ -131,7 +125,6 @@ for every instance (config `image_simulation`), not selected. All outputs are un
 | `img_train_hybrid_h2opt` | `instance{i}/h2opt_hybrid.{npz,pt}` | as `sim_train_hybrid_h2opt`, with `h2opt.ImageConvModel` |
 | `img_train_baselines` | `instance{i}/{pca,genetic_pca,pch,max_features}.npz` | as `sim_train_baselines` |
 | `img_score_traits` | `evaluation.npz` | correlation with the true traits, train/test heritability |
-| `img_plot_traits` | `figures/{heritability,correlation}.pdf` | test heritability and \|r\| with the true traits per method |
 
 ### Miscanthus
 
@@ -141,46 +134,59 @@ edge, near infrared), 63 x 63 pixels per plant. Each date is analyzed alone. The
 'unknown' seed lots and empty plots are left out; the folds are the paper's 5 plant folds. The
 heritability is Henderson's Method III (`h2opt.Henderson3`: families, plots within families, rep
 and field column fixed), broad-sense on the plant scale (the paper's narrow-sense value is 4 x it,
-capped at 1). The config lists the populations. All outputs are under
+capped at 1), after the nearest-neighbor field adjustment (`h2opt.spatial`, Papadakis 1937: the
+other-family plots within `spatial_width` field columns in the same rep). The config lists the
+populations.
+
+The images, the baselines, the genotypes and the CNN level are shared; they are under
 `data/derived/miscanthus/{population}/`.
 
 | Rule | Output | Content |
 |---|---|---|
 | `misc_prepare_images` | `images.npy` | the images as uncompressed float32, read one date at a time |
-| `misc_choose_linear_h2opt_noise` | `h2opt/noise.npz` | the one linear noise level for all folds and dates: `h2opt.selection.select_noise_level` on the selection date (06/08, before canopy closure), the validation splits of all folds together |
-| `misc_train_linear_h2opt` | `h2opt/date{d}.{npz,pt}` | linear H2-opt of one date, all folds, at the linear level |
+| `misc_choose_linear_h2opt_noise` | `h2opt/noise.npz` | the linear noise level without the adjustment (`h2opt.selection.select_noise_level` on the selection date, 06/08, the validation splits of all folds together); the input of the CNN level |
 | `misc_choose_hybrid_cnn_level` | `h2opt_hybrid/cnn_level.npz` | the one CNN level of the hybrid for all folds and dates: `h2opt.selection.score_linear_conv_levels` on the selection date, fold 0 |
-| `misc_train_hybrid_h2opt` | `h2opt_hybrid/date{d}.{npz,pt}` | the hybrid of one date, all folds: `h2opt.LinearConvModel` with `h2opt.PositionImageConvModel`, warm started from linear H2-opt, at the linear and CNN levels |
-| `misc_choose_pch_ridge` | `pch/ridge.npz` | the one PCH ridge for all folds and dates: `PCH.tune` over `h2opt.baselines.RIDGES` on the selection date, the validation splits of all folds together (as the linear H2-opt level) |
-| `misc_train_baselines` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | baselines of every date in one fold; PCH maximizes Henderson3 at the ridge of `pch/ridge.npz` |
-| `misc_score_heritability` | `heritability.npz` | train and test Henderson3 of every method, date and fold |
-| `misc_plot_heritability` | `figures/heritability.{pdf,png}` | test heritability per date, hybrid H2-opt against the baselines |
-
-The GWAS is a separate target, `miscanthus_gwas_all`, run only on request. The genotypes are the
-PLINK sets `miscPlant/SNP/bed/Msi{C,S}_annotated` with their full sample lists (`_copy.fam`; the
-`.fam` beside each `.bed` is a subset written by the original code, and GEMMA reads shifted
-genotypes with it). Plants with two conflicting samples are left out.
-
-| Rule | Output | Content |
-|---|---|---|
+| `misc_choose_pch_ridge` | `pch/ridge.npz` | the one PCH ridge for all folds and dates: `PCH.tune` over `h2opt.baselines.RIDGES` on the selection date, the validation splits of all folds together |
+| `misc_train_baselines` | `{pca,genetic_pca,pch,max_features,single_band}/fold{k}.npz` | baselines of every date in one fold; PCH maximizes Henderson3 at the ridge of `pch/ridge.npz` |
 | `misc_prepare_genotypes` | `gwas/genotypes.{bed,bim,fam}`, `gwas/genotype_pcs.npy` | the PLINK set (unplaced scaffolds as chromosome 0) and 5 genotype PCs of the genotyped plants with traits |
-| `misc_run_gwas` | `gwas/date{d}.npz` | GEMMA LMM of trait 1 of hybrid H2-opt, one run per fold (intercept + 5 PCs) |
+| `misc_score_ndvi` | `ndvi.npz` | NDVI (mean red and NIR of the pixels) of every plant and date, and its Henderson3 per date and fold, before and after the adjustment |
 
-The paper figures are a separate target, `miscanthus_paper_figures`; `miscFig` and `miscGWAS` need
-the GWAS. The figures are under `data/derived/miscanthus/figures/paper/`, each a `.pdf` and a
-`.png`; the data rules write beside the population outputs. Correlations are the median over the
-folds of \|r\|; GWAS counts are Bonferroni-significant SNPs of the first fold. `miscSecondTrait`
-is not made: it needs a run with `traits: 2`.
+The paper's run trains H2-opt on the adjusted heritability (config `miscanthus.adjusted`); its
+outputs are under `data/derived/miscanthus_adjusted/{population}/` (target
+`miscanthus_adjusted_all`).
 
 | Rule | Output | Content |
 |---|---|---|
-| `misc_score_ndvi` | `ndvi.npz` | NDVI (mean red and NIR of the pixels) of every plant and date, and its train and test Henderson3 per date and fold, scored as the methods |
-| `misc_date_correlations` | `date_correlations.npz` | Pearson r of trait 1 of hybrid H2-opt between dates, per plant and between half-sib family means, per fold (all kept plants) |
-| `misc_measured_correlations` | `central/measured_correlations.npz` | the same with the 16 measured traits of the Central plant data table (Central only) |
-| `misc_plot_paper_main` | `miscFig.pdf` | a example images; b test heritability per date; c family-mean \|r\| between the first five dates; d the same with the 6 top measured traits; e significant SNPs per date |
-| `misc_plot_paper_heritability` | `NDVI_canopy.pdf`, `miscVegIndex.pdf`, `trainHeritMisc.pdf` | mean NDVI per date; test heritability of NDVI and the methods; train heritability |
-| `misc_plot_paper_correlations` | `miscCorTimeSimple.pdf`, `miscCorTime.pdf`, `traitCorrelation_{allTraits,simplePearson}.pdf` | \|r\| between dates and with the measured traits, per plant and between family means |
-| `misc_plot_paper_gwas` | `miscGWAS.pdf` | Manhattan and QQ plots of the dates with significant SNPs, first fold (one page per population) |
+| `misc_adjusted_choose_linear_h2opt_noise` | `h2opt/noise.npz` | the linear noise level, selected again under the adjustment |
+| `misc_adjusted_train_linear_h2opt` | `h2opt/date{d}.{npz,pt}` | linear H2-opt of one date, all folds |
+| `misc_adjusted_train_hybrid_h2opt` | `h2opt_hybrid/date{d}.{npz,pt}` | the hybrid (H2-opt (CNN)) of one date, all folds: `h2opt.LinearConvModel` with `h2opt.PositionImageConvModel`, at the linear level and the CNN level of `cnn_level_population` |
+| `misc_adjusted_score_heritability` | `heritability.npz` | train and test Henderson3 after the adjustment, every method, date and fold |
+| `misc_adjusted_date_correlations` | `date_correlations.npz` | Pearson r of trait 1 of the hybrid between dates, per plant and between half-sib family means, per fold |
+| `misc_adjusted_measured_correlations` | `measured_correlations.npz` | the same with the measured traits of the plant data tables |
+
+The GWAS and the null are separate targets, `miscanthus_adjusted_gwas_all` and
+`miscanthus_adjusted_null_all`, run only on request. The genotypes are the PLINK sets
+`miscPlant/SNP/bed/Msi{C,S}_annotated` with their full sample lists (`_copy.fam`; the `.fam` beside
+each `.bed` is a subset written by the original code, and GEMMA reads shifted genotypes with it).
+Plants with two conflicting samples are left out.
+
+| Rule | Output | Content |
+|---|---|---|
+| `misc_adjusted_crossfit_traits` | `h2opt_hybrid/crossfit_date{d}.npz` | trait 1 of each plant from the fold model that held it out |
+| `misc_adjusted_run_gwas` | `gwas/{,crossfit_}date{d}.npz` | GEMMA LMM of trait 1 of the hybrid, one run per fold (intercept, 5 PCs and the neighbor mean), and of the cross-fitted trait |
+| `misc_adjusted_null_gwas` | `null/perm{k}.npz` | one permutation of the whole hybrid H2-opt to GWAS pipeline on the selection date |
+
+The paper figures are a separate target, `miscanthus_paper_figures`, under
+`data/derived/miscanthus/figures/paper/`, each a `.pdf` and a `.png`; `miscGWAS` and `miscNull`
+need the GWAS and the null.
+
+| Rule | Output | Content |
+|---|---|---|
+| `misc_plot_paper_main` | `miscFig.pdf` | a example images; b test heritability per date; c and d family-mean \|r\| between dates and with the measured traits |
+| `misc_plot_paper_heritability` | `miscVegIndex.pdf`, `trainHeritMisc.pdf` | mean NDVI per date and the test heritability of NDVI and H2-opt (CNN); train heritability |
+| `misc_plot_paper_correlations` | `miscCorTime.pdf`, `traitCorrelation_{allTraits,simplePearson}.pdf` | \|r\| between dates and with the measured traits, per plant and between family means |
+| `misc_plot_paper_gwas` | `miscGWAS_{population}.pdf` | GWAS of trait 1 per fold and cross-fitted, the dates with significant SNPs |
+| `misc_plot_paper_null` | `miscNull.pdf` | the GWAS of trait 1 of all folds and dates against its cross-fit and the permutation null |
 
 ### Arabidopsis
 
@@ -202,7 +208,6 @@ under `data/derived/arabidopsis/{treatment}/`.
 | `arabi_train_linear_h2opt` | `h2opt/fold{k}.{npz,pt}` | linear H2-opt, all folds in one job (device from the config) |
 | `arabi_train_baselines` | `{pca,genetic_pca,pch,max_features}/fold{k}.npz` | the baselines of one fold; PCH's ridge by `PCH.tune` |
 | `arabi_score_heritability` | `heritability.npz` | train and test heritability of every method, fold and trait |
-| `arabi_plot_heritability` | `figures/heritability_{test,train}.pdf` | heritability per trait, H2-opt against the baselines (Fig. arabiResult b and its train counterpart) |
 
 Pathway enrichment is a separate target, `arabidopsis_pathway_enrichment`, run only on request.
 It runs MetaboAnalyst's functional analysis (MS peaks to pathways, mummichog v2) offline with

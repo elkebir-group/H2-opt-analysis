@@ -45,15 +45,10 @@ def folds(genotypes, seed=0):
     return per_group(genotypes, lambda c: np.random.RandomState(seed).randint(N_FOLDS, size=c))
 
 
-def paper_traits(fold):
-    """Path of the paper's linear H2-opt predictions for a genotype fold (10 traits, all plants)."""
-    return data('plant', 'syntheticTraits', f'linear_crossVal_reg4_{fold}_mod10.npz')
-
-
 def load_traits(path):
-    """Traits of all plants from an .npz: the pipeline's 'traits' array, or the paper's arr_0."""
+    """Traits of all plants from an .npz (array 'traits')."""
     with np.load(path) as f:
-        return f['traits'] if 'traits' in f else f['arr_0']
+        return f['traits']
 
 
 def line_accessions():

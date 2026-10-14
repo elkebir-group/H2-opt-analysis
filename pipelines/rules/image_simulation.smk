@@ -25,7 +25,6 @@ def img_files(name, instances=IMG_INSTANCES):
 rule image_simulation_all:
     input:
         str(IMG_ROOT / "evaluation.npz"),
-        str(IMG_ROOT / "figures" / "heritability.pdf"),
 
 
 rule img_build_helios:
@@ -167,22 +166,6 @@ rule img_score_traits:
         " --truth {input.truth} {params.methods} --out {output} > {log} 2>&1"
 
 
-rule img_plot_traits:
-    input:
-        str(IMG_ROOT / "evaluation.npz"),
-    output:
-        str(IMG_ROOT / "figures" / "heritability.pdf"),
-        str(IMG_ROOT / "figures" / "correlation.pdf"),
-    log:
-        str(IMG_ROOT / "figures" / "plot_traits.log"),
-    params:
-        out_dir=str(IMG_ROOT / "figures"),
-    threads: 1
-    shell:
-        "python -u {SIM_SCRIPTS}/plot_traits.py --evaluation {input}"
-        " --out-dir {params.out_dir} > {log} 2>&1"
-
-
 # GWAS of the image simulations, as the spectral simulation's (simulation.smk): the instances have
 # the plants, lines and true traits of the spectral instances, so the genotypes, the plant lines
 # (spectra.npz 'lines') and the GWAS of the true traits come from there. Run only on request.
@@ -192,7 +175,6 @@ IMG_GWAS_METHODS = IMG["methods"]
 rule image_simulation_gwas_all:
     input:
         str(IMG_ROOT / "roc.npz"),
-        str(IMG_ROOT / "figures" / "auc.pdf"),
 
 
 rule img_run_gwas:
@@ -240,28 +222,6 @@ rule img_score_gwas:
     shell:
         "python -u {SIM_SCRIPTS}/roc.py --instances {params.instances} {params.methods}"
         " --out {output} > {log} 2>&1"
-
-
-rule img_plot_gwas:
-    input:
-        roc=str(IMG_ROOT / "roc.npz"),
-        example=img_file(IMG["example"]["instance"], f"gwas/{IMG['example']['method']}.npz"),
-    output:
-        [str(IMG_ROOT / "figures" / name) for name in
-         ["auc.pdf", "roc_trait1.pdf", "roc_trait2.pdf", "roc_trait3.pdf",
-          f"gwas_{IMG['example']['method']}_instance{IMG['example']['instance']}.png"]],
-    log:
-        str(IMG_ROOT / "figures" / "plot_gwas.log"),
-    params:
-        out_dir=str(IMG_ROOT / "figures"),
-        name=f"{IMG['example']['method']}_instance{IMG['example']['instance']}",
-        label=(f"{LABELS[IMG['example']['method']]}, "
-               f"instance {IMG['example']['instance']}"),
-    threads: 1
-    shell:
-        "python -u {SIM_SCRIPTS}/plot_gwas.py --roc {input.roc}"
-        " --gwas-example {input.example} --example-name {params.name}"
-        " --example-label '{params.label}' --out-dir {params.out_dir} > {log} 2>&1"
 
 
 # The permutation null of the hybrid, as for the spectral simulation (simulation_null_gwas_all).

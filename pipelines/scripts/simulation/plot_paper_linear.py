@@ -23,12 +23,14 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 from matplotlib.ticker import MaxNLocator  # noqa: E402
-from plot_gwas import auc_values  # noqa: E402
 from plot_paper import (  # noqa: E402
     BOTTOM_MARGIN,
     SIM_FIG_RC,
     TOP_MARGIN,
+    auc_values,
     boxplot_panel,
+    correlation_values,
+    heritability_values,
     letter,
     row_label,
     save,
@@ -36,7 +38,6 @@ from plot_paper import (  # noqa: E402
     share_y,
     top_legend,
 )
-from plot_traits import correlation_values, heritability_values  # noqa: E402
 
 from h2opt_analysis.figures import COLORS  # noqa: E402
 from h2opt_analysis.methods import LABELS  # noqa: E402

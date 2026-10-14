@@ -1,8 +1,9 @@
 """Henderson3 test heritability of the Miscanthus traits after a nearest-neighbor field
 adjustment (Papadakis 1937; h2opt_analysis.miscanthus.papadakis), every method, date and fold.
 
-The traits are read as in evaluate_heritability.py, for the dates --dates (indices into
-miscanthus.DATES; one --by-date file per listed date, --by-fold files hold all dates). For each
+The traits come from --by-date (H2-opt: one file per listed date, folds x plants x traits) and
+--by-fold (the baselines: one file per fold, holding all dates), for the dates --dates (indices into
+miscanthus.DATES). For each
 fold, trait 1 of all kept plants is adjusted by the mean of the plants of the other-family plots
 within --width field columns in the
 same rep (the slope fitted on the scored plants) and scored by Henderson3 (families, plots
@@ -15,7 +16,7 @@ narrow-sense test heritability (4 x Henderson3, clipped to [0, 1] per fold) per 
 
     python pipelines/scripts/miscanthus/evaluate_heritability_spatial.py --population central \\
         --by-date h2opt_hybrid date0.npz ... date13.npz --by-fold pch fold0.npz ... fold4.npz \\
-        --dates 0 1 ... 13 --width 3 --out heritability_spatial.npz
+        --dates 0 1 ... 13 --width 3 --out heritability.npz
 """
 
 import argparse

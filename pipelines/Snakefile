@@ -35,6 +35,6 @@ rule all:
     input:
         rules.sorghum_all.input,
         rules.simulation_all.input,
-        rules.miscanthus_all.input,
+        rules.miscanthus_adjusted_all.input,
         rules.arabidopsis_all.input,
         rules.image_simulation_all.input,
