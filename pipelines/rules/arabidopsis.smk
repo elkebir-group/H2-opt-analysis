@@ -266,6 +266,8 @@ rule arabi_paper_main_figure:
                             treatment=ARABI["treatments"]),
         coefficients=[arabi_paper_coefficients(t) for t in ARABI["treatments"]],
         gwas=[arabi_paper_gwas(t) for t in ARABI["treatments"]],
+        genotypes=[str(ARABI_OUT / t / "gwas" / f"genotypes{e}") for t in ARABI["treatments"]
+                   for e in (".bed", ".bim", ".fam")],
         pathways=expand(str(ARABI_OUT / "{treatment}" / "enrichment" / "trait{k}_pathways.csv"),
                         treatment=ARABI["treatments"],
                         k=range(1, ARABI["h2opt"]["traits"] + 1)),
@@ -276,12 +278,14 @@ rule arabi_paper_main_figure:
         str(ARABI_PAPER / "metabFig.log"),
     params:
         treatments=" ".join(ARABI["treatments"]),
+        genotypes=" ".join(str(ARABI_OUT / t / "gwas" / "genotypes") for t in ARABI["treatments"]),
     threads: 1
     shell:
         "python -u {ARABI_SCRIPTS}/plot_paper_main.py --features {input.features}"
         " --treatments {params.treatments} --heritability {input.heritability}"
         " --coefficients {input.coefficients} --gwas {input.gwas}"
-        " --pathways {input.pathways} --out {output.pdf}"
+        " --genotypes {params.genotypes} --r2 {config[gwas_loci][r2]}"
+        " --kb {config[gwas_loci][kb]} --pathways {input.pathways} --out {output.pdf}"
         " > {log} 2>&1"
 
 

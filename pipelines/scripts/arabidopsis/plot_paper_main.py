@@ -6,10 +6,11 @@ scale), with the number of samples n and of accessions c. b: test heritability p
 and every baseline, the median over the folds and a band from the 25th to the 75th percentile (as
 sorghum). c: coefficients of traits 1-3 of each treatment's model (MS1 only), the ones with
 magnitude at least 2% of the trait's largest, the marker area proportional to the magnitude
-relative to the largest. d: SNPs above the Bonferroni threshold
-0.05 / SNPs, per trait. e: pathway enrichment of each trait, the adjusted Fisher p-value
-(AdjP.Fisher of pathway_enrichment.R, adjusted over the pathways of one peak list) on a log color
-scale, every pathway with p < 0.05 for a trait of either treatment; an asterisk marks p < 0.05.
+relative to the largest. d: loci per trait, the SNPs above the Bonferroni threshold
+0.05 / SNPs clumped by LD (gwas.clump, --r2 and --kb; genotypes of --genotypes). e: pathway
+enrichment of each trait, the adjusted Fisher p-value (AdjP.Fisher of pathway_enrichment.R,
+adjusted over the pathways of one peak list) on a log color scale, every pathway with p < 0.05 for
+a trait of either treatment; an asterisk marks p < 0.05.
 Not the mummichog p-value P(Gamma): it is below 0.05 for most pathways also for a peak list ranked
 without a trait (by intensity SD alone), while the adjusted Fisher p-value of that list is at
 least 0.5.
@@ -21,6 +22,7 @@ Drawn at the text width of the paper (6.5 in) in the style of simFig. Saves --ou
         --treatments 0d 6d --heritability 0d/heritability.npz 6d/heritability.npz \\
         --coefficients {0d,6d}/h2opt/coefficients_fold0.npz \\
         --gwas 0d/gwas/fold0.npz 6d/gwas/fold0.npz \\
+        --genotypes 0d/gwas/genotypes 6d/gwas/genotypes --r2 0.5 --kb 250 \\
         --pathways {0d,6d}/enrichment/trait{1..10}_pathways.csv \\
         --out metabFig.pdf
 """
@@ -35,7 +37,7 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.colors import LogNorm  # noqa: E402
 
-from h2opt_analysis import arabidopsis  # noqa: E402
+from h2opt_analysis import arabidopsis, gwas  # noqa: E402
 from h2opt_analysis.figures import (  # noqa: E402
     COLORS,
     LETTER_SIZE,
@@ -90,10 +92,14 @@ def save(fig, path):
     plt.close(fig)
 
 
-def significant_snps(path):
-    """SNPs per trait above the Bonferroni threshold 0.05 / SNPs of a gwas.summarize .npz."""
-    score = np.load(path)['neg_log10_p']
-    return (score > -np.log10(0.05 / score.shape[1])).sum(axis=1)
+def significant_loci(path, prefix, r2, kb):
+    """Loci per trait of a gwas.summarize .npz: its SNPs above the Bonferroni threshold
+    0.05 / SNPs, clumped by LD for each trait on its own (gwas.clump; PLINK set prefix)."""
+    with np.load(path) as f:
+        chrom, ps, score = f['chr'], f['ps'], f['neg_log10_p']
+    threshold = -np.log10(0.05 / score.shape[1])
+    return np.array([len(gwas.clump(prefix, chrom, ps, row, r2=r2, kb=kb))
+                     if (row > threshold).any() else 0 for row in score])
 
 
 def load_pathways(tables, n_treatments):
@@ -115,6 +121,10 @@ def main():
     parser.add_argument('--coefficients', nargs='+', required=True,
                         help='coefficients.py output, one per treatment')
     parser.add_argument('--gwas', nargs='+', required=True, help='one per treatment')
+    parser.add_argument('--genotypes', nargs='+', required=True,
+                        help='PLINK prefix of each treatment (genotypes.py)')
+    parser.add_argument('--r2', type=float, required=True, help='LD clumping r^2')
+    parser.add_argument('--kb', type=float, required=True, help='LD clumping window (kb)')
     parser.add_argument('--pathways', nargs='+', required=True,
                         help='pathway tables, traits 1 to k of each treatment in order')
     parser.add_argument('--out', required=True)
@@ -128,7 +138,8 @@ def main():
 
     features = np.load(args.features, mmap_mode='r')
     _, sample_treatments, _ = arabidopsis.labels()
-    counts = [significant_snps(path) for path in args.gwas]
+    counts = [significant_loci(path, prefix, args.r2, args.kb)
+              for path, prefix in zip(args.gwas, args.genotypes, strict=True)]
     p, pathways = load_pathways(args.pathways, len(args.treatments))
     keep = [i for i in range(len(pathways)) if p[:, :, i].min() < ALPHA]
     p, pathways = p[:, :, keep], [pathways[i] for i in keep]
@@ -231,13 +242,13 @@ def main():
                     handle.set_sizes([8])
                     handle.set_alpha(1)
 
-            # d: significant SNPs per trait
+            # d: loci per trait
             ax = axes(4.23, row, 0.46)
             panels['d'].append(ax)
             ax.bar(traits, counts[row], color=COLORS['h2opt'], width=0.7)
             ax.set_xticks(traits, [t if t in (1, 5, 10) else '' for t in traits])
             ax.set_ylim(0, max(c.max() for c in counts) * 1.05)
-            ax.set_ylabel('significant SNPs')
+            ax.set_ylabel('significant loci')
             ax.spines[['top', 'right']].set_visible(False)
             if last:
                 ax.set_xlabel('synthetic trait')
@@ -288,7 +299,7 @@ def main():
               ', '.join(f'{LABELS[m]} {v:.3f}' for m, v in means.items()),
               '| lowest H2-opt trait (fold mean):',
               f'{results["test"][methods.index("h2opt")].mean(0).min():.3f}',
-              '| significant SNPs per trait:', count.tolist())
+              '| loci per trait:', count.tolist())
     print(f'e: {len(pathways)} pathways: ' + '; '.join(
         f'{name} (min p {p[:, :, i].min():.2g})' for i, name in enumerate(pathways)))
 
