@@ -29,14 +29,19 @@ import numpy as np  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.ticker import MaxNLocator  # noqa: E402
 from plot_paper_correlations import heatmap, median_abs, sort_traits  # noqa: E402
-from plot_paper_heritability import MARKERS, PAPER_LABELS, narrow, save  # noqa: E402
+from plot_paper_heritability import (  # noqa: E402
+    CANOPY_CLOSURE,
+    MARKERS,
+    PAPER_LABELS,
+    narrow,
+    save,
+)
 
 from h2opt_analysis import miscanthus  # noqa: E402
 from h2opt_analysis.figures import COLORS, MATH_RC, SIM_FIG_RC, TICK_SIZE, letter  # noqa: E402
 from h2opt_analysis.methods import ordered  # noqa: E402
 
 N_DATES = 5  # panels c and d: the dates before canopy closure
-CANOPY_CLOSURE = '07/24'
 LABELS_B = {**PAPER_LABELS, 'h2opt_hybrid': 'H2-opt (CNN)', 'h2opt': 'H2-opt (linear)'}
 MARKERS_B = {**MARKERS, 'h2opt': 'o'}
 N_MEASURED = 6
