@@ -190,19 +190,16 @@ rule arabi_plot_heritability:
         " --out-test {output.test} --out-train {output.train} > {log} 2>&1"
 
 
-# Figures of the paper (main.tex image names), from fold ARABI_PAPER_FOLD ("the first
-# cross-validation split") and the GWAS of that fold. Panel e of metabFig uses the tables of
-# arabi_pathway_enrichment. Run only on request, as the GWAS.
+# Figures of the paper (main.tex image names). The coefficients are from fold ARABI_PAPER_FOLD
+# ("the first cross-validation fold"); the GWAS figures (metab0d_GWAS, metab6d_GWAS) use all
+# folds. Panel e of metabFig uses the tables of arabi_pathway_enrichment. Run only on request, as
+# the GWAS.
 ARABI_PAPER = ARABI_OUT / "figures" / "paper"
 ARABI_PAPER_FOLD = 0
 
 
 def arabi_paper_coefficients(treatment):
     return str(ARABI_OUT / treatment / "h2opt" / f"coefficients_fold{ARABI_PAPER_FOLD}.npz")
-
-
-def arabi_paper_gwas(treatment):
-    return str(ARABI_OUT / treatment / "gwas" / f"fold{ARABI_PAPER_FOLD}.npz")
 
 
 rule arabidopsis_paper_figures:
@@ -378,16 +375,22 @@ rule arabi_paper_sparsity:
 
 rule arabi_paper_gwas:
     input:
-        lambda wc: arabi_paper_gwas(wc.treatment),
+        gwas=lambda wc: [str(ARABI_OUT / wc.treatment / "gwas" / f"fold{f}.npz")
+                         for f in ARABI_FOLDS],
+        genotypes=multiext(str(ARABI_OUT / "{treatment}" / "gwas" / "genotypes"),
+                           ".bed", ".bim", ".fam"),
     output:
         pdf=str(ARABI_PAPER / "metab{treatment}_GWAS.pdf"),
         png=str(ARABI_PAPER / "metab{treatment}_GWAS.png"),
     log:
         str(ARABI_PAPER / "metab{treatment}_GWAS.log"),
+    params:
+        genotypes=lambda wc: str(ARABI_OUT / wc.treatment / "gwas" / "genotypes"),
     threads: 1
     shell:
-        "python -u {ARABI_SCRIPTS}/plot_paper_gwas.py --gwas {input}"
-        " --title '{wildcards.treatment}, fold {ARABI_PAPER_FOLD}' --out {output.pdf} > {log} 2>&1"
+        "python -u {ARABI_SCRIPTS}/plot_paper_gwas.py --gwas {input.gwas}"
+        " --genotypes {params.genotypes} --r2 {config[gwas_loci][r2]}"
+        " --kb {config[gwas_loci][kb]} --out {output.pdf} > {log} 2>&1"
 
 
 # Peak lists for pathway enrichment (MetaboAnalyst functional analysis): the input of
