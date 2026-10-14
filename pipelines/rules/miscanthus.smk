@@ -566,12 +566,18 @@ rule misc_adjusted_train_linear_h2opt:
         " --out {output.traits} --out-models {output.models} > {log} 2>&1"
 
 
+def misc_adjusted_cnn_level(wildcards):
+    """The main run's CNN level file of the population that cnn_level_population names for this
+    population."""
+    source = MISC_ADJ_CONFIG["cnn_level_population"][wildcards.population]
+    return str(MISC_OUT / source / "h2opt_hybrid" / "cnn_level.npz")
+
+
 rule misc_adjusted_train_hybrid_h2opt:
     input:
         images=misc_images,
         noise=str(MISC_ADJ / "{population}" / "h2opt" / "noise.npz"),
-        cnn_level=str(MISC_OUT / MISC_ADJ_CONFIG["cnn_level_population"] / "h2opt_hybrid"
-                      / "cnn_level.npz"),
+        cnn_level=misc_adjusted_cnn_level,
     output:
         traits=str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "date{date}.npz"),
         models=str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "date{date}.pt"),
@@ -619,8 +625,7 @@ rule misc_adjusted_train_hybrid_later:
     input:
         images=misc_images,
         noise=str(MISC_ADJ / "{population}" / "h2opt" / "noise.npz"),
-        cnn_level=str(MISC_OUT / MISC_ADJ_CONFIG["cnn_level_population"] / "h2opt_hybrid"
-                      / "cnn_level.npz"),
+        cnn_level=misc_adjusted_cnn_level,
         earlier=misc_adjusted_earlier,
     output:
         traits=str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "trait{k}_date{date}.npz"),
@@ -757,8 +762,7 @@ rule misc_adjusted_null_gwas:
     input:
         images=misc_images,
         noise=str(MISC_ADJ / "{population}" / "h2opt" / "noise.npz"),
-        cnn_level=str(MISC_OUT / MISC_ADJ_CONFIG["cnn_level_population"] / "h2opt_hybrid"
-                      / "cnn_level.npz"),
+        cnn_level=misc_adjusted_cnn_level,
         genotypes=multiext(str(MISC_OUT / "{population}" / "gwas" / "genotypes"),
                            ".bed", ".bim", ".fam"),
         pcs=str(MISC_OUT / "{population}" / "gwas" / "genotype_pcs.npy"),
