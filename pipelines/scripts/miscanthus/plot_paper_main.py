@@ -94,7 +94,7 @@ def panel_a(fig, box, images_path, population):
     n, c = int(design.keep.sum()), len(np.unique(design.families))
     n_text = f'{n:,}'.replace(',', '{,}')
     fig.text(left + width / 2, bottom - 0.06 * height,
-             f'$n = {n_text}$\n$c = {c}$ half-sibling groups', ha='center', va='top',
+             f'$n = {n_text}$\n$c = {c}$ half-siblings', ha='center', va='top',
              fontsize=TICK_SIZE)
     return n, c
 
