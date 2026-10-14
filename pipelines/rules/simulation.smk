@@ -331,7 +331,8 @@ rule sim_plot_gwas:
 # The simulation figures of the paper (file stems as in the paper's images/), from the saved
 # results. They need the GWAS outputs, so they are not part of simulation_all. simFig has one row
 # per simulation of simulation.paper_figures.rows, each with its H2-opt variant
-# (simulation.paper_figures.h2opt); simCompareSNP and simGWASexample show the spectral simulation.
+# (simulation.paper_figures.h2opt); simCompareSNP has the same rows; simGWASexample shows the
+# spectral simulation.
 SIM_PAPER = SIM_OUT / "figures" / "paper"
 SIM_PAPER_ROWS = SIM["paper_figures"]["rows"]
 SIM_PAPER_H2OPT = SIM["paper_figures"]["h2opt"]
@@ -348,7 +349,6 @@ rule sim_plot_paper_figures:
     input:
         evaluations=[str(OUT_ROOT / s / "evaluation.npz") for s in SIM_PAPER_ROWS],
         rocs=[str(OUT_ROOT / s / "roc.npz") for s in SIM_PAPER_ROWS],
-        compare=str(SIM_OUT / "roc.npz"),
         example=sim_file(SIM["example"]["instance"],
                          f"gwas/{SIM_PAPER_H2OPT['simulation']}.npz"),
     output:
@@ -361,7 +361,6 @@ rule sim_plot_paper_figures:
     log:
         str(SIM_PAPER / "plot_paper.log"),
     params:
-        compare_h2opt=SIM_PAPER_H2OPT["simulation"],
         baselines=" ".join(SIM["paper_figures"]["baselines"]),
         rows=lambda wc, input: " ".join(
             f"--row '{label}' {ev} {roc} {SIM_PAPER_H2OPT[s]}" for (s, label), ev, roc in
@@ -369,8 +368,7 @@ rule sim_plot_paper_figures:
     threads: 1
     shell:
         "python -u {SIM_SCRIPTS}/plot_paper.py {params.rows}"
-        " --compare-h2opt {params.compare_h2opt} --baselines {params.baselines}"
-        " --compare-roc {input.compare} --gwas-example {input.example}"
+        " --baselines {params.baselines} --gwas-example {input.example}"
         " --out-figure {output.figure} --out-compare {output.compare}"
         " --out-example {output.example} > {log} 2>&1"
 

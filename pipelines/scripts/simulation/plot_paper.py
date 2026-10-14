@@ -6,22 +6,22 @@ trait t; mean ROC curves of trait 1, each with a band from the 25th to the 75th 
 curves of the instances and the median AUC over the instances in the legend; AUC of traits 1-3. A
 panel has the same y-axis in all rows. The letters go down the columns (a, b in column 1). The
 row labels are at the right of the rows.
---out-compare (paper Fig. S2, simCompareSNP): mean ROC curves of traits 2 and 3 of --compare-roc,
-with the same bands (lighter).
+--out-compare (paper Fig. S2, simCompareSNP): mean ROC curves of traits 2 and 3, with the same
+bands, one row per simulation (--row), with the row labels of simFig.
 --out-example (simGWASexample): QQ and Manhattan plots of the GWAS of trait 1 of one method on one
 instance (--gwas-example).
 Each figure is also saved as a .png next to its .pdf. The panels use the functions of
 plot_traits.py and plot_gwas.py, which make the same panels as separate files.
 
-The figures show the ground truth, one H2-opt variant per row (the last value of --row;
---compare-h2opt for simCompareSNP) and the baselines (--baselines). The H2-opt variant gets the
+The figures show the ground truth, one H2-opt variant per row (the last value of --row) and the
+baselines (--baselines). The H2-opt variant gets the
 label and the color of H2-opt.
 
     python pipelines/scripts/simulation/plot_paper.py \\
         --row Hyperspectral simulation/evaluation.npz simulation/roc.npz h2opt \\
         --row Images helios_simulation/evaluation.npz helios_simulation/roc.npz h2opt_hybrid \\
-        --compare-h2opt h2opt --baselines pca genetic_pca pch max_features \\
-        --compare-roc simulation/roc.npz --gwas-example instance0/gwas/h2opt.npz \\
+        --baselines pca genetic_pca pch max_features \\
+        --gwas-example instance0/gwas/h2opt.npz \\
         --out-figure figures/paper/simFig.pdf --out-compare figures/paper/simCompareSNP.pdf \\
         --out-example figures/paper/simGWASexample.pdf
 """
@@ -47,6 +47,8 @@ from h2opt_analysis.methods import LABELS  # noqa: E402
 ROC_LEGEND_SIZE = 5.5
 ROW_LABEL_SIZE = 7.5
 SIM_FIG_SIZE = (6.5, 3.7)
+# simCompareSNP: height in inches of one row.
+COMPARE_ROW_HEIGHT = 2.6
 # simGWASexample: size in inches and x of the panel letters (QQ, Manhattan) in axes coordinates.
 EXAMPLE_FIG_SIZE = (6.5, 2.4)
 EXAMPLE_LETTER_X = [-0.28, -0.11]
@@ -219,10 +221,7 @@ def main():
                         metavar=('LABEL', 'EVALUATION', 'ROC', 'H2OPT'),
                         help='one row of simFig: label, evaluate.py result, roc.py result, slug '
                              'of the H2-opt variant shown as H2-opt')
-    parser.add_argument('--compare-h2opt', required=True,
-                        help='slug of the H2-opt variant shown as H2-opt in simCompareSNP')
     parser.add_argument('--baselines', nargs='+', required=True, help='slugs of the baselines')
-    parser.add_argument('--compare-roc', required=True, help='roc.py result of simCompareSNP')
     parser.add_argument('--gwas-example', required=True,
                         help='gwas.summarize result of the example (trait 1 is shown)')
     parser.add_argument('--out-figure', required=True, help='simFig .pdf')
@@ -260,18 +259,26 @@ def main():
             row_label(fig, axes[r, -1], label)
         save(fig, args.out_figure)
 
-    roc = select_methods(np.load(args.compare_roc), roc_axes,
-                         ['truth', args.compare_h2opt] + args.baselines, args.compare_h2opt)
     # Drawn at the text width in the style of simFig, so that LaTeX does not scale it.
     with plt.rc_context(SIM_FIG_RC):
-        fig, axes = plt.subplots(1, 2, figsize=(6.5, 3.0))
-        for t, ax in zip((1, 2), axes, strict=True):
-            roc_bands(ax, roc, t, 0.25)
-            plot_roc(ax, roc, t)
-            ax.legend(loc='lower right', fontsize=6, frameon=True, framealpha=0.9,
-                      edgecolor='none')
-            ax.set_title(f'trait {t + 1}', fontsize=7)
-        fig.tight_layout()
+        fig, axes = plt.subplots(n_rows, 2, figsize=(6.5, COMPARE_ROW_HEIGHT * n_rows),
+                                 squeeze=False)
+        for r, (_, _, roc, h2opt) in enumerate(args.row):
+            roc = select_methods(np.load(roc), roc_axes,
+                                 ['truth', h2opt] + args.baselines, h2opt)
+            for t, ax in zip((1, 2), axes[r], strict=True):
+                roc_bands(ax, roc, t, 0.25)
+                plot_roc(ax, roc, t)
+                ax.legend(loc='lower right', fontsize=6, frameon=True, framealpha=0.9,
+                          edgecolor='none')
+                if r == 0:
+                    ax.set_title(f'trait {t + 1}', fontsize=7)
+                if r < n_rows - 1:
+                    ax.set_xlabel('')
+                letter(ax, letters[2 * r + t - 1], -0.12)
+        fig.tight_layout(rect=(0, 0, 0.98, 1))
+        for r, (label, *_) in enumerate(args.row):
+            row_label(fig, axes[r, -1], label)
         save(fig, args.out_compare)
 
     summary = np.load(args.gwas_example)
