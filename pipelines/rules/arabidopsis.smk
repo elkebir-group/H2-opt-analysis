@@ -209,7 +209,7 @@ rule arabidopsis_paper_figures:
     input:
         expand(str(ARABI_PAPER / "{stem}.pdf"),
                stem=["metabFig", "ArabiHeritTrain", "arabiNull"]
-                    + [f"coef_{t.removesuffix('d')}day" for t in ARABI["treatments"]]
+                    + ["arabiCoef", "arabiSparsity"]
                     + [f"metab{t}_GWAS" for t in ARABI["treatments"]]),
 
 
@@ -308,21 +308,72 @@ rule arabi_paper_heritability:
         " --heritability {input} --out {output.pdf} --traits {params.traits} > {log} 2>&1"
 
 
-# coef_0day for treatment 0d, coef_6day for 6d.
+# arabiCoef: the coefficients of the H2-opt traits of both treatments in the first fold.
 rule arabi_paper_coefficients:
     input:
-        lambda wc: arabi_paper_coefficients(f"{wc.days}d"),
+        [arabi_paper_coefficients(t) for t in ARABI["treatments"]],
     output:
-        pdf=str(ARABI_PAPER / "coef_{days}day.pdf"),
-        png=str(ARABI_PAPER / "coef_{days}day.png"),
+        pdf=str(ARABI_PAPER / "arabiCoef.pdf"),
+        png=str(ARABI_PAPER / "arabiCoef.png"),
     log:
-        str(ARABI_PAPER / "coef_{days}day.log"),
-    wildcard_constraints:
-        days="|".join(t.removesuffix("d") for t in ARABI["treatments"]),
+        str(ARABI_PAPER / "arabiCoef.log"),
+    params:
+        treatments=" ".join(ARABI["treatments"]),
     threads: 1
     shell:
-        "python -u {ARABI_SCRIPTS}/plot_paper_coefficients.py --coefficients {input}"
-        " --title '{wildcards.days} day, fold {ARABI_PAPER_FOLD}' --out {output.pdf} > {log} 2>&1"
+        "python -u {ARABI_SCRIPTS}/plot_paper_coefficients.py --treatments {params.treatments}"
+        " --coefficients {input} --out {output.pdf} > {log} 2>&1"
+
+
+# PCH coefficients per fold (PCH refitted at its saved ridge), for arabiSparsity. All folds of a
+# treatment in one job.
+rule arabi_pch_coefficients:
+    input:
+        features=ARABI_FEATURES,
+        pch=lambda wc: [arabi_traits(wc.treatment, "pch", f) for f in ARABI_FOLDS],
+    output:
+        [str(ARABI_OUT / "{treatment}" / "pch_coefficients" / f"fold{f}.npz") for f in ARABI_FOLDS],
+    log:
+        str(ARABI_OUT / "{treatment}" / "pch_coefficients" / "coefficients.log"),
+    params:
+        folds=" ".join(str(f) for f in ARABI_FOLDS),
+    threads: 4
+    shell:
+        "python -u {ARABI_SCRIPTS}/pch_coefficients.py --features {input.features}"
+        " --treatment {wildcards.treatment} --folds {params.folds} --pch {input.pch}"
+        " --out {output} > {log} 2>&1"
+
+
+def arabi_sparsity_files(treatment):
+    """Per fold: H2-opt and PCH coefficients, H2-opt and PCH traits."""
+    out = ARABI_OUT / treatment
+    return {"h2opt_coefficients": [str(out / "h2opt" / f"coefficients_fold{f}.npz")
+                                   for f in ARABI_FOLDS],
+            "pch_coefficients": [str(out / "pch_coefficients" / f"fold{f}.npz")
+                                 for f in ARABI_FOLDS],
+            "h2opt_traits": [arabi_traits(treatment, "h2opt", f) for f in ARABI_FOLDS],
+            "pch_traits": [arabi_traits(treatment, "pch", f) for f in ARABI_FOLDS]}
+
+
+# arabiSparsity: H2-opt (L1 penalty) against PCH, the sparsity of the coefficients, in the style
+# of sorCoefficients.
+rule arabi_paper_sparsity:
+    input:
+        [path for t in ARABI["treatments"] for paths in arabi_sparsity_files(t).values()
+         for path in paths],
+    output:
+        pdf=str(ARABI_PAPER / "arabiSparsity.pdf"),
+        png=str(ARABI_PAPER / "arabiSparsity.png"),
+    log:
+        str(ARABI_PAPER / "arabiSparsity.log"),
+    params:
+        files=" ".join(f"--treatment {t} " + " ".join(
+            f"--{kind.replace('_', '-')} " + " ".join(paths)
+            for kind, paths in arabi_sparsity_files(t).items()) for t in ARABI["treatments"]),
+    threads: 1
+    shell:
+        "python -u {ARABI_SCRIPTS}/plot_paper_sparsity.py {params.files} --out {output.pdf}"
+        " > {log} 2>&1"
 
 
 rule arabi_paper_gwas:

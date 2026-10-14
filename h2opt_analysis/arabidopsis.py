@@ -77,3 +77,32 @@ def genotype_rows(accessions, fam):
     samples = np.loadtxt(fam, dtype=str, usecols=0, ndmin=1)
     row = {sample: r for r, sample in enumerate(samples)}
     return np.array([row.get(a, -1) for a in np.asarray(accessions).astype(str)])
+
+
+# Minutes per retention-time bin.
+RT_BIN = 0.5
+# Smallest coefficient magnitude drawn by coefficient_map, as a fraction of the trait's largest.
+SHOWN = 0.02
+# Colors of the two MS levels in coefficient_map.
+LEVEL_COLORS = (('MS1', 'tab:blue'), ('MS/MS', 'tab:orange'))
+
+
+def coefficient_map(ax, coefficients, size):
+    """Coefficients of one trait, (MS level, m/z, retention time), on ax by retention time and m/z:
+    those with magnitude at least SHOWN of the largest, the marker area size times the magnitude
+    over the largest, larger magnitudes on top, one color per MS level (LEVEL_COLORS)."""
+    magnitude = np.abs(coefficients) / np.abs(coefficients).max()
+    level, mz, rt = np.nonzero(magnitude >= SHOWN)
+    order = np.argsort(magnitude[level, mz, rt])
+    level, mz, rt = level[order], mz[order], rt[order]
+    colors = np.array([color for _, color in LEVEL_COLORS])[level]
+    ax.scatter((rt + 0.5) * RT_BIN, mz, s=size * magnitude[level, mz, rt], c=colors, alpha=0.6,
+               linewidths=0)
+
+
+def share_features(coefficients, share=0.9):
+    """Number of features that carry the given share of the total magnitude of each trait's
+    coefficients (traits, ...): the fewest features, largest magnitudes first."""
+    magnitude = np.sort(np.abs(coefficients).reshape(len(coefficients), -1), axis=1)[:, ::-1]
+    cumulative = np.cumsum(magnitude, axis=1) / magnitude.sum(axis=1, keepdims=True)
+    return (cumulative < share).sum(axis=1) + 1

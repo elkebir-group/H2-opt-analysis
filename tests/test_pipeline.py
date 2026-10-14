@@ -62,6 +62,7 @@ def test_pipeline_parses():
             'arabi_run_gwas', 'arabidopsis_paper_figures',
             'arabi_trait_coefficients',
             'arabi_paper_main_figure', 'arabi_paper_heritability', 'arabi_paper_coefficients',
+            'arabi_pch_coefficients', 'arabi_paper_sparsity',
             'arabi_paper_gwas', 'arabi_paper_null', 'estimator_check_all',
             'check_estimator_inputs',
             'check_lme4_heritability', 'check_plot_estimators',
