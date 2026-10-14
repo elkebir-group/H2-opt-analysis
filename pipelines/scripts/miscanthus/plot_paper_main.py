@@ -49,6 +49,9 @@ HEATMAP_SIZE = 4.5
 # Rows of panels in inches: the bottoms of the Central and the South row, and their height.
 ROW_BOTTOM = (1.6, 0.4)
 ROW_HEIGHT = 0.64
+# The population of each row, at the right edge (as in the Arabidopsis figure).
+ROW_LABEL_X = 6.33
+ROW_LABEL_SIZE = 7.5
 
 
 def csm_image(images, row, date):
@@ -145,27 +148,25 @@ def main():
             box = (0, ROW_BOTTOM[p] / FIG_SIZE[1], 0.98 / FIG_SIZE[0], ROW_HEIGHT / FIG_SIZE[1])
             panel_a(fig, box, args.images[p], population)
 
-            ax = axes(1.4, p, 1.5)
+            ax = axes(1.4, p, 1.42)
             plot_bands(ax, load_adjusted(args.heritability[p]))
             ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=90,
                           fontsize=TICK_SIZE - 1)
-            ax.set_title(population.capitalize())
             ax.set_ylim(0, 1)
             ax.set_yticks([0, 0.5, 1])
             ax.set_ylabel('test heritability')
             if p == 0:
-                letter(ax, 'a', -0.93)
+                letter(ax, 'a', -0.99)
                 letter(ax, 'b', -0.23)
                 ax.legend(loc='upper right', ncol=2, frameon=False, fontsize=TICK_SIZE - 1,
                           handletextpad=0.1, columnspacing=0.6, labelspacing=0.2,
                           borderaxespad=0.1, markerscale=0.8)
 
-            ax = axes(3.27, p, 0.85)
+            ax = axes(3.14, p, 0.85)
             with np.load(args.dates[p]) as f:
                 matrix = median_abs(f['family'])[:N_DATES, :N_DATES]
             image = heatmap(ax, matrix, dates, dates, font_size=HEATMAP_SIZE)
-            ax.set_title(population.capitalize())
-            fig.colorbar(image, cax=axes(4.18, p, 0.05), label='$|r|$', ticks=[0, 0.5, 1])
+            fig.colorbar(image, cax=axes(4.05, p, 0.05), label='$|r|$', ticks=[0, 0.5, 1])
             if p == 0:
                 letter(ax, 'c', -0.4)
 
@@ -183,15 +184,17 @@ def main():
         vmax = max(matrix.max() for matrix, _ in measured)
         for p, (population, (matrix, names)) in enumerate(zip(miscanthus.POPULATIONS, measured,
                                                               strict=True)):
-            ax = axes(5.25, p, 0.85)
+            ax = axes(5.12, p, 0.8)
             image = heatmap(ax, matrix, names, dates, vmax=vmax, font_size=HEATMAP_SIZE)
-            ax.tick_params(axis='y', labelsize=TICK_SIZE - 1)
-            ax.set_title(population.capitalize())
+            ax.tick_params(axis='y', labelsize=TICK_SIZE - 1.5)
             if p == 0:
                 letter(ax, 'd', -0.85)
-            bar = fig.colorbar(image, cax=axes(6.16, p, 0.05))
+            bar = fig.colorbar(image, cax=axes(5.98, p, 0.05))
             bar.locator = MaxNLocator(nbins=3)
             bar.update_ticks()
+            fig.text(ROW_LABEL_X / FIG_SIZE[0], (ROW_BOTTOM[p] + ROW_HEIGHT / 2) / FIG_SIZE[1],
+                     population.capitalize(), rotation=-90, ha='left', va='center',
+                     fontsize=ROW_LABEL_SIZE, fontweight='bold')
             for name, value in zip(names, matrix.max(axis=1), strict=True):
                 print(f'{population} measured trait {name}: largest median |r| of family means '
                       f'{value:.3f}')
