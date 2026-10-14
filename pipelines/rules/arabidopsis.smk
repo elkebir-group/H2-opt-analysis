@@ -208,9 +208,37 @@ def arabi_paper_gwas(treatment):
 rule arabidopsis_paper_figures:
     input:
         expand(str(ARABI_PAPER / "{stem}.pdf"),
-               stem=["metabFig", "ArabiHeritTrain"]
+               stem=["metabFig", "ArabiHeritTrain", "arabiNull"]
                     + [f"coef_{t.removesuffix('d')}day" for t in ARABI["treatments"]]
                     + [f"metab{t}_GWAS" for t in ARABI["treatments"]]),
+
+
+# arabiNull: the GWAS of the H2-opt traits of all folds against the cross-fit of trait 1 and the
+# permutation null (traits 1 to null_traits), in the style of sorNull; one row per treatment.
+rule arabi_paper_null:
+    input:
+        **{f"gwas_{t}": [str(ARABI_OUT / t / "gwas" / f"fold{f}.npz") for f in ARABI_FOLDS]
+           for t in ARABI["treatments"]},
+        **{f"heritability_{t}": str(ARABI_OUT / t / "heritability.npz")
+           for t in ARABI["treatments"]},
+        **{f"crossfit_{t}": str(ARABI_OUT / t / "gwas" / "crossfit.npz")
+           for t in ARABI["treatments"]},
+        **{f"null_{t}": [str(ARABI_OUT / t / "null" / f"perm{k}.npz")
+                         for k in range(ARABI["gwas"]["permutations"])]
+           for t in ARABI["treatments"]},
+    output:
+        pdf=str(ARABI_PAPER / "arabiNull.pdf"),
+        png=str(ARABI_PAPER / "arabiNull.png"),
+    log:
+        str(ARABI_PAPER / "arabiNull.log"),
+    threads: 1
+    shell:
+        "python -u {ARABI_SCRIPTS}/plot_paper_null.py"
+        " --gwas-0d {input.gwas_0d} --heritability-0d {input.heritability_0d}"
+        " --crossfit-0d {input.crossfit_0d} --null-0d {input.null_0d}"
+        " --gwas-6d {input.gwas_6d} --heritability-6d {input.heritability_6d}"
+        " --crossfit-6d {input.crossfit_6d} --null-6d {input.null_6d}"
+        " --out {output.pdf} > {log} 2>&1"
 
 
 rule arabi_trait_coefficients:
