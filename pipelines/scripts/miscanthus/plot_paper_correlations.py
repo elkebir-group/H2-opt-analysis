@@ -2,8 +2,8 @@
 
 Every value is the median over the folds of |Pearson r| (the sign of a synthetic trait is
 arbitrary) of trait 1 of hybrid H2-opt (date_correlations.py, measured_correlations.py).
---out-dates-plant (miscCorTimeSimple) and --out-dates-family (miscCorTime): between the dates,
-per plant and between half-sib family means, both populations. --out-measured-family
+--out-dates (miscCorTime): between the dates, both populations (columns); per plant (a, b) and
+between half-sib family means (c, d), with one color bar. --out-measured-family
 (traitCorrelation_allTraits) and --out-measured-plant (traitCorrelation_simplePearson): with the
 measured traits of Central Japan, between family means and per plant; the traits are sorted by
 their largest value. The panel function heatmap also makes panels c and d of miscFig
@@ -13,8 +13,7 @@ figure is also saved as a .png next to its .pdf.
     python pipelines/scripts/miscanthus/plot_paper_correlations.py \\
         --dates central/date_correlations.npz south/date_correlations.npz \\
         --measured central/measured_correlations.npz \\
-        --out-dates-plant figures/paper/miscCorTimeSimple.pdf \\
-        --out-dates-family figures/paper/miscCorTime.pdf \\
+        --out-dates figures/paper/miscCorTime.pdf \\
         --out-measured-family figures/paper/traitCorrelation_allTraits.pdf \\
         --out-measured-plant figures/paper/traitCorrelation_simplePearson.pdf
 """
@@ -29,11 +28,15 @@ import numpy as np  # noqa: E402
 from plot_paper_heritability import FONT_SIZE, save  # noqa: E402
 
 from h2opt_analysis import miscanthus  # noqa: E402
-from h2opt_analysis.figures import MATH_RC, SIM_FIG_RC  # noqa: E402
+from h2opt_analysis.figures import MATH_RC, SIM_FIG_RC, letter  # noqa: E402
 
 WIDTH = 6.5  # inches
 CELL_SIZE = 4  # points, the values in the cells
 COLORBAR_LABEL = r'$|r|$, median over the folds'
+# miscCorTime: the rows (key of date_correlations.py, title) and x of the panel letters in axes
+# coordinates.
+DATE_ROWS = [('plant', 'individual plants'), ('family', 'half-sibling group means')]
+DATE_LETTER_X = -0.2
 
 
 def median_abs(values):
@@ -58,16 +61,19 @@ def sort_traits(matrix, names):
     return matrix[order], [names[t] for t in order]
 
 
-def date_figure(files, key, path):
-    fig, axes = plt.subplots(1, 2, figsize=(WIDTH, 3.3), layout='constrained')
-    for ax, population, file in zip(axes, miscanthus.POPULATIONS, files, strict=True):
-        with np.load(file) as f:
-            image = heatmap(ax, median_abs(f[key]), miscanthus.DATES, miscanthus.DATES,
-                            font_size=CELL_SIZE)
-        ax.set_title(population.capitalize())
-        ax.set_xlabel('date')
-        ax.set_ylabel('date')
-    fig.colorbar(image, ax=axes, shrink=0.8, label=COLORBAR_LABEL)
+def date_figure(files, path):
+    fig, axes = plt.subplots(len(DATE_ROWS), 2, figsize=(WIDTH, 6.6), layout='constrained')
+    for r, (key, title) in enumerate(DATE_ROWS):
+        for c, (population, file) in enumerate(zip(miscanthus.POPULATIONS, files, strict=True)):
+            ax = axes[r, c]
+            with np.load(file) as f:
+                image = heatmap(ax, median_abs(f[key]), miscanthus.DATES, miscanthus.DATES,
+                                font_size=CELL_SIZE)
+            ax.set_title(f'{population.capitalize()}, {title}')
+            ax.set_xlabel('date')
+            ax.set_ylabel('date')
+            letter(ax, 'abcd'[2 * r + c], DATE_LETTER_X)
+    fig.colorbar(image, ax=axes, shrink=0.5, label=COLORBAR_LABEL)
     save(fig, path)
 
 
@@ -87,14 +93,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dates', nargs=2, required=True, metavar=('CENTRAL', 'SOUTH'))
     parser.add_argument('--measured', required=True)
-    parser.add_argument('--out-dates-plant', required=True)
-    parser.add_argument('--out-dates-family', required=True)
+    parser.add_argument('--out-dates', required=True)
     parser.add_argument('--out-measured-family', required=True)
     parser.add_argument('--out-measured-plant', required=True)
     args = parser.parse_args()
     with plt.rc_context({**SIM_FIG_RC, **MATH_RC}):
-        date_figure(args.dates, 'plant', args.out_dates_plant)
-        date_figure(args.dates, 'family', args.out_dates_family)
+        date_figure(args.dates, args.out_dates)
         measured_figure(args.measured, 'family', args.out_measured_family)
         measured_figure(args.measured, 'plant', args.out_measured_plant)
 

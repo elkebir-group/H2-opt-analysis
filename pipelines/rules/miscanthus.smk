@@ -317,7 +317,7 @@ rule misc_plot_heritability:
 # miscGWAS need the GWAS (miscanthus_gwas_all). miscSecondTrait is not made: it needs trait 2.
 MISC_PAPER = MISC_OUT / "figures" / "paper"
 MISC_PAPER_FIGURES = ["miscFig", "miscVegIndex", "trainHeritMisc",
-                      "miscCorTimeSimple", "miscCorTime", "traitCorrelation_allTraits",
+                      "miscCorTime", "traitCorrelation_allTraits",
                       "traitCorrelation_simplePearson", "miscGWAS", "miscNull"]
 
 
@@ -395,8 +395,7 @@ rule misc_plot_paper_correlations:
         dates=[str(MISC_ADJ / p / "date_correlations.npz") for p in miscanthus.POPULATIONS],
         measured=str(MISC_ADJ / "central" / "measured_correlations.npz"),
     output:
-        dates_plant=str(MISC_PAPER / "miscCorTimeSimple.pdf"),
-        dates_family=str(MISC_PAPER / "miscCorTime.pdf"),
+        dates=str(MISC_PAPER / "miscCorTime.pdf"),
         measured_family=str(MISC_PAPER / "traitCorrelation_allTraits.pdf"),
         measured_plant=str(MISC_PAPER / "traitCorrelation_simplePearson.pdf"),
     log:
@@ -404,8 +403,7 @@ rule misc_plot_paper_correlations:
     threads: 1
     shell:
         "python -u {MISC_SCRIPTS}/plot_paper_correlations.py --dates {input.dates}"
-        " --measured {input.measured} --out-dates-plant {output.dates_plant}"
-        " --out-dates-family {output.dates_family}"
+        " --measured {input.measured} --out-dates {output.dates}"
         " --out-measured-family {output.measured_family}"
         " --out-measured-plant {output.measured_plant} > {log} 2>&1"
 
