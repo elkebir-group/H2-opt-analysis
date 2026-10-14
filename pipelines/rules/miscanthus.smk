@@ -318,16 +318,12 @@ rule misc_plot_heritability:
 MISC_PAPER = MISC_OUT / "figures" / "paper"
 MISC_PAPER_FIGURES = ["miscFig", "miscVegIndex", "trainHeritMisc",
                       "miscCorTime", "traitCorrelation_allTraits",
-                      "traitCorrelation_simplePearson", "miscGWAS", "miscNull"]
+                      "traitCorrelation_simplePearson", "miscGWAS_central", "miscGWAS_south",
+                      "miscNull"]
 
 
 def misc_by_population(name):
     return [str(MISC_OUT / p / name) for p in miscanthus.POPULATIONS]
-
-
-def misc_gwas_files(dates):
-    return [str(MISC_OUT / p / "gwas" / f"date{d}.npz") for p in miscanthus.POPULATIONS
-            for d in dates]
 
 
 rule miscanthus_paper_figures:
@@ -408,16 +404,29 @@ rule misc_plot_paper_correlations:
         " --out-measured-plant {output.measured_plant} > {log} 2>&1"
 
 
+# miscGWAS_<population>: the adjusted run's GWAS of H2-opt (CNN) trait 1 on each date with a
+# significant SNP, per fold and cross-fitted, in the style of sorGWAS.
 rule misc_plot_paper_gwas:
     input:
-        misc_gwas_files(MISC_DATES),
+        gwas=lambda wc: [str(MISC_ADJ / wc.population / "gwas" / f"date{d}.npz")
+                         for d in MISC_DATES],
+        crossfit=lambda wc: [str(MISC_ADJ / wc.population / "gwas" / f"crossfit_date{d}.npz")
+                             for d in MISC_DATES],
+        genotypes=multiext(str(MISC_OUT / "{population}" / "gwas" / "genotypes"),
+                           ".bed", ".bim", ".fam"),
     output:
-        str(MISC_PAPER / "miscGWAS.pdf"),
+        pdf=str(MISC_PAPER / "miscGWAS_{population}.pdf"),
+        png=str(MISC_PAPER / "miscGWAS_{population}.png"),
     log:
-        str(MISC_PAPER / "miscGWAS.log"),
+        str(MISC_PAPER / "miscGWAS_{population}.log"),
+    params:
+        prefix=lambda wc: str(MISC_OUT / wc.population / "gwas" / "genotypes"),
     threads: 1
     shell:
-        "python -u {MISC_SCRIPTS}/plot_paper_gwas.py --gwas {input} --out {output} > {log} 2>&1"
+        "python -u {MISC_SCRIPTS}/plot_paper_gwas.py --population {wildcards.population}"
+        " --gwas {input.gwas} --crossfit {input.crossfit} --genotypes {params.prefix}"
+        " --r2 {config[gwas_loci][r2]} --kb {config[gwas_loci][kb]} --out {output.pdf}"
+        " > {log} 2>&1"
 
 
 # miscNull: the adjusted run's GWAS of H2-opt (CNN) trait 1 of all folds and dates against its
