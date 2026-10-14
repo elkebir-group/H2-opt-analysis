@@ -597,27 +597,38 @@ rule misc_adjusted_train_hybrid_h2opt:
         " --out-models {output.models} > {log} 2>&1"
 
 
-# Trait 2 of the adjusted run's hybrid H2-opt, trained on top of each fold's trait 1
-# (train_hybrid.py --earlier), and its adjusted test heritability.
-rule miscanthus_adjusted_trait2_all:
+# Traits 2, 3, ... of the adjusted run's hybrid H2-opt: trait k trained on top of each fold's
+# traits 1 to k - 1 (train_hybrid.py --earlier), and the adjusted test heritability of each.
+MISC_ADJ_LATER = range(2, MISC_ADJ_CONFIG["traits"] + 1)
+
+
+def misc_adjusted_earlier(wildcards):
+    hybrid = MISC_ADJ / wildcards.population / "h2opt_hybrid"
+    return ([str(hybrid / f"date{wildcards.date}.npz")]
+            + [str(hybrid / f"trait{j}_date{wildcards.date}.npz")
+               for j in range(2, int(wildcards.k))])
+
+
+rule miscanthus_adjusted_later_traits_all:
     input:
-        expand(str(MISC_ADJ / "{population}" / "heritability_trait2.npz"),
-               population=MISC_POPULATIONS),
+        expand(str(MISC_ADJ / "{population}" / "heritability_trait{k}.npz"),
+               population=MISC_POPULATIONS, k=MISC_ADJ_LATER),
 
 
-rule misc_adjusted_train_hybrid_trait2:
+rule misc_adjusted_train_hybrid_later:
     input:
         images=misc_images,
         noise=str(MISC_ADJ / "{population}" / "h2opt" / "noise.npz"),
         cnn_level=str(MISC_OUT / MISC_ADJ_CONFIG["cnn_level_population"] / "h2opt_hybrid"
                       / "cnn_level.npz"),
-        earlier=str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "date{date}.npz"),
+        earlier=misc_adjusted_earlier,
     output:
-        traits=str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "trait2_date{date}.npz"),
-        models=str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "trait2_date{date}.pt"),
+        traits=str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "trait{k}_date{date}.npz"),
+        models=str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "trait{k}_date{date}.pt"),
     log:
-        str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "trait2_date{date}.log"),
+        str(MISC_ADJ / "{population}" / "h2opt_hybrid" / "trait{k}_date{date}.log"),
     wildcard_constraints:
+        k=r"\d+",
         date=r"\d+",
     threads: 2
     resources:
@@ -632,14 +643,16 @@ rule misc_adjusted_train_hybrid_trait2:
         " --out-models {output.models} > {log} 2>&1"
 
 
-rule misc_adjusted_score_trait2:
+rule misc_adjusted_score_later:
     input:
-        lambda wc: [str(MISC_ADJ / wc.population / "h2opt_hybrid" / f"trait2_date{d}.npz")
+        lambda wc: [str(MISC_ADJ / wc.population / "h2opt_hybrid" / f"trait{wc.k}_date{d}.npz")
                     for d in MISC_ADJ_DATES],
     output:
-        str(MISC_ADJ / "{population}" / "heritability_trait2.npz"),
+        str(MISC_ADJ / "{population}" / "heritability_trait{k}.npz"),
     log:
-        str(MISC_ADJ / "{population}" / "heritability_trait2.log"),
+        str(MISC_ADJ / "{population}" / "heritability_trait{k}.log"),
+    wildcard_constraints:
+        k=r"\d+",
     params:
         dates=" ".join(str(d) for d in MISC_ADJ_DATES),
     threads: 2

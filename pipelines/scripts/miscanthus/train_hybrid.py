@@ -8,8 +8,9 @@ choose_noise.py; the CNN branch has the CNN level of choose_cnn_level.py, times 
 fold's training pixels of the date. Both levels serve all folds and dates.
 Henderson3 heritability (families, plots within families, rep and field column fixed). Writes the
 fold models (a list, torch.save) to --out-models and an .npz with 'traits' (folds x plants x
-traits, uncorrelated on each fold's training plants). With --earlier (the .npz of an earlier run,
-e.g. trait 1), the new traits are trained on top of each fold's earlier traits (the loss uses the
+traits, uncorrelated on each fold's training plants). With --earlier (the .npz files of earlier
+runs, e.g. traits 1 and 2), the new traits are trained on top of each fold's earlier traits, all
+files together (the loss uses the
 residual after regression on them, h2opt.train_models), and saved as that residual on the fold's
 training plants, standardized there.
 
@@ -47,7 +48,8 @@ def main():
     parser.add_argument('--neighbor-width', type=int,
                         help='train on the heritability after the nearest-neighbor field '
                              'adjustment (h2opt.spatial), neighbors within this many columns')
-    parser.add_argument('--earlier', help='.npz of this script: train on top of its traits')
+    parser.add_argument('--earlier', nargs='+',
+                        help='.npz files of this script: train on top of their traits')
     args = parser.parse_args()
 
     torch.manual_seed(args.date)
@@ -59,7 +61,8 @@ def main():
     with np.load(args.cnn_level) as f:
         level = float(f['chosen'])
     folds = np.arange(miscanthus.N_FOLDS)
-    earlier = None if args.earlier is None else np.load(args.earlier)['traits']
+    earlier = None if args.earlier is None else np.concatenate(
+        [np.load(path)['traits'] for path in args.earlier], axis=-1)
     train_test = np.array([(design.fold == f).astype(int) for f in folds])
     conv_sd = np.array([level * noise_scale(flat[design.fold != f]) for f in folds])
     models = train_linear_conv_models(
