@@ -1,6 +1,8 @@
 # The lme4 check of the heritability estimators (paper Fig. ANOVA): for the raw features of each
-# dataset (and for the Miscanthus H2-opt traits), the pipeline's estimator (ANOVA or Henderson3) against an lme4 mixed model with the
-# same design (environment fixed; group and plots random). R and lme4 come from pipelines/envs/lme4.yaml.
+# dataset (and for the Miscanthus H2-opt traits of the adjusted run), the pipeline's estimator
+# (ANOVA or Henderson3) against an lme4 mixed model with the same design (environment fixed; group
+# and plots random). Miscanthus values first get the nearest-neighbor adjustment of the paper.
+# R and lme4 come from pipelines/envs/lme4.yaml.
 
 CHECK_OUT = OUT_ROOT / "estimator_check"
 SHARED_SCRIPTS = PIPELINE_DIR / "scripts" / "shared"
@@ -22,7 +24,8 @@ def check_terms(wildcards):
 def check_inputs(wildcards):
     if wildcards.dataset.startswith("miscanthus-traits"):
         population = wildcards.dataset.split("-")[2]
-        return [str(MISC_OUT / population / "h2opt_hybrid" / f"date{d}.npz") for d in MISC_DATES]
+        return [str(MISC_ADJ / population / "h2opt_hybrid" / f"date{d}.npz")
+                for d in MISC_ADJ_DATES]
     if wildcards.dataset.startswith("miscanthus"):
         return [str(OUT_ROOT / "miscanthus" / wildcards.dataset.split("-")[1] / "images.npy")]
     if wildcards.dataset.startswith("arabidopsis"):
@@ -32,9 +35,10 @@ def check_inputs(wildcards):
 
 def check_input_args(wildcards, input):
     if wildcards.dataset.startswith("miscanthus-traits"):
-        return "--traits " + " ".join(input)
+        return f"--width {MISC['spatial_width']} --traits " + " ".join(input)
     if wildcards.dataset.startswith("miscanthus"):
-        return f"--images {input[0]} --date {MISC['selection_date']}"
+        return (f"--images {input[0]} --date {MISC['selection_date']}"
+                f" --width {MISC['spatial_width']}")
     if wildcards.dataset.startswith("arabidopsis"):
         return f"--features {input[0]}"
     return ""

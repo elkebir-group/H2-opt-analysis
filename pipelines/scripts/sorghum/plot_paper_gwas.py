@@ -27,7 +27,7 @@ import numpy as np  # noqa: E402
 from h2opt_analysis import gwas  # noqa: E402
 from h2opt_analysis.figures import MATH_RC, SIM_FIG_RC, letter  # noqa: E402
 
-ROW_HEIGHT = 0.6  # inches
+ROW_HEIGHT = 0.46  # inches
 LABEL_SIZE = 5.5
 LABEL_STEP = 6  # points between stacked locus labels
 

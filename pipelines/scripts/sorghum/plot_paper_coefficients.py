@@ -39,9 +39,9 @@ from h2opt_analysis.figures import (  # noqa: E402
 from h2opt_analysis.methods import LABELS  # noqa: E402
 
 # Positions in inches from the bottom left of the figure.
-FIG_SIZE = (6.5, 6.9)
+FIG_SIZE = (6.5, 6.6)
 COLUMNS = [(0.55, 2.55), (3.85, 2.55)]  # panel a: left and width of each column
-ROW = 0.3  # height of one method row in panel a
+ROW = 0.27  # height of one method row in panel a
 PAIR_GAP = 0.08  # between the H2-opt and the PCH row of a trait
 TRAIT_GAP = 0.14  # between two traits
 A_TOP = FIG_SIZE[1] - 0.32  # top of panel a (the legend and the letter are above it)
