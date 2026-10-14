@@ -166,7 +166,8 @@ def main():
             with np.load(args.dates[p]) as f:
                 matrix = median_abs(f['family'])[:N_DATES, :N_DATES]
             image = heatmap(ax, matrix, dates, dates, font_size=HEATMAP_SIZE)
-            fig.colorbar(image, cax=axes(4.05, p, 0.05), label='$|r|$', ticks=[0, 0.5, 1])
+            bar = fig.colorbar(image, cax=axes(4.05, p, 0.05), ticks=[0, 0.5, 1])
+            bar.ax.set_xlabel('$|r|$')
             if p == 0:
                 letter(ax, 'c', -0.4)
 
@@ -190,6 +191,7 @@ def main():
             if p == 0:
                 letter(ax, 'd', -0.85)
             bar = fig.colorbar(image, cax=axes(5.98, p, 0.05))
+            bar.ax.set_xlabel('$|r|$')
             bar.locator = MaxNLocator(nbins=3)
             bar.update_ticks()
             fig.text(ROW_LABEL_X / FIG_SIZE[0], (ROW_BOTTOM[p] + ROW_HEIGHT / 2) / FIG_SIZE[1],
