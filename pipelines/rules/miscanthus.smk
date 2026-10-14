@@ -376,7 +376,6 @@ rule misc_measured_correlations:
 
 rule misc_plot_paper_heritability:
     input:
-        heritability=misc_by_population("heritability.npz"),
         adjusted=[str(MISC_ADJ / p / "heritability.npz") for p in miscanthus.POPULATIONS],
         ndvi=misc_by_population("ndvi.npz"),
     output:
@@ -386,7 +385,7 @@ rule misc_plot_paper_heritability:
         str(MISC_PAPER / "heritability.log"),
     threads: 1
     shell:
-        "python -u {MISC_SCRIPTS}/plot_paper_heritability.py --heritability {input.heritability}"
+        "python -u {MISC_SCRIPTS}/plot_paper_heritability.py"
         " --heritability-adjusted {input.adjusted} --ndvi {input.ndvi}"
         " --out-train {output.train} --out-ndvi-heritability {output.ndvi} > {log} 2>&1"
 

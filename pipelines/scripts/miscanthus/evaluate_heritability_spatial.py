@@ -5,11 +5,12 @@ The traits are read as in evaluate_heritability.py, for the dates --dates (indic
 miscanthus.DATES; one --by-date file per listed date, --by-fold files hold all dates). For each
 fold, trait 1 of all kept plants is adjusted by the mean of the plants of the other-family plots
 within --width field columns in the
-same rep (the slope fitted on the fold's test plants) and scored by Henderson3 (families, plots
-within families, rep and field column fixed) on the test plants. Central only: the measured
-traits (measured_correlations.py) are scored on all plants with a value, before and after the
-same adjustment, as a control. Writes an .npz (methods; dates; test: methods x dates x folds;
-for Central measured_traits, measured_h2 and measured_h2_adjusted) and prints the mean
+same rep (the slope fitted on the scored plants) and scored by Henderson3 (families, plots
+within families, rep and field column fixed), on the test plants and on the train plants. Central
+only: the measured traits (measured_correlations.py) are scored on all plants with a value, before
+and after the same adjustment, as a control. Writes an .npz (methods; dates; test and train:
+methods x dates x folds; for Central measured_traits, measured_h2 and measured_h2_adjusted) and
+prints the mean
 narrow-sense test heritability (4 x Henderson3, clipped to [0, 1] per fold) per date.
 
     python pipelines/scripts/miscanthus/evaluate_heritability_spatial.py --population central \\
@@ -58,15 +59,16 @@ def main():
         traits[method] = np.stack([np.load(f)['traits'][dates, ..., 0] for f in files], axis=1)
     methods = list(traits)
     test = np.zeros((len(methods), n_dates, n_folds))
+    train = np.zeros((len(methods), n_dates, n_folds))
     for m, method in enumerate(methods):
         for d in range(n_dates):
             for f in range(n_folds):
-                rows = design.fold == f
-                test[m, d, f] = h3(miscanthus.papadakis(traits[method][d, f], weights, rows),
-                                   design, rows)
+                for scores, rows in ((test, design.fold == f), (train, design.fold != f)):
+                    scores[m, d, f] = h3(miscanthus.papadakis(traits[method][d, f], weights,
+                                                              rows), design, rows)
         print(f'{method} done', flush=True)
     out = dict(methods=methods, dates=[miscanthus.DATES[d] for d in dates], test=test,
-               width=args.width)
+               train=train, width=args.width)
 
     if args.population == 'central':
         names = list(MEASURED_TRAITS['central'])

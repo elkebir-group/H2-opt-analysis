@@ -1,7 +1,9 @@
 """The Miscanthus heritability and NDVI figures of the paper's supplement.
 
---out-train (trainHeritMisc): the narrow-sense train heritability of trait 1 per date, H2-opt
-(the hybrid) and the baselines (--heritability), the median over the folds.
+--out-train (trainHeritMisc): the narrow-sense train heritability of trait 1 per date after the
+nearest-neighbor field adjustment, H2-opt (the hybrid) and the baselines
+(--heritability-adjusted), the median over the folds and a band from the 25th to the 75th
+percentile; H2-opt is drawn on top.
 --out-ndvi-heritability (miscVegIndex): a, the mean NDVI of the plants per date, both populations;
 b, the test heritability per date after the nearest-neighbor field adjustment of H2-opt with a CNN
 (--heritability-adjusted, evaluate_heritability_spatial.py) and of NDVI (ndvi.py, test_adjusted),
@@ -10,7 +12,6 @@ the date of canopy closure; in the style of miscFig. The heritability is 4 x Hen
 to [0, 1] per fold. Each figure is also saved as a .png next to its .pdf.
 
     python pipelines/scripts/miscanthus/plot_paper_heritability.py \\
-        --heritability central/heritability.npz south/heritability.npz \\
         --heritability-adjusted adjusted/central/heritability.npz \\
         adjusted/south/heritability.npz --ndvi central/ndvi.npz south/ndvi.npz \\
         --out-train figures/paper/trainHeritMisc.pdf \\
@@ -46,21 +47,24 @@ def narrow(values):
 
 
 def load_heritability(path, split):
-    """{method: narrow-sense heritability of trait 1, dates x folds} of split 'train' or 'test',
-    in figure order, without linear H2-opt."""
+    """{method: narrow-sense heritability of trait 1, dates x folds} of split 'train' or 'test' of
+    an evaluate_heritability_spatial.py result, in figure order, without linear H2-opt."""
     with np.load(path) as f:
-        values = dict(zip(f['methods'], narrow(f[split][..., 0]), strict=True))
+        values = dict(zip(f['methods'], narrow(f[split]), strict=True))
     return {m: values[m] for m in ordered(values) if m != 'h2opt'}
 
 
 def plot_dates(ax, curves, colors, labels, dates=miscanthus.DATES):
     """One line with markers per curve: the median over the folds of curves[key] (dates x
-    folds)."""
+    folds), with a band from the 25th to the 75th percentile. The first curve is drawn on top."""
     x = np.arange(len(dates))
-    for key, values in curves.items():
-        median = np.median(values, axis=1)
-        ax.plot(x, median, '-', color=colors[key], alpha=0.6, lw=1)
-        ax.plot(x, median, MARKERS[key], color=colors[key], ms=3, label=labels[key])
+    for z, (key, values) in enumerate(curves.items()):
+        low, median, high = np.percentile(values, [25, 50, 75], axis=1)
+        zorder = len(curves) - z
+        ax.fill_between(x, low, high, color=colors[key], alpha=0.15, linewidth=0, zorder=zorder)
+        ax.plot(x, median, '-', color=colors[key], alpha=0.6, lw=1, zorder=zorder)
+        ax.plot(x, median, MARKERS[key], color=colors[key], ms=3, label=labels[key],
+                zorder=zorder)
     ax.axhline(0, color='0.6', lw=0.5)
     ax.set_xticks(x, dates, rotation=60)
     ax.spines[['top', 'right']].set_visible(False)
@@ -130,7 +134,6 @@ def ndvi_figure(mean_ndvi, cnn, ndvi):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--heritability', nargs=2, required=True, metavar=('CENTRAL', 'SOUTH'))
     parser.add_argument('--heritability-adjusted', nargs=2, required=True,
                         metavar=('CENTRAL', 'SOUTH'))
     parser.add_argument('--ndvi', nargs=2, required=True, metavar=('CENTRAL', 'SOUTH'))
@@ -140,7 +143,7 @@ def main():
     plt.rcParams.update({'font.size': FONT_SIZE})
 
     ndvi = [np.load(f) for f in args.ndvi]
-    train = [load_heritability(f, 'train') for f in args.heritability]
+    train = [load_heritability(f, 'train') for f in args.heritability_adjusted]
     save(population_panels(train, 'train heritability'), args.out_train)
     cnn = []
     for path in args.heritability_adjusted:
