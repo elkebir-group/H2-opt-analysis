@@ -5,7 +5,7 @@ repos:
       - id: ruff
         args: [--fix]
 
-  # US spelling plus ordinary typos, matching prolyG's convention.
+  # US spelling plus ordinary typos.
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.3
     hooks:
@@ -13,6 +13,8 @@ repos:
         args:
           - --builtin=clear,rare,en-GB_to_en-US
           - --regex=[\w]+
+          # fpr: false positive rate (sklearn.metrics.roc_curve).
+          - --ignore-words-list=fpr
           # Base64 cell outputs in notebooks.
           - --ignore-regex=[A-Za-z0-9+/]{32,}={0,2}
 

@@ -14,8 +14,7 @@
 #                           deletes) existing outputs. Force a rerun with
 #                           --forcerun <rule> and one target.
 #   --keep-going            One failed job does not stop the independent ones.
-#   --resources gpu=N       Small GPU jobs share the GPU, N at a time (default 8,
-#                           which scales about linearly on one RTX 3080).
+#   --resources gpu=N       Small GPU jobs share the GPU, N at a time (default 8).
 # --cores defaults to the machine's cores minus 2, for headroom. Each job's
 # OpenBLAS/OpenMP/MKL threads are capped at its rule's `threads`, so the jobs
 # together never use more than --cores.
@@ -37,6 +36,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 cd "$REPO"
+# Large GPU jobs (CNNs on images) fail with "reserved but unallocated" memory under the default
+# allocator, which fragments; expandable segments avoid that.
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 # The h2opt commit each run used, for provenance (h2opt is an editable sibling
 # checkout, so the lockfile does not record it).
 h2opt_dir="$(uv run --no-sync python -c 'import h2opt, pathlib; print(pathlib.Path(h2opt.__file__).resolve().parent.parent)')"
@@ -45,5 +47,5 @@ echo "H2-opt-analysis: $(git rev-parse --short HEAD)$(git diff --quiet HEAD || e
 
 exec uv run --no-sync snakemake -s pipelines/Snakefile \
     --cores "$cores" --resources gpu="$gpu_jobs" \
-    --rerun-triggers mtime --keep-going --printshellcmds \
+    --rerun-triggers mtime --keep-going --printshellcmds --use-conda \
     "${extra[@]}" -- "$@"

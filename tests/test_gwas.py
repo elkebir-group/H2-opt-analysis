@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from scipy import stats
 
 from h2opt_analysis import gwas
 
@@ -34,6 +35,37 @@ def test_bed_roundtrip_and_subset(tmp_path):
     gwas.write_bed_subset(tmp_path / 'g', keep, tmp_path / 's', chunk=10)
     np.savetxt(tmp_path / 's.fam', np.zeros((keep.sum(), 6)), fmt='%d')
     assert np.array_equal(gwas.read_bed(tmp_path / 's'), G[keep], equal_nan=True)
+
+
+def test_writers_never_write_through_leftover_symlinks(tmp_path):
+    """A failed run can leave geno.bed and geno.bim as symlinks to the source set; the next run must
+    replace them, not write the subset into the source files."""
+    G = genotypes()
+    write_plink(tmp_path / 'g', G)
+    source = {ext: (tmp_path / f'g.{ext}').read_bytes() for ext in ['bed', 'bim', 'fam']}
+    work = tmp_path / 'work'
+    work.mkdir()
+    for ext in ['bed', 'bim', 'fam']:  # as left by a run with every individual phenotyped
+        (work / f'geno.{ext}').symlink_to(tmp_path / f'g.{ext}')
+    Y = np.random.default_rng(1).normal(size=len(G))
+    Y[::3] = np.nan
+    gwas.run_gemma(tmp_path / 'g', Y, work)
+    assert not (work / 'geno.bed').is_symlink()
+    gwas.write_snp_subset(tmp_path / 'g', np.arange(G.shape[1]) % 2 > 0, work / 'geno')
+    gwas.write_plink_set(tmp_path / 'g', tmp_path / 'g.fam', work / 'geno')
+    gwas.write_snp_subset(tmp_path / 'g', np.arange(G.shape[1]) % 2 > 0, work / 'geno')
+    for ext, content in source.items():
+        assert (tmp_path / f'g.{ext}').read_bytes() == content, ext
+
+
+def test_snp_subset(tmp_path):
+    G = genotypes()
+    write_plink(tmp_path / 'g', G)
+    snps = np.random.default_rng(2).random(G.shape[1]) < 0.7
+    gwas.write_snp_subset(tmp_path / 'g', snps, tmp_path / 's')
+    assert np.array_equal(gwas.read_bed(tmp_path / 's'), G[:, snps], equal_nan=True)
+    bim = np.loadtxt(tmp_path / 's.bim', dtype=str)
+    assert list(bim[:, 1]) == [f'snp{j}' for j in np.flatnonzero(snps)]
 
 
 @pytest.mark.skipif(not Path(gwas.gemma_binary()).exists(), reason='GEMMA binary not installed')
@@ -70,3 +102,114 @@ def test_run_gemma_matches_exact_lmm(tmp_path):
             sigma2 = (y @ P @ y - beta ** 2 * (x @ P @ x)) / (len(y) - W.shape[1] - 1)
             assert result['beta'][t, k] == pytest.approx(beta, rel=1e-5)
             assert result['se'][t, k] == pytest.approx(np.sqrt(sigma2 / (x @ P @ x)), rel=1e-5)
+
+
+def test_line_means():
+    Y = np.array([[1.0, 0.0], [3.0, 2.0], [5.0, 4.0], [7.0, 6.0]])
+    out = gwas.line_means(Y, [2, 2, -1, 0], n_lines=4)
+    # line 2 (mean of rows 0, 1) is below line 0 (row 3) in both columns: ranks 1 and 2 of 2
+    low, high = stats.norm.ppf([(1 - 0.375) / 2.25, (2 - 0.375) / 2.25])
+    np.testing.assert_allclose(out[2], [low, low])
+    np.testing.assert_allclose(out[0], [high, high])
+    assert np.isnan(out[[1, 3]]).all()
+
+
+def test_rank_normal_keeps_order_and_removes_outliers():
+    rng = np.random.default_rng(0)
+    P = rng.standard_normal((200, 2))
+    P[0, 0] = 50.0
+    P[5, 1] = np.nan
+    out = gwas.rank_normal(P)
+    assert np.isnan(out[5, 1]) and not np.isnan(out[:, 0]).any()
+    ok = ~np.isnan(P[:, 1])
+    np.testing.assert_array_equal(np.argsort(out[ok, 1]), np.argsort(P[ok, 1]))
+    assert out[0, 0] == pytest.approx(stats.norm.ppf((200 - 0.375) / 200.25))
+    assert abs(out[:, 0].mean()) < 1e-12
+
+
+def test_plink_set_rejects_wrong_fam(tmp_path):
+    G = genotypes()
+    write_plink(tmp_path / 'g', G)
+    np.savetxt(tmp_path / 'subset.fam', [[f'i{i}', f'i{i}', 0, 0, 0, -9] for i in range(40)],
+               fmt='%s')
+    with pytest.raises(ValueError, match='bytes'):
+        gwas.write_plink_set(tmp_path / 'g', tmp_path / 'subset.fam', tmp_path / 's')
+    gwas.write_plink_set(tmp_path / 'g', tmp_path / 'g.fam', tmp_path / 's')
+    assert np.array_equal(gwas.read_bed(tmp_path / 's'), G, equal_nan=True)
+
+
+def test_cross_fit_takes_each_row_from_its_held_out_fold():
+    from h2opt_analysis.gwas import cross_fit
+    rng = np.random.default_rng(0)
+    base = rng.normal(size=40)
+    fold_of = np.arange(40) % 4
+    traits = np.stack([base * (-1) ** f * (f + 1) + f for f in range(4)])  # sign, scale, shift
+    stitched, r = cross_fit(traits, fold_of)
+    np.testing.assert_allclose(r, 1)
+    z = (base - base.mean()) / base.std()
+    np.testing.assert_allclose(stitched, z)
+
+
+def test_bonferroni_hits_and_report(capsys):
+    # 100 SNPs: threshold -log10(0.05 / 100) = 3.30
+    score = np.zeros((2, 100), dtype=np.float32)
+    score[0, :3] = 3.4
+    score[1, 0] = 3.2
+    assert gwas.bonferroni_hits(score).tolist() == [3, 0]
+    gwas.report({'neg_log10_p': score, 'lambda_gc': np.array([1.0, 1.1])}, ['fold 0', 'fold 1'])
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[0].startswith('fold 0: 100 SNPs') and '3 Bonferroni hits' in lines[0]
+    assert '0 Bonferroni hits, lambda GC 1.100' in lines[1]
+
+
+def test_clump_joins_hits_in_ld_and_nearby():
+    rng = np.random.default_rng(1)
+    G = rng.binomial(2, 0.5, size=(200, 5)).astype(float)
+    G[:, 1] = G[:, 0]  # in LD with SNP 0
+    G[:, 3] = G[:, 0]  # in LD with SNP 0, but far away
+    chrom = np.ones(5, dtype=int)
+    ps = np.array([1_000, 2_000, 3_000, 900_000, 5_000])
+    score = np.zeros((2, 5))
+    score[0, [0, 2, 3]] = [12, 9, 8]
+    score[1, 1] = 10  # SNP 4 is not significant
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(gwas, 'read_bed', lambda prefix, snps: G[:, snps])
+        patch.setattr(gwas, 'bim_rows', lambda prefix, c, p: np.searchsorted(ps, p))
+        loci = gwas.clump('g', chrom, ps, score, r2=0.5, kb=250)
+    assert [int(locus['lead']) for locus in loci] == [0, 2, 3]
+    assert [sorted(locus['snps'].tolist()) for locus in loci] == [[0, 1], [2], [3]]
+    assert loci[0]['rows'].tolist() == [0, 1]
+
+
+def test_bim_rows_skips_snps_left_out_of_the_results(tmp_path):
+    G = genotypes(n=20, m=6)
+    write_plink(tmp_path / 'g', G)  # positions 1..6 on chromosome 1
+    kept = np.array([0, 2, 5])  # GEMMA left out SNPs 1, 3 and 4
+    rows = gwas.bim_rows(tmp_path / 'g', np.ones(3, dtype=int), kept + 1)
+    assert rows.tolist() == [0, 2, 5]
+    with pytest.raises(ValueError):
+        gwas.bim_rows(tmp_path / 'g', np.array([1]), np.array([99]))
+
+
+def test_clump_without_hits_finds_no_loci():
+    assert gwas.clump('g', np.ones(3, dtype=int), np.arange(3), np.zeros((2, 3))) == []
+
+
+def test_clump_never_joins_hits_on_chromosome_zero():
+    # chromosome 0 holds unplaced scaffolds: two of its hits at nearby positions may be far apart
+    G = np.tile(np.random.default_rng(1).binomial(2, 0.5, size=(200, 1)).astype(float), (1, 2))
+    chrom = np.zeros(2, dtype=int)
+    ps = np.array([1_000, 2_000])
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(gwas, 'read_bed', lambda prefix, snps: G[:, snps])
+        patch.setattr(gwas, 'bim_rows', lambda prefix, c, p: np.searchsorted(ps, p))
+        loci = gwas.clump('g', chrom, ps, np.array([[12.0, 10.0]]), r2=0.5, kb=250)
+    assert [locus['snps'].tolist() for locus in loci] == [[0], [1]]
+
+
+def test_snp_subset_refuses_a_mask_of_the_wrong_length(tmp_path):
+    G = genotypes()
+    write_plink(tmp_path / 'g', G)
+    with pytest.raises(ValueError, match='SNP flags'):
+        gwas.write_snp_subset(tmp_path / 'g', np.ones(G.shape[1] - 1, bool), tmp_path / 's')
+    assert not (tmp_path / 's.bed').exists()

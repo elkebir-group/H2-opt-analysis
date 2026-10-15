@@ -1,0 +1,6 @@
+# R with lme4, for the lme4 check of the heritability estimators (lme4_heritability.R).
+channels:
+  - conda-forge
+dependencies:
+  - r-base=4.4
+  - r-lme4

@@ -1,4 +1,4 @@
-"""H2-opt analysis pipeline. Run it through pipelines/run.sh; see pipelines/README.md."""
+"""H2-opt analysis pipeline. Run it through pipelines/run.sh; see the root README.md."""
 
 import os
 from pathlib import Path
@@ -23,9 +23,18 @@ OUT_ROOT = Path(config["outputs_root"])
 os.environ["H2OPT_DATA"] = str(RAW_ROOT if RAW_ROOT.is_absolute() else REPO_ROOT / RAW_ROOT)
 
 include: "rules/sorghum.smk"
+include: "rules/simulation.smk"
+include: "rules/image_simulation.smk"
+include: "rules/miscanthus.smk"
+include: "rules/arabidopsis.smk"
+include: "rules/estimator_check.smk"
 
 
 rule all:
     default_target: True
     input:
         rules.sorghum_all.input,
+        rules.simulation_all.input,
+        rules.miscanthus_adjusted_all.input,
+        rules.arabidopsis_all.input,
+        rules.image_simulation_all.input,

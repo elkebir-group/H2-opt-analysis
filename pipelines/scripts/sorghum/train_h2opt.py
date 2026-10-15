@@ -1,55 +1,58 @@
-"""Train linear H2-opt on sorghum for one of the paper's 10 genotype folds (the paper's settings).
+"""Train linear H2-opt on sorghum for the genotype folds, all folds at once.
 
-One linear model per trait, RMSprop with learning rate 1e-5, uniform input noise up to 0.005, and a
-penalty of 1e-4 on the total variation of the weights across adjacent wavelengths. Writes the model
-(.pt) and the traits of all plants (.npz, array 'traits').
+One linear model per trait and fold, and normal input noise with the standard deviation that
+choose_noise.py chose for that fold (one for all traits). A total variation penalty over
+wavelength (--penalty tv 1e-5, from the config) and no clipping of the traits. The loss
+is the heritability that the evaluation scores plus the penalty.
+Trained with h2opt.train's default optimizer (Adam), all folds together by h2opt.train_models.
+Writes, per fold, the model (.pt) and the traits of all plants, uncorrelated on the training
+plants (.npz, array 'traits').
 
-    python pipelines/scripts/sorghum/train_h2opt.py --fold 0 --out-traits fold0.npz \\
-        --out-model fold0.pt [--steps 10000] [--traits 10] [--seed 0] [--device cuda]
+    python pipelines/scripts/sorghum/train_h2opt.py --folds 0 1 --noise noise.npz \\
+        --out-traits fold0.npz fold1.npz --out-models fold0.pt fold1.pt --steps 10000 \\
+        --traits 10 --seed 0 --penalty tv 1e-5 --device cuda
 """
 
 import argparse
 
 import numpy as np
 import torch
-from h2opt import LinearModel, TraitModels, train
+from h2opt import LinearModel, TraitModels, synthetic_traits, train_models
 
 from h2opt_analysis import sorghum
 
 
-def smoothness_penalty(scale):
-    """Total variation of the weights over adjacent wavelengths, relative to the trait's spread."""
-    def penalty(trait_model, Y):
-        w = trait_model.lin1.weight
-        variation = torch.mean(torch.sum(torch.abs(w[:, 1:] - w[:, :-1]), axis=1))
-        return scale * variation / torch.mean(torch.abs(Y - torch.mean(Y, axis=0)))
-    return penalty
-
-
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--fold', type=int, required=True)
-    parser.add_argument('--out-traits', required=True)
-    parser.add_argument('--out-model', required=True)
-    parser.add_argument('--steps', type=int, default=10000, help='RMSprop steps per trait')
-    parser.add_argument('--traits', type=int, default=10)
-    parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--device', default='cpu', help="e.g. 'cuda'")
+    parser.add_argument('--folds', type=int, nargs='+', required=True)
+    parser.add_argument('--noise', required=True, help='the noise chosen by choose_noise.py')
+    parser.add_argument('--out-traits', nargs='+', required=True, help='one file per fold')
+    parser.add_argument('--out-models', nargs='+', required=True, help='one file per fold')
+    parser.add_argument('--steps', type=int, required=True, help='steps per trait')
+    parser.add_argument('--traits', type=int, required=True)
+    parser.add_argument('--seed', type=int, required=True)
+    parser.add_argument('--penalty', nargs=2, required=True, metavar=('KIND', 'WEIGHT'),
+                        help="penalty of h2opt.train: 'l1', 'l2' or 'tv', and its weight")
+    parser.add_argument('--device', required=True, help="'cpu' or 'cuda'")
     args = parser.parse_args()
+    penalty = (args.penalty[0], float(args.penalty[1]))
+    if not len(args.folds) == len(args.out_traits) == len(args.out_models):
+        parser.error('give one traits file and one model file per fold')
 
     torch.manual_seed(args.seed)
     X, genotypes, environment = sorghum.load()
-    train_test = (sorghum.folds(genotypes) == args.fold).astype(int)
+    fold_of = sorghum.folds(genotypes)
+    with np.load(args.noise) as f:
+        noise_folds, noise_sd = list(f['folds']), f['noise_sd']
+    noise_sd = noise_sd[[noise_folds.index(fold) for fold in args.folds], None]
 
-    model = TraitModels(args.traits, LinearModel, X.shape[1])
-    train(model, X, genotypes, environment, train_test, model_file=args.out_model,
-          n_traits=args.traits, n_iter=args.steps, learning_rate=1e-5, noise_level=0.005,
-          penalty=smoothness_penalty(1e-4), device=args.device)
-    torch.save(model, args.out_model)
-
-    with torch.no_grad():
-        traits = model(torch.tensor(X).float().to(args.device)).cpu().numpy()
-    np.savez(args.out_traits, traits=traits)
+    models = [TraitModels(args.traits, LinearModel, X.shape[1]) for _ in args.folds]
+    train_test = np.array([(fold_of == fold).astype(int) for fold in args.folds])
+    train_models(models, X, genotypes, environment, train_test, model_files=args.out_models,
+                 n_traits=args.traits, n_iter=args.steps, noise_sd=noise_sd, penalty=penalty,
+                 device=args.device)
+    for model, rows, path in zip(models, train_test, args.out_traits, strict=True):
+        np.savez(path, traits=synthetic_traits(model, X, rows == 0))
 
 
 if __name__ == '__main__':
