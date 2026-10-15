@@ -32,19 +32,61 @@ to use another binary.
 
 ## Data
 
-Nothing under `data/` is committed.
-
-| Path | What | Source |
-|---|---|---|
-| `data/raw/` | the H2-opt datasets (`plant/`, `miscPlant/`, `metab/`, `software/`, ...) | a symlink to the lab's H2-opt data directory |
-| `data/derived/` | everything the pipeline writes | `pipelines/run.sh` |
+The raw data and the trained H2-opt models of all synthetic traits of the paper are deposited in
+the Illinois Data Bank: https://doi.org/10.13012/B2IDB-XXXXXXX_V1. Download the data and link it
+as `data/raw`:
 
 ```bash
 mkdir -p data && ln -s /path/to/h2opt-data data/raw
 ```
 
-Alternatively set `raw_root` in `pipelines/config/config.yaml` (or `$H2OPT_DATA`
-when you run a script by hand).
+Alternatively set `raw_root` in `pipelines/config/config.yaml` (or `$H2OPT_DATA` when you run a
+script by hand). The pipeline reads these files:
+
+```
+data/raw/
+├── plant/                                    # sorghum
+│   ├── processed/
+│   │   ├── sor/
+│   │   │   ├── X.npz                         # hyperspectral measurements (plants x 2,151 wavelengths)
+│   │   │   ├── names.npz                     # genotype of each plant
+│   │   │   └── set1.npz                      # field set of each plant
+│   │   └── traits/SorgumTraits.tsv           # measured traits
+│   ├── models/autoencode_2.pt                # autoencoder of the simulations
+│   ├── simulations/simPhen/seperate100SNP/
+│   │   └── 0/ … 9/                           # simplePHENOTYPES run of each simulation instance
+│   │       ├── Simulated_Data_2_Reps_Herit_0.6_0.4_0.2.txt
+│   │       └── Additive_Selected_QTNs.txt
+│   └── SNP/simulation/specialSNP/
+│       └── random300SNP_0.csv … random300SNP_9.csv
+├── software/data/                            # sorghum genotypes
+│   ├── WEST_original.bed, .bim, .fam         # PLINK set of the 836 sequenced lines
+│   └── nameKey_corrected.tsv                 # genotype names to PLINK sample IDs
+├── miscPlant/                                # Miscanthus sinensis
+│   ├── inputs/
+│   │   ├── MSI_combine/all.npz               # multispectral images, Central population
+│   │   ├── MSI_combine/south_all.npz         # multispectral images, South population
+│   │   └── data_process/
+│   │       ├── Miscanthus_C.tsv, Miscanthus_S.tsv   # plants, families and field layout
+│   │       └── Msi_C_Japan_2019-URB-Plant_Data.tsv, Msi_S_Japan_2019-URB-Plant_Data.tsv
+│   │                                                 # measured traits
+│   └── SNP/bed/
+│       ├── MsiC_annotated.bed, .bim, .fam, MsiC_annotated_copy.fam
+│       └── MsiS_annotated.bed, .bim, .fam, MsiS_annotated_copy.fam
+└── metab/                                    # Arabidopsis thaliana
+    ├── metabData_Fernie/processed/
+    │   ├── imageMetab.npz                    # mass spectrometry, binned by m/z and retention time
+    │   ├── massIntensitiesPrecise2_0d.npz, massIntensitiesPrecise2_6d.npz
+    │   │                                     # precise masses (pathway enrichment)
+    │   └── names.npz, env.npz, year.npz      # accession, environment and year of each sample
+    └── metabData_Alex/call_method_75/
+        └── call_method_75_TAIR8.bed, .bim, .fam, call_method_75_TAIR8_copy.fam
+                                              # 250k SNP panel
+```
+
+The `_copy.fam` files list all samples of each `.bed`. The pipeline downloads the MetaboAnalyst
+pathway library (`arabi_download_pathway_library`) and clones Helios itself. Everything the
+pipeline writes goes to `data/derived/`. Nothing under `data/` is committed.
 
 ## Running the pipeline
 
