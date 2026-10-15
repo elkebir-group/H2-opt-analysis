@@ -21,6 +21,7 @@ def test_pipeline_parses():
             'sim_train_baselines', 'sim_prepare_gwas_genotypes', 'sim_run_gwas',
             'sim_score_traits', 'sim_score_gwas',
             'sim_plot_paper_figures', 'sim_plot_paper_null', 'sim_plot_paper_linear',
+            'sim_plot_selection_bias',
             'simulation_paper_figures',
             'simulation_gwas_all', 'sorghum_gwas_all', 'sorghum_prepare_genotype_pcs',
             'sorghum_train_baselines', 'sorghum_choose_linear_h2opt_noise',

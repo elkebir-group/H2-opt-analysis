@@ -292,6 +292,25 @@ rule sim_plot_paper_figures:
         " --out-example {output.example} > {log} 2>&1"
 
 
+# Selection bias of single trait (response letter): training vs test heritability of every
+# measurement of one instance of each simulation, with the single trait picks marked.
+rule sim_plot_selection_bias:
+    input:
+        spectra=sim_file(SIM["selection_bias"]["instance"], "spectra.npz"),
+        images=str(OUT_ROOT / "helios_simulation" / f"instance{SIM['selection_bias']['instance']}"
+                   / "images.npz"),
+    output:
+        str(SIM_PAPER / "selectionBias.pdf"),
+    log:
+        str(SIM_PAPER / "selectionBias.log"),
+    params:
+        traits=SIM["selection_bias"]["traits"],
+    threads: 4
+    shell:
+        "python -u {SIM_SCRIPTS}/plot_selection_bias.py --row Hyperspectral {input.spectra}"
+        " --row Images {input.images} --traits {params.traits} --out {output} > {log} 2>&1"
+
+
 # simNull: per simulation of simulation.paper_figures.rows, the real H2-opt traits of the null
 # instance (simulation.paper_figures.h2opt) against the permutation null (sim_null_gwas,
 # img_null_gwas): test heritability, largest -log10 p, QQ plot of trait 1 and lambda GC of traits

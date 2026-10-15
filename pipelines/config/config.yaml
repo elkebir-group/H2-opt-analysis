@@ -90,6 +90,9 @@ simulation:
   # The GWAS shown as Manhattan and QQ plots (plot_gwas.py). The paper figures use its instance:
   # an H2-opt trait 1 clearly below the significance threshold (PI, 2026-10-14).
   example: {instance: 8, method: h2opt}
+  # Selection bias of single trait (response letter, R1 5): training vs test heritability of every
+  # measurement of one instance of each simulation (plot_selection_bias.py).
+  selection_bias: {instance: 0, traits: 5}
   # The paper figures (plot_paper.py): the baselines and, per simulation, the H2-opt variant they
   # show with the label and color of H2-opt (PI, 2026-10-12: linear for spectra, the hybrid for
   # images). The ground truth is always shown. rows: the simulations of the rows of simFig
