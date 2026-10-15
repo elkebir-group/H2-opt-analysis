@@ -19,7 +19,7 @@ Needs [uv](https://docs.astral.sh/uv/) and an `H2-opt` checkout at `../H2-opt`,
 which is installed as an editable package.
 
 ```bash
-git clone git@github.com:elkebir-group/H2-opt.git ../H2-opt
+git clone https://github.com/elkebir-group/H2-opt.git ../H2-opt
 uv sync --all-extras        # creates .venv; the pipeline extra holds Snakemake
 uv run pre-commit install   # one-time, after cloning: runs ruff and codespell on commit
 scripts/install_gemma.sh    # GEMMA 0.97, into bin/ (Linux or macOS)
@@ -277,3 +277,9 @@ uv run --all-extras pytest
 ```
 
 The GEMMA test is skipped when GEMMA is not installed.
+
+## Related repositories
+
+- [`elkebir-group/H2-opt`](https://github.com/elkebir-group/H2-opt): the H2-opt package
+  (heritability estimators, models, training and baselines). This repository installs it
+  from a sibling checkout.
