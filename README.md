@@ -33,12 +33,15 @@ to use another binary.
 ## Data
 
 The raw data and the trained H2-opt models of all synthetic traits of the paper are deposited in
-the Illinois Data Bank: https://doi.org/10.13012/B2IDB-XXXXXXX_V1. Download the data and link it
-as `data/raw`:
+the Illinois Data Bank: https://doi.org/10.13012/B2IDB-XXXXXXX_V1. Download `h2opt.tar`, unpack it
+and link its `data/` folder as `data/raw`:
 
 ```bash
-mkdir -p data && ln -s /path/to/h2opt-data data/raw
+tar -xf h2opt.tar
+mkdir -p data && ln -s "$PWD/h2opt/data" data/raw
 ```
+
+The trained models are in `h2opt/models/`; the `README.txt` of the deposit describes them.
 
 Alternatively set `raw_root` in `pipelines/config/config.yaml` (or `$H2OPT_DATA` when you run a
 script by hand). The pipeline reads these files:
