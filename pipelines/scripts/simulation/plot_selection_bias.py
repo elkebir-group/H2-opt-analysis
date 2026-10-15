@@ -1,6 +1,8 @@
 """Selection bias of the single trait baseline (response letter): the training and the test
 heritability of every measurement of one simulation instance, one panel per simulation, with the
-measurements that single trait picks marked by their pick order.
+measurements that single trait picks marked: the first pick (the highest training heritability)
+as a star, the later picks (made after projecting out the earlier ones) as open circles numbered
+by pick order.
 
 Heritability is the ANOVA estimate of each measurement on the training and on the test plants. The
 picks are those of h2opt.baselines.MaxHeritabilityFeatures on the training plants (the baseline of
@@ -25,7 +27,7 @@ from h2opt.baselines import MaxHeritabilityFeatures  # noqa: E402
 
 from h2opt_analysis.figures import COLORS, MATH_RC, SIM_FIG_RC, letter  # noqa: E402
 
-FIG_SIZE = (6.5, 3.0)
+FIG_SIZE = (6.5, 3.3)
 
 
 def main():
@@ -53,10 +55,15 @@ def main():
 
             ax.scatter(h2_train, h2_test, s=2, color='0.6', alpha=0.3, linewidth=0,
                        rasterized=True, label='all measurements')
-            ax.scatter(h2_train[picks], h2_test[picks], s=14, color=COLORS['max_features'],
-                       edgecolor='black', linewidth=0.4, zorder=3, label='single trait picks')
-            for k, j in enumerate(picks):
-                ax.annotate(str(k + 1), (h2_train[j], h2_test[j]), xytext=(3, 2),
+            first, later = picks[0], picks[1:]
+            ax.scatter(h2_train[first], h2_test[first], s=60, marker='*',
+                       color=COLORS['max_features'], edgecolor='black', linewidth=0.4, zorder=4,
+                       label='first pick (highest training heritability)')
+            ax.scatter(h2_train[later], h2_test[later], s=16, facecolor='none',
+                       edgecolor=COLORS['max_features'], linewidth=0.9, zorder=3,
+                       label='later picks (after projecting out the earlier ones)')
+            for k, j in enumerate(later, start=2):
+                ax.annotate(str(k), (h2_train[j], h2_test[j]), xytext=(3, 2),
                             textcoords='offset points', fontsize=6, zorder=4)
             low = min(h2_train.min(), h2_test.min())
             high = max(h2_train.max(), h2_test.max())
@@ -67,8 +74,9 @@ def main():
             ax.set_title(f'{label} ({X.shape[1]:,} measurements, r = {r:.2f})')
             ax.spines[['top', 'right']].set_visible(False)
             letter(ax, text, -0.18)
-        axes[0].legend(loc='upper left', frameon=False, markerscale=1.5)
-        fig.tight_layout()
+        handles, labels = axes[0].get_legend_handles_labels()
+        fig.legend(handles, labels, loc='upper center', ncol=3, frameon=False)
+        fig.tight_layout(rect=(0, 0, 1, 0.9))
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(out, dpi=300)
