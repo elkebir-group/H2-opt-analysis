@@ -1,6 +1,6 @@
 """Arabidopsis LC-MS metabolomics (Fernie lab): 1,112 samples of 280 accessions, two treatments.
 
-Each sample is an LC-MS run binned by integer m/z and 30 s of retention time, for MS1 and MS/MS
+Each sample is an LC-MS run binned by integer m/z and 30 s of retention time, for MS1 and MS2
 (processed/imageMetab.npz: samples x 2 MS levels x 2,000 m/z x 60 bins, summed intensities). The
 treatments are normal growth ('0d') and 6 days of darkness ('6d'), each analyzed on its own; every
 accession has one sample per year in a treatment, and the year is the environment.
@@ -84,7 +84,7 @@ RT_BIN = 0.5
 # Smallest coefficient magnitude drawn by coefficient_map, as a fraction of the trait's largest.
 SHOWN = 0.02
 # Colors of the two MS levels in coefficient_map.
-LEVEL_COLORS = (('MS1', 'tab:blue'), ('MS/MS', 'tab:orange'))
+LEVEL_COLORS = (('MS1', 'tab:blue'), ('MS2', 'tab:orange'))
 
 
 def coefficient_map(ax, coefficients, size):
