@@ -1,7 +1,7 @@
 """Figure of the lme4 check: the pipeline estimator's heritability of each raw feature against
 lme4's (lme4_heritability.R), one lettered panel per dataset with the Pearson r, in the rows
 of ROWS (paper Fig. ANOVA), drawn at the text width of the paper (6.5 in). The H2-opt trait
-panels clip the estimator at 0, as the paper reports these values (miscFig); lme4 cannot go below
+panels clip the estimator at 0, as in miscFig; lme4 cannot go below
 0 either.
 
     python pipelines/scripts/shared/plot_estimator_check.py \\

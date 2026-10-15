@@ -2,7 +2,7 @@
 
 This repository holds the code that reproduces the analyses and figures of the
 [H2-opt](https://github.com/elkebir-group/H2-opt) paper: sorghum, Miscanthus, Arabidopsis
-metabolomics and simulations (the Arabidopsis pathway enrichment and GWAS are not ported yet).
+metabolomics and simulations.
 There are three parts:
 
 - **`h2opt_analysis/`**: the dataset-specific library. Data loading and folds
@@ -27,7 +27,7 @@ scripts/install_gemma.sh    # GEMMA 0.97, into bin/ (Linux or macOS)
 
 Always pass `--all-extras`. A bare `uv sync` removes Snakemake and the dev tools.
 To use an `H2-opt` checkout elsewhere, run `uv pip install -e /path/to/H2-opt`.
-GWAS use GEMMA 0.97, the version used for the paper. Set `GEMMA=/path/to/gemma`
+GWAS use GEMMA 0.97. Set `GEMMA=/path/to/gemma`
 to use another binary.
 
 ## Data
@@ -67,7 +67,7 @@ GPU training jobs share the GPU, 8 at a time (`--gpu-jobs N`).
 
 ### Sorghum
 
-All outputs are under `data/derived/sorghum/`. H2-opt is retrained here with Adam, with the noise
+All outputs are under `data/derived/sorghum/`. H2-opt is trained with Adam, with the noise
 level of each fold, one for all traits, chosen by held-out heritability.
 
 | Rule | Output | Content |
@@ -131,9 +131,10 @@ for every instance (config `image_simulation`), not selected. All outputs are un
 Multispectral drone images of two populations of half-sib families, Central and South Japan
 (`h2opt_analysis/miscanthus.py`): 14 dates, 6 channels (crop surface model, blue, green, red, red
 edge, near infrared), 63 x 63 pixels per plant. Each date is analyzed alone. The clone checks,
-'unknown' seed lots and empty plots are left out; the folds are the paper's 5 plant folds. The
+'unknown' seed lots and empty plots are left out. The folds are 5 random folds of plants
+(np.random.seed(1), randint(5) over all 3,900 plants). The
 heritability is Henderson's Method III (`h2opt.Henderson3`: families, plots within families, rep
-and field column fixed), broad-sense on the plant scale (the paper's narrow-sense value is 4 x it,
+and field column fixed), broad-sense on the plant scale (the narrow-sense value is 4 x it,
 capped at 1), after the nearest-neighbor field adjustment (`h2opt.spatial`, Papadakis 1937: the
 other-family plots within `spatial_width` field columns in the same rep). The config lists the
 populations.
@@ -151,7 +152,7 @@ The images, the baselines, the genotypes and the CNN level are shared; they are 
 | `misc_prepare_genotypes` | `gwas/genotypes.{bed,bim,fam}`, `gwas/genotype_pcs.npy` | the PLINK set (unplaced scaffolds as chromosome 0) and 5 genotype PCs of the genotyped plants with traits |
 | `misc_score_ndvi` | `ndvi.npz` | NDVI (mean red and NIR of the pixels) of every plant and date, and its Henderson3 per date and fold, before and after the adjustment |
 
-The paper's run trains H2-opt on the adjusted heritability (config `miscanthus.adjusted`); its
+The adjusted run trains H2-opt on the adjusted heritability (config `miscanthus.adjusted`); its
 outputs are under `data/derived/miscanthus_adjusted/{population}/` (target
 `miscanthus_adjusted_all`).
 
@@ -167,7 +168,7 @@ outputs are under `data/derived/miscanthus_adjusted/{population}/` (target
 The GWAS and the null are separate targets, `miscanthus_adjusted_gwas_all` and
 `miscanthus_adjusted_null_all`, run only on request. The genotypes are the PLINK sets
 `miscPlant/SNP/bed/Msi{C,S}_annotated` with their full sample lists (`_copy.fam`; the `.fam` beside
-each `.bed` is a subset written by the original code, and GEMMA reads shifted genotypes with it).
+each `.bed` lists a subset of the samples, and GEMMA reads shifted genotypes with it).
 Plants with two conflicting samples are left out.
 
 | Rule | Output | Content |
@@ -193,11 +194,11 @@ need the GWAS and the null.
 LC-MS metabolomics of 280 accessions, 263 in 0d and 277 in 6d, all genotyped
 (`h2opt_analysis/arabidopsis.py`): MS1 and MS/MS binned by integer m/z (0-1499) and 30 s of
 retention time (0-20 min), 120,000 features over their largest
-value, as in the paper. The two treatments, normal growth (0d) and 6 days of darkness (6d), are
+value. The two treatments, normal growth (0d) and 6 days of darkness (6d), are
 analyzed on their own; each accession has one sample per year (Col-0: nine), and the year is the
 environment.
-The nine labels 6909-1 to 6909-9 are pooled as one accession (Col-0, 6909 in the PLINK set): their
-metabolite profiles show no heritability among them. The folds are 5 random folds of accessions
+The nine labels 6909-1 to 6909-9 are one accession (Col-0, 6909 in the PLINK set) and are pooled.
+The folds are 5 random folds of accessions
 (seed 0). The heritability is ANOVA among accessions (`h2opt.anova_heritability`). All outputs are
 under `data/derived/arabidopsis/{treatment}/`.
 
@@ -232,10 +233,11 @@ The GWAS is a separate target, `arabidopsis_gwas_all`, run only on request. The 
 | `arabi_prepare_genotypes` | `gwas/genotypes.{bed,bim,fam}`, `gwas/genotype_pcs.npy` | the PLINK set and 5 genotype PCs of the treatment's accessions |
 | `arabi_run_gwas` | `gwas/fold{k}.npz` | GEMMA LMM of the per-accession means of H2-opt traits 1-10 (intercept + 5 PCs) |
 
-The paper figures are a separate target, `arabidopsis_paper_figures` (it needs the GWAS of fold 0).
+The paper figures are a separate target, `arabidopsis_paper_figures`
+(it needs the GWAS, the null and the pathway enrichment).
 The figures are under `data/derived/arabidopsis/figures/paper/`, named as the paper's images, each
-a `.pdf` and a `.png`. Panel e of `metabFig` (pathway enrichment) is not made: its input (the
-mummichog files) is missing.
+a `.pdf` and a `.png`. Panel e of `metabFig` (pathway enrichment) uses the tables of
+`arabi_pathway_enrichment`.
 
 | Rule | Output | Content |
 |---|---|---|

@@ -2,7 +2,7 @@
 
 One linear model per trait and fold, and normal input noise with the standard deviation that
 choose_noise.py chose for that fold (one for all traits). An L1 penalty (--penalty l1 1e-6, from
-the config) but not the paper's clipping, so the loss is the heritability that the evaluation
+the config) and no clipping of the traits. The loss is the heritability that the evaluation
 scores plus the penalty. Trained with h2opt.train's
 default optimizer (Adam), all folds together by h2opt.train_models. Writes, per fold, the model
 (.pt) and the traits of all samples of the treatment, uncorrelated on the training samples (.npz,

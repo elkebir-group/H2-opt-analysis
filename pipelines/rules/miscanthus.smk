@@ -24,7 +24,7 @@ rule misc_prepare_images:
 
 MISC_POPULATIONS = MISC["populations"]
 MISC_DATES = range(len(miscanthus.DATES))
-# The run of the paper (rules misc_adjusted_*): H2-opt trained on the neighbor-adjusted heritability.
+# The adjusted run (rules misc_adjusted_*): H2-opt trained on the neighbor-adjusted heritability.
 MISC_ADJ = OUT_ROOT / "miscanthus_adjusted"
 MISC_ADJ_CONFIG = MISC["adjusted"]
 MISC_ADJ_DATES = MISC_ADJ_CONFIG["dates"]
@@ -94,9 +94,9 @@ rule misc_train_baselines:
         " --traits {MISC[traits]} --out {output} > {log} 2>&1"
 
 
-# The noise levels of linear and hybrid H2-opt without the field adjustment: one linear level
-# (choose_noise.py) and one CNN level (choose_cnn_level.py, on one fold), each for all folds and
-# dates, chosen on one date. The adjusted run takes its CNN level from here.
+# The noise levels of the unadjusted run (miscanthus/), without the field adjustment: one linear
+# level (choose_noise.py) and one CNN level (choose_cnn_level.py, on one fold), each for all folds
+# and dates, chosen on one date. The adjusted run takes its CNN level from here.
 MISC_H2OPT_METHODS = ["h2opt", "h2opt_hybrid"]
 
 
@@ -278,9 +278,9 @@ rule misc_plot_paper_main:
         " --measured {input.measured} --out {output} > {log} 2>&1"
 
 
-# The run of the paper: H2-opt trained on the heritability after the nearest-neighbor field
+# The adjusted run: H2-opt trained on the heritability after the nearest-neighbor field
 # adjustment (config miscanthus.adjusted). Outputs under miscanthus_adjusted/ (MISC_ADJ); the
-# baselines and images come from the main run.
+# baselines and images come from the unadjusted run (miscanthus/).
 
 
 rule miscanthus_adjusted_all:
@@ -336,8 +336,8 @@ rule misc_adjusted_train_linear_h2opt:
 
 
 def misc_adjusted_cnn_level(wildcards):
-    """The main run's CNN level file of the population that cnn_level_population names for this
-    population."""
+    """CNN level file of the unadjusted run (miscanthus/), of the population that
+    cnn_level_population names for this population."""
     source = MISC_ADJ_CONFIG["cnn_level_population"][wildcards.population]
     return str(MISC_OUT / source / "h2opt_hybrid" / "cnn_level.npz")
 
@@ -373,8 +373,8 @@ rule misc_adjusted_train_hybrid_h2opt:
 
 
 # GWAS of trait 1 of the adjusted run's hybrid H2-opt per date (all folds) and of its cross-fitted
-# trait, with the neighbor mean as a covariate (gwas.py --neighbor-width); genotypes from the main
-# run.
+# trait, with the neighbor mean as a covariate (gwas.py --neighbor-width); genotypes from the
+# unadjusted run (miscanthus/).
 rule miscanthus_adjusted_gwas_all:
     input:
         expand(str(MISC_ADJ / "{population}" / "gwas" / "{kind}date{date}.npz"),
@@ -488,7 +488,8 @@ rule misc_adjusted_null_gwas:
 
 
 def misc_adjusted_method_args(wildcards):
-    """--by-date and --by-fold arguments of the adjusted run: its H2-opt traits, the main baselines."""
+    """--by-date and --by-fold arguments of the adjusted run: its H2-opt traits and the baselines
+    of the unadjusted run (miscanthus/)."""
     args = " ".join(
         f"--by-date {m} " + " ".join(str(MISC_ADJ / wildcards.population / m / f"date{d}.npz")
                                      for d in MISC_ADJ_DATES)

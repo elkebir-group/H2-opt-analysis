@@ -12,9 +12,6 @@ of --genotypes). e: pathway
 enrichment of each trait, the adjusted Fisher p-value (AdjP.Fisher of pathway_enrichment.R,
 adjusted over the pathways of one peak list) on a log color scale, every pathway with p < 0.05 for
 a trait of either treatment; an asterisk marks p < 0.05.
-Not the mummichog p-value P(Gamma): it is below 0.05 for most pathways also for a peak list ranked
-without a trait (by intensity SD alone), while the adjusted Fisher p-value of that list is at
-least 0.5.
 
 Drawn at the text width of the paper (6.5 in) in the style of simFig. Saves --out (.pdf) and a
 .png next to it.

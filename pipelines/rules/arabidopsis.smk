@@ -174,7 +174,7 @@ rule arabi_score_heritability:
         " > {log} 2>&1"
 
 
-# Figures of the paper (main.tex image names). The coefficients are from fold ARABI_PAPER_FOLD
+# Figures of the paper (file names as in the paper). The coefficients are from fold ARABI_PAPER_FOLD
 # ("the first cross-validation fold"); the GWAS figures (metab0d_GWAS, metab6d_GWAS) use all
 # folds. Panel e of metabFig uses the tables of arabi_pathway_enrichment. Run only on request, as
 # the GWAS.
@@ -417,8 +417,8 @@ rule arabi_enrichment_inputs:
         " --out-dir {params.out_dir} > {log} 2>&1"
 
 
-# MS peaks to pathways of each peak list, offline with MetaboAnalystR, with the settings of the
-# paper's web runs (config arabidopsis.pathways). Not part of arabidopsis_all: run only on request.
+# MS peaks to pathways of each peak list, offline with MetaboAnalystR, with the settings of
+# config arabidopsis.pathways. Not part of arabidopsis_all: run only on request.
 ARABI_PATHWAYS = ARABI["pathways"]
 ARABI_MUMMICHOG_LIBRARY = str(ARABI_OUT / "pathway_library" / f"{ARABI_PATHWAYS['library']}.qs")
 

@@ -1,4 +1,4 @@
-"""The Miscanthus heritability and NDVI figures of the paper's supplement.
+"""The Miscanthus heritability and NDVI figures of the supplement.
 
 --out-train (trainHeritMisc): the narrow-sense train heritability of trait 1 per date after the
 nearest-neighbor field adjustment, H2-opt (CNN), H2-opt (linear) and the baselines

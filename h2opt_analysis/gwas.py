@@ -6,8 +6,8 @@ marked NA in the .fam: GEMMA 0.97 reports wrong per-SNP effects and p-values (wi
 model) when the .fam has NA phenotypes. The original files are never changed. GEMMA adds no
 intercept when covariates are given (-c), so run_gemma adds one unless told otherwise.
 
-The GEMMA binary is $GEMMA, or bin/gemma-0.97/gemma in this repository (GEMMA 0.97, the version used
-for the paper). GEMMA 0.97 fails when the number of SNPs analyzed is a multiple of 10,000 (its batch
+The GEMMA binary is $GEMMA, or bin/gemma-0.97/gemma in this repository (GEMMA 0.97).
+GEMMA 0.97 fails when the number of SNPs analyzed is a multiple of 10,000 (its batch
 size).
 
 Every file written here first replaces whatever is at its path, so a write never goes through a
@@ -187,8 +187,8 @@ def line_means(Y, line_of_row, n_lines):
 def rank_normal(P):
     """Rank-based inverse normal transform of each column of P over its non-NaN rows (Blom offset:
     the normal quantile of (rank - 3/8) / (n + 1/4)). H2-opt traits can have a few extreme lines
-    (overfitting on training lines); their rare alleles then give false GWAS hits, which the
-    permutation nulls showed. NaN stays NaN."""
+    (overfitting on training lines); their rare alleles can then give false GWAS hits. NaN
+    stays NaN."""
     P = np.array(P, dtype=np.float64)
     for t in range(P.shape[1]):
         ok = ~np.isnan(P[:, t])

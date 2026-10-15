@@ -1,6 +1,7 @@
-"""GWAS figure of the paper's supplement (miscGWAS_<population>): the GWAS of trait 1 of H2-opt
-(CNN) of the adjusted run on each date with a significant SNP, per fold and cross-fitted, in the
-style of sorGWAS (figures.gwas_fold_rows, with the dates in place of the traits).
+"""GWAS figure of the supplement (miscGWAS_<population>): the GWAS of trait 1 of H2-opt (CNN),
+trained after the nearest-neighbor field adjustment, on each date with a significant SNP, per fold
+and cross-fitted, in the style of sorGWAS (figures.gwas_fold_rows, with the dates in place of the
+traits).
 
 The loci are the Bonferroni hits (0.05 / SNPs) of all dates and folds of the population, grouped
 by LD clumping (gwas.clump: r^2 above --r2 with the lead SNP within --kb kilobases, LD from

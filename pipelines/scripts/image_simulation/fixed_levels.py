@@ -1,8 +1,8 @@
-"""The noise levels of H2-opt on one image simulation instance: fixed for every instance (PI), not
-chosen by selection. Writes the linear level in the format of choose_noise.py (.npz with 'chosen'
-and 'noise_sd' = the level x h2opt.selection.noise_scale of the training images), read by
-train_h2opt.py and train_hybrid.py, and the CNN level in the format of choose_cnn_level.py (.npz
-with 'chosen'), read by train_hybrid.py.
+"""The noise levels of H2-opt on one image simulation instance: fixed for every instance
+(--linear-level, --cnn-level), not chosen by selection. Writes the linear level in the format of
+choose_noise.py (.npz with 'chosen' and 'noise_sd' = the level x h2opt.selection.noise_scale of the
+training images), read by train_h2opt.py and train_hybrid.py, and the CNN level in the format of
+choose_cnn_level.py (.npz with 'chosen'), read by train_hybrid.py.
 
     python pipelines/scripts/image_simulation/fixed_levels.py --measurements images.npz \\
         --linear-level 17.7828 --cnn-level 1 --out-noise noise.npz --out-cnn-level cnn_level.npz

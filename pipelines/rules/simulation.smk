@@ -37,7 +37,7 @@ def sim_method_args(name_pattern):
 
 
 # Traits and their heritability only. The GWAS (causal-SNP detection) is a separate target,
-# simulation_gwas_all, run only on request once the methods and their tuning are settled.
+# simulation_gwas_all, run only on request.
 rule simulation_all:
     input:
         str(SIM_OUT / "evaluation.npz"),
@@ -292,7 +292,7 @@ rule sim_plot_paper_figures:
         " --out-example {output.example} > {log} 2>&1"
 
 
-# Selection bias of single trait (response letter): training vs test heritability of every
+# Selection bias of single trait: training vs test heritability of every
 # measurement of one instance of each simulation, with the single trait picks marked.
 rule sim_plot_selection_bias:
     input:

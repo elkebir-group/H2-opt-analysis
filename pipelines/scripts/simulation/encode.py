@@ -1,4 +1,4 @@
-"""Encode the true traits of all simulation instances into simulated spectra (the paper's way).
+"""Encode the true traits of all simulation instances into simulated spectra.
 
 One random stream (seed 0) runs over the instances in order, so all instances are made in one
 run, and --out-dirs names one directory per instance. Writes, per instance, spectra.npz (X:
@@ -20,7 +20,7 @@ from h2opt_analysis import simulation
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--autoencoder', required=True, help="the paper's pickled autoencoder")
+    parser.add_argument('--autoencoder', required=True, help='pickled autoencoder (.pt)')
     parser.add_argument('--reference', required=True, help='real spectra (.npz, arr_0)')
     parser.add_argument('--out-dirs', nargs='+', required=True,
                         help='output directory of each instance, in instance order')

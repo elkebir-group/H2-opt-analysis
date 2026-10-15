@@ -12,7 +12,7 @@ dist/
 wheels/
 *.whl
 
-# uv lockfile (not committed, matching prolyG's convention)
+# uv lockfile (not committed)
 uv.lock
 
 # Test / coverage
@@ -48,10 +48,12 @@ env/
 # Snakemake run state.
 .snakemake/
 
-# Top-level scratch directory: agent <-> user artifacts that persist across
-# Claude Code sessions (handoff notes, ad-hoc notes, throwaway data), matching
-# prolyG's convention. Committed files never cite a .scratch/ path.
+# Local scratch directory (notes, throwaway data).
 .scratch/
 
-# Local Claude Code session state.
+# Local agent session state.
 .claude/*
+
+# Local notes and agent instructions (not committed).
+TODO.md
+CLAUDE.md

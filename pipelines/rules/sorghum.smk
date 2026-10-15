@@ -39,7 +39,7 @@ def sorghum_method_args():
 
 
 # Traits and their heritability only. The GWAS is a separate target, sorghum_gwas_all, run only
-# on request once the methods and their tuning are settled.
+# on request.
 rule sorghum_all:
     input:
         str(SORGHUM_OUT / "figures" / "noise.pdf"),
@@ -256,7 +256,7 @@ rule sorghum_reference_gwas_summary:
         " --window {params.window} --out {output} > {log} 2>&1"
 
 
-# The figures of the paper, made from linear H2-opt retrained here. They need
+# The figures of the paper, made from linear H2-opt. They need
 # the GWAS, so they are not part of sorghum_all.
 rule sorghum_paper_figures:
     input:

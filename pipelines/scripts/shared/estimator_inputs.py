@@ -4,15 +4,15 @@ Writes a .csv for lme4_heritability.R (the design columns, then one column per f
 .npz with the pipeline estimator's heritability of each feature on all individuals (h2):
 - sorghum: the 2,151 wavelengths; ANOVA among genotypes with the field set as environment.
 - miscanthus-central, miscanthus-south: date --date, every third pixel in each direction of the
-  6 channels (6 x 21 x 21 = 2,646 features, as the paper), after the nearest-neighbor field
+  6 channels (6 x 21 x 21 = 2,646 features), after the nearest-neighbor field
   adjustment (--width, slope fitted on all plants); Henderson3 among families, plots within
   families, rep and field column as environment.
 - arabidopsis-0d, arabidopsis-6d: the features summed over retention time (MS level x m/z,
   3,000), those with nonzero variance; ANOVA among accessions with the year as environment.
-- miscanthus-traits-central, miscanthus-traits-south: trait 1 of hybrid H2-opt of the adjusted
-  run (--traits, one file per date) of every date and fold, on the fold's test plants only
-  (missing elsewhere), after the nearest-neighbor adjustment with the slope fitted on the test
-  plants, as the paper reports it; Henderson3 as for the pixels.
+- miscanthus-traits-central, miscanthus-traits-south: trait 1 of hybrid H2-opt trained after the
+  nearest-neighbor adjustment (--traits, one file per date) of every date and fold, on the fold's
+  test plants only (missing elsewhere), after the nearest-neighbor adjustment with the slope fitted
+  on the test plants; Henderson3 as for the pixels.
 
     python pipelines/scripts/shared/estimator_inputs.py --dataset sorghum --out-csv sorghum.csv \\
         --out sorghum.npz

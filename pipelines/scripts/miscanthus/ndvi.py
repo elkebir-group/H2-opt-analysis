@@ -1,7 +1,7 @@
 """NDVI of every kept Miscanthus plant and date, and its Henderson3 heritability per date and fold.
 
 NDVI = (NIR - red) / (NIR + red), with red (channel 3) and NIR (channel 5) the mean of the
-pixels of each plant (as the paper: the bands are summed over the pixels first). The images are
+pixels of each plant (the bands are summed over the pixels first). The images are
 the values as received (images.npy: not clipped, not scaled). NDVI is a fixed index, not a trained
 method: its heritability is scored by Henderson3 on the training and the test plants of each fold,
 and on the test plants after the nearest-neighbor field adjustment of the other methods

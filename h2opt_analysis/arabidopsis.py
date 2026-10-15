@@ -5,8 +5,8 @@ Each sample is an LC-MS run binned by integer m/z and 30 s of retention time, fo
 treatments are normal growth ('0d') and 6 days of darkness ('6d'), each analyzed on its own; every
 accession has one sample per year in a treatment, and the year is the environment.
 
-The nine labels 6909-1 ... 6909-9 are Col-0 (accession 6909 of the PLINK set): metabolite profiles
-show no heritability among them, so they are pooled as one accession (POOLED).
+The nine labels 6909-1 ... 6909-9 are Col-0 (accession 6909 of the PLINK set) and are pooled as
+one accession (POOLED).
 """
 
 import numpy as np
@@ -18,12 +18,12 @@ from .paths import data
 TREATMENTS = ('0d', '6d')
 N_FOLDS = 5
 PROCESSED = data('metab', 'metabData_Fernie', 'processed')
-# m/z 0-1499 and retention times 0-20 min, the paper's crop.
+# The crop: m/z 0-1499 and retention times 0-20 min.
 N_MZ, N_RT = 1500, 40
 # Labels of one accession: Col-0 sown as nine labeled lines.
 POOLED = {f'6909-{k}': '6909' for k in range(1, 10)}
-# PLINK set of the genotyped accessions (call method 75, TAIR8). The .fam beside it was overwritten
-# with a subset by the original GWAS code; the full sample list of the .bed is the _copy.fam.
+# PLINK set of the genotyped accessions (call method 75, TAIR8). The .fam beside it lists a subset
+# of the samples; the full sample list of the .bed is the _copy.fam.
 GENOTYPES = data('metab', 'metabData_Alex', 'call_method_75', 'call_method_75_TAIR8')
 GENOTYPE_SAMPLES = GENOTYPES.with_name(GENOTYPES.name + '_copy.fam')
 
@@ -46,7 +46,7 @@ def labels():
 
 def features():
     """Measurements of all samples, (1112, 2 * N_MZ * N_RT): the cropped intensities over their
-    largest value, flattened in the order (MS level, m/z, retention time) as in the paper."""
+    largest value, flattened in the order (MS level, m/z, retention time)."""
     X = load_npz(PROCESSED / 'imageMetab.npz')[:, :, :N_MZ, :N_RT]
     return (X / X.max()).reshape((len(X), -1))
 

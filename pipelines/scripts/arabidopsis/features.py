@@ -1,4 +1,4 @@
-"""Measurements of all Arabidopsis samples: the paper's crop and scaling, flattened.
+"""Measurements of all Arabidopsis samples: cropped and scaled, flattened.
 
 h2opt_analysis.arabidopsis.features() (m/z 0-1499, retention time 0-20 min, MS1 and MS/MS, over
 the largest intensity), saved as float32 (1112 x 120,000) in sample order.

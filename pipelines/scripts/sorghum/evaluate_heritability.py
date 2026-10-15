@@ -1,11 +1,10 @@
 """Train and test heritability of H2-opt and the baselines on sorghum, per genotype fold.
 
 Each --method gives a method slug (h2opt_analysis.methods.LABELS) and its traits file for each fold,
-in the order of --folds: the H2-opt traits of one source and the baselines' traits
-(baseline.py), all used as saved. Each source saves its traits uncorrelated: on the training plants
-for the retrained methods, on all plants for the paper's predictions. The first --traits traits are
-evaluated. Writes an .npz (methods; folds; train and test: methods x folds x traits) and prints the
-mean test heritability of each trait.
+in the order of --folds: the H2-opt traits (train_h2opt.py) and the baselines' traits (baseline.py),
+all used as saved (uncorrelated on the training plants). The first --traits traits are evaluated.
+Writes an .npz (methods; folds; train and test: methods x folds x traits) and prints the mean test
+heritability of each trait.
 
     python pipelines/scripts/sorghum/evaluate_heritability.py --folds 0 ... 9 \\
         --method h2opt h2opt/fold0.npz ... --method pch pch/fold0.npz ... \\

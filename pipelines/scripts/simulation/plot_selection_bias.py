@@ -1,4 +1,4 @@
-"""Selection bias of the single trait baseline (response letter): the training and the test
+"""Selection bias of the single trait baseline: the training and the test
 heritability of every measurement of one simulation instance, one panel per simulation, with the
 measurements that single trait picks marked: the first pick (the highest training heritability)
 as a star, the later picks (made after projecting out the earlier ones) as open circles numbered

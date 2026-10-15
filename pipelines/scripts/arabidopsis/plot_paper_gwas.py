@@ -1,7 +1,7 @@
 """GWAS of the H2-opt traits of one Arabidopsis treatment over all folds (images/metab0d_GWAS,
 metab6d_GWAS), one row per trait with a significant SNP, in the style of sorGWAS.
 
-The regions are those of the paper's gene table: the Bonferroni hits (0.05 / SNPs) of all traits
+The regions are the Bonferroni hits (0.05 / SNPs) of all traits
 and folds, grouped by LD clumping (gwas.clump: r^2 above --r2 with the lead SNP within --kb
 kilobases, LD from --genotypes), and then loci whose lead SNPs are on the same chromosome and
 within --kb kilobases of each other joined into one region. The lead SNP of a region is its most

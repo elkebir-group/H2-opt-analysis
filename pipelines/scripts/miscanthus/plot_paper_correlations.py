@@ -1,4 +1,4 @@
-"""The Miscanthus correlation figures of the paper's supplement.
+"""The Miscanthus correlation figures of the supplement.
 
 Every value is the median over the folds of |Pearson r| (the sign of a synthetic trait is
 arbitrary) of trait 1 of hybrid H2-opt (date_correlations.py, measured_correlations.py).

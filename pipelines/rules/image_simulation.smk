@@ -88,7 +88,7 @@ rule img_train_linear_h2opt:
         " --instance {wildcards.instance} --device {params.device} > {log} 2>&1"
 
 
-# One fixed linear level and one fixed CNN level for every instance (PI: no selection here; config
+# One fixed linear level and one fixed CNN level for every instance, not selected (config
 # image_simulation.h2opt.noise_level and image_simulation.hybrid.cnn_level).
 rule img_fixed_levels:
     input:
@@ -225,7 +225,7 @@ rule img_score_gwas:
 
 
 # The permutation null of the hybrid, as for the spectral simulation (simulation_null_gwas_all).
-# Helios only; run only on request.
+# Run only on request.
 rule image_simulation_null_gwas_all:
     input:
         [img_file(SIM_NULL["null_instance"], f"null/perm{k}.npz")

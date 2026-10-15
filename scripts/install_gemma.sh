@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install GEMMA 0.97 (the version used for the paper) into bin/gemma-0.97 of this repository.
+# Install GEMMA 0.97 into bin/gemma-0.97 of this repository.
 # Linux: the official v0.97 release (a Guix pack, commit c760aa0), run through its bundled loader and libraries.
 # macOS: the official gemma.macosx binary of the same release.
 set -euo pipefail

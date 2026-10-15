@@ -17,7 +17,7 @@ dependencies = [
     "h2opt",
     "numpy>=1.26,<3",
     "scipy>=1.11",
-    # The torch version of the paper's runs.
+    # Pinned torch version, for reproducibility.
     "torch==2.4.1",
     "scikit-learn",
     "pandas>=2.0",
@@ -44,7 +44,7 @@ Parent = "https://github.com/elkebir-group/H2-opt"
 packages = ["h2opt_analysis"]
 
 [tool.uv.sources]
-# A local editable path, as prolyG-analysis does for prolyG: a change to the
+# A local editable path: a change to the
 # method is live here without a re-pin, and there is one copy of h2opt on disk.
 # The cost is that nothing in git records which h2opt commit produced a result;
 # each pipeline run records it in its log instead (pipelines/run.sh). Point

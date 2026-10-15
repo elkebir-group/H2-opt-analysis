@@ -5,7 +5,7 @@ repos:
       - id: ruff
         args: [--fix]
 
-  # US spelling plus ordinary typos, matching prolyG's convention.
+  # US spelling plus ordinary typos.
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.3
     hooks:

@@ -17,24 +17,19 @@ gwas_loci:
 
 sorghum:
   folds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-  # H2-opt retrained (train_h2opt.py, all folds in one job), trained with Adam (h2opt.train's
+  # H2-opt (train_h2opt.py, all folds in one job), trained with Adam (h2opt.train's
   # default optimizer), no clipping, with normal input noise whose level is chosen per fold, one for
   # all traits, by held-out heritability on the fold's training plants (choose_noise.py,
   # h2opt.selection.select_noise_level: 20 validation splits of the genotypes, the highest level
   # within one SE of the best held-out heritability of the first trait) with the same steps. The
   # raw spectra are badly conditioned and gradient training converges slowly: steps is where
-  # doubling it changes the train heritability of traits 1-3 by at most about 0.01 (fold 0, noise
-  # level 0.01: 160k -> 320k steps changes it by 0.002, 0.007, 0.010).
+  # doubling it changes the train heritability of traits 1-3 by at most about 0.01.
   h2opt:
     traits: 10
     steps: 320000
     device: cuda
-    # Total variation over wavelength (the paper's kind; the paper's code divides it by the
-    # spread of the trait, as h2opt.train does), weight 1e-5 (PI). 10 folds, 320k steps, test h2
-    # traits 1-4: 1e-5 0.691 0.479 0.471 0.398 (PCH 0.687 0.468 0.437 0.445), roughness
-    # sum |dw| / sum |w| 0.06-0.10; the paper's 1e-4 lowers traits 1, 2 and 4 below PCH (0.664
-    # 0.383 0.523 0.385); 1e-6 ties PCH (roughness 0.17-0.24). Training only: the noise level is
-    # chosen without it (choose_noise.py).
+    # Total variation over wavelength, divided by the spread of the trait (as h2opt.train does).
+    # Training only: the noise level is chosen without it (choose_noise.py).
     penalty: [tv, 1.0e-5]
   # Baselines fitted once per fold (baseline.py) and evaluated against every source;
   # traits must be at least the traits of every source.
@@ -87,14 +82,13 @@ simulation:
     # instance, its fold 0 (the test plants), traits 1-3.
     null_instance: 0
     permutations: 10
-  # The GWAS shown as Manhattan and QQ plots (plot_gwas.py). The paper figures use its instance:
-  # an H2-opt trait 1 clearly below the significance threshold (PI, 2026-10-14).
+  # The GWAS shown as Manhattan and QQ plots (plot_gwas.py); the paper figures use its instance.
   example: {instance: 8, method: h2opt}
-  # Selection bias of single trait (response letter, R1 5): training vs test heritability of every
+  # Selection bias of single trait: training vs test heritability of every
   # measurement of one instance of each simulation (plot_selection_bias.py).
   selection_bias: {instance: 0, traits: 5}
   # The paper figures (plot_paper.py): the baselines and, per simulation, the H2-opt variant they
-  # show with the label and color of H2-opt (PI, 2026-10-12: linear for spectra, the hybrid for
+  # show with the label and color of H2-opt (linear for spectra, the hybrid for
   # images). The ground truth is always shown. rows: the simulations of the rows of simFig
   # (output directory: row label), top to bottom.
   paper_figures:
@@ -109,10 +103,7 @@ image_simulation:
   methods: [h2opt, h2opt_hybrid, pca, genetic_pca, pch, max_features]
   traits: 5
   # As in the spectral simulation; linear models take the flattened pixels. The noise levels are
-  # fixed for every instance, not selected (PI, 2026-10-11), chosen by the true traits on Helios:
-  # with selection the linear level went to the top of the grid on 7 of 10 instances and the hybrid
-  # started from a size-and-shoots trait. With linear 17.8 and CNN 1, median |r| of trait k with
-  # true trait k 0.71 0.50 0.37 (selected levels 0.24 0.18 0.15; PCH 0.08 0.09 0.22).
+  # fixed for every instance, not selected; they were set by comparison with the true traits.
   h2opt:
     noise_level: 17.7828
     steps: 10000
@@ -120,8 +111,7 @@ image_simulation:
   # The hybrid with h2opt.ImageConvModel. max_copies: models trained at once (GPU memory); the
   # copies of one split train together and share every noise draw.
   hybrid:
-    # Fixed for all instances (see h2opt.noise_level). Helios sweep of 0.0316-3.16 with linear
-    # levels as selected: 1 best (mean median |r| 0.197), 3.16 worst (0.155).
+    # Fixed for all instances (see h2opt.noise_level).
     cnn_level: 1.0
     linear_steps: 10000
     steps: 1000
@@ -143,16 +133,14 @@ miscanthus:
   baselines: [pca, genetic_pca, pch, max_features, single_band]
   # Nearest-neighbor field adjustment of the test heritability (evaluate_heritability_spatial.py):
   # the other-family plots within spatial_width field columns in the same rep. Chosen without
-  # trained traits: the smallest residual correlation of neighboring plots' raw image channel
-  # means after the adjustment (Central +0.02, South +0.03), with the measured traits' heritability
-  # unchanged.
+  # trained traits: the width with the smallest residual correlation of neighboring plots' raw
+  # image channel means after the adjustment.
   spatial_width: 3
-  # The run of the paper (miscanthus_adjusted_all, outputs under miscanthus_adjusted/): linear and
+  # The adjusted run (miscanthus_adjusted_all, outputs under miscanthus_adjusted/): linear and
   # hybrid H2-opt trained on the heritability after the nearest-neighbor adjustment
-  # (spatial_width), the linear level selected again under it; per population, the main run's CNN
-  # level of the population in cnn_level_population (Central's 0.562 for both; South at its own
-  # level 5.62 is kept apart in miscanthus_adjusted_south_cnn_level_5.62/, PI 2026-10-14); the
-  # baselines of the main run, fitted without the adjustment (PCH cannot maximize the adjusted
+  # (spatial_width), the linear level selected again under it; per population, the CNN level of
+  # the unadjusted run (miscanthus/) of the population in cnn_level_population; the baselines of
+  # the unadjusted run, fitted without the adjustment (PCH cannot maximize the adjusted
   # heritability). Scored after the adjustment.
   adjusted:
     dates: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
@@ -164,8 +152,8 @@ miscanthus:
   # (choose_noise.py: linear H2-opt, the validation splits of all folds) and the CNN level
   # (choose_cnn_level.py: the hybrid, the validation splits of fold 0), both by
   # h2opt.selection.highest_level_within_one_se on one date, selection_date (index into
-  # miscanthus.DATES; 2 = 06/08, before canopy closure; a closed-canopy date has no signal and the
-  # rule then picks the top level). max_copies: models trained at once (GPU memory only).
+  # miscanthus.DATES; 2 = 06/08, before canopy closure). max_copies: models trained at once
+  # (GPU memory only).
   selection_date: 2
   h2opt:
     steps: 10000
@@ -197,20 +185,14 @@ arabidopsis:
   # the L1 penalty below (training only). The level is one per fold for all traits, chosen by
   # choose_noise.py on 20 validation splits of the training accessions from
   # h2opt.selection.NOISE_LEVELS (the highest level within one SE of the best held-out heritability
-  # of trait 1). steps is
-  # where doubling it changes the train heritability of traits 1-3 by at most about 0.01 (fold 0,
-  # levels 0.01, 0.1 and 1, both treatments: 16k -> 32k steps changes it by at most 0.001; at
-  # levels 0.01 and 0.1 the train heritability is 1.000 from about 8k steps).
+  # of trait 1). steps is where doubling it changes the train heritability of traits 1-3 by at
+  # most about 0.01.
   h2opt:
     traits: 10
     steps: 16000
     device: cuda
-    # L1 penalty (the paper's kind), weight 1e-6 (PI). The paper's 1e-4 is too strong when
-    # training runs to convergence (the paper's code stopped after about 2,000 RMSprop steps): on
-    # 6d fold 0 trait 1 it lowers held-out h2 (0.99 -> 0.87, 0.59 at 64k steps) and picks other
-    # masses. Training only: the noise level is chosen without it (with it, the rule picks almost
-    # no noise for trait 1, and 6d traits 2-10 fall below PCH). 6d fold 0, traits 1-5, chosen noise:
-    # test h2 sum 4.26 (none) -> 4.34, trait 1 MS1 mean/max |w| 0.0058 -> 0.0014 (paper < 0.002).
+    # L1 penalty on the coefficients. Training only: the noise level is chosen without it
+    # (choose_noise.py).
     penalty: [l1, 1.0e-6]
   # GEMMA LMM of the per-accession means of H2-opt traits, per treatment and fold.
   gwas:
@@ -222,15 +204,12 @@ arabidopsis:
     # 1 to null_traits.
     permutations: 10
     null_traits: 5
-  # Masses per peak list for pathway enrichment (enrichment_inputs.py), as the paper.
+  # Masses per peak list for pathway enrichment (enrichment_inputs.py).
   enrichment_peaks: 10000
   # MS peaks to pathways of each peak list (pathway_enrichment.R: MetaboAnalystR, mummichog v2).
   # mode: the data are negative ion full scans, m/z 100-1500, on an Exactive Orbitrap at resolution
   # 25,000 (Zhu et al. 2024, Sci. Data 11:841, Methods). ppm: MetaboAnalyst's default. Primary ions
-  # enforced and retention time in seconds (the lists' rt): of 24 combinations of these settings on
-  # the paper's 6d trait 1 peak list, these come closest to the paper's table (its 18 pathways with
-  # the same total hits and top pathways, the same significant hits in 14 of 18; the rest of the
-  # difference is probably from MetaboAnalyst versions). library: the mummichog library (KEGG,
+  # enforced; retention time in seconds (the lists' rt). library: the mummichog library (KEGG,
   # Arabidopsis thaliana).
   pathways:
     library: ath_kegg

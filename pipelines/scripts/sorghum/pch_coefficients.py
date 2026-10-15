@@ -82,8 +82,7 @@ def main():
         coefficients, traits = h2opt_coefficients(model_path, X, is_train)
         with np.load(traits_path) as f:
             saved_h2opt = f['traits']
-        # the saved traits are float32 model outputs (about 0.9 in size, trait spread about
-        # 0.005), so they match the float64 coefficients to rounding: compare by correlation
+        # the saved traits are float32 model outputs: compare by correlation, not by value
         h2opt_r = np.array([abs(np.corrcoef(a, b)[0, 1])
                             for a, b in zip(traits.T, saved_h2opt.T, strict=True)])
         print(f'fold {fold}: H2-opt coefficients vs saved traits, largest |difference| '

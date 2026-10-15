@@ -4,7 +4,7 @@ For each method and instance: the Pearson correlation of each true trait with ea
 trait (all plants); the correlation of each true trait with its least-squares fit on the first
 three synthetic traits; and the ANOVA heritability of each synthetic trait on the training and
 test plants. Also the heritability of the true traits. Writes an .npz and prints a summary:
-the paper's metric (|r| of true trait t with synthetic trait t), the best |r| over the first three
+|r| of true trait t with synthetic trait t, the best |r| over the first three
 synthetic traits, the mean absolute deviation of the test heritability of synthetic traits 1-3
 from the true traits, and the mean test heritability of synthetic traits 4-5.
 

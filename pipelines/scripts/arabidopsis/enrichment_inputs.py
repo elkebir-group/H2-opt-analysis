@@ -1,7 +1,7 @@
 """Peak lists for MetaboAnalyst functional analysis (mummichog, web tool, default settings), one per
 H2-opt trait of one Arabidopsis treatment and fold.
 
-As the paper: the MS1 coefficient of each m/z and retention-time bin (coefficients.py) times the
+The MS1 coefficient of each m/z and retention-time bin (coefficients.py) times the
 standard deviation of the intensity of each precise mass in the bin (precise_masses.py); the
 top-ranked precise masses by the absolute product, with their mean retention time. Writes
 <out-dir>/trait<k>.txt (header "m.z" "rt", space separated, best first) for traits 1..n.

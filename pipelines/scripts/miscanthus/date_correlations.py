@@ -1,7 +1,7 @@
 """Pearson correlations of the Miscanthus synthetic traits between dates.
 
 The synthetic traits are trait 1 of one method (one file per date: folds x kept plants x traits),
-on all kept plants (training and test plants, as in the paper). Each correlation is computed per
+on all kept plants (training and test plants). Each correlation is computed per
 plant and between half-sib family means, in each fold (the model of the fold). Writes an .npz
 (dates; plant and family: dates x dates x folds) and prints the median |r| over the folds of the
 family means of the first five dates.

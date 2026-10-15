@@ -41,7 +41,7 @@ def load():
 
 
 def folds(genotypes, seed=0):
-    """Fold (0-9) of each plant; all plants of a genotype share a fold. The paper used seed 0."""
+    """Fold (0-9) of each plant; all plants of a genotype share a fold."""
     return per_group(genotypes, lambda c: np.random.RandomState(seed).randint(N_FOLDS, size=c))
 
 

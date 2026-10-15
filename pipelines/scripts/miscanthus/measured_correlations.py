@@ -1,10 +1,10 @@
 """Pearson correlations of the Miscanthus synthetic traits with the measured traits.
 
-The measured traits (MEASURED_TRAITS) are, for Central Japan, the 16 traits of the paper from the
+The measured traits (MEASURED_TRAITS) are, for Central Japan, 16 measured traits from the
 2020 columns of its plant data table; for South Japan, the 8 of these that its plant data table
 also has (no biomass, culm or height columns). Dates are converted to days. The synthetic traits
 are trait 1 of one method (one file per date: folds x kept plants x traits), on all kept plants
-(training and test plants, as in the paper). For each measured trait, only the kept plants with
+(training and test plants). For each measured trait, only the kept plants with
 a value are used. Each correlation is computed per plant and between half-sib family means (over
 these plants), in each fold. Writes an .npz (traits; plants: the plants with a value per trait;
 dates; plant and family: traits x dates x folds) and prints the median |r| over the folds of the

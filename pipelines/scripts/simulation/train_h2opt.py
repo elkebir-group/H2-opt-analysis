@@ -1,7 +1,7 @@
 """Train linear H2-opt on one simulation instance.
 
 One linear model per trait, normal input noise of the standard deviation chosen by
-choose_noise.py, and no clipping (the paper's simulation setting).
+choose_noise.py, and no clipping.
 Trained with h2opt.train's default optimizer (Adam) on the training plants (outside fold 0 of
 simulation.line_folds, the test plants).
 Writes the model (.pt) and the traits of all plants, uncorrelated on the training plants (.npz,

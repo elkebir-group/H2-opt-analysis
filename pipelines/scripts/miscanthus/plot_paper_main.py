@@ -3,7 +3,7 @@
 a: example input images (crop surface model) of one plant on three dates as a stack, with the
 number of kept plants n and of half-sib families c. b: the narrow-sense test heritability of
 trait 1 per date after the nearest-neighbor field adjustment (4 x Henderson3, clipped to [0, 1]
-per fold; the neighbor-adjusted run, evaluate_heritability_spatial.py): the median over the folds
+per fold; evaluate_heritability_spatial.py): the median over the folds
 and a band from the 25th to the 75th percentile, H2-opt with a CNN (the hybrid) and with linear
 functions against the baselines; a dotted line before the date of canopy closure. c: the median
 over the folds of |r| between half-sib family means of H2-opt traits of the first five dates

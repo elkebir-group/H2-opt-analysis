@@ -1,4 +1,4 @@
-"""H2-opt analysis pipeline. Run it through pipelines/run.sh; see pipelines/README.md."""
+"""H2-opt analysis pipeline. Run it through pipelines/run.sh; see the root README.md."""
 
 import os
 from pathlib import Path

@@ -22,8 +22,8 @@ N_FOLDS = 5
 INPUTS = data('miscPlant', 'inputs')
 _TABLES = {'central': 'Miscanthus_C.tsv', 'south': 'Miscanthus_S.tsv'}
 _IMAGES = {'central': 'all.npz', 'south': 'south_all.npz'}
-# PLINK sets of the genotyped plants. The .fam beside each .bed was overwritten with a subset by
-# the original GWAS code; the full sample list of the .bed is the _copy.fam (GENOTYPE_SAMPLES).
+# PLINK sets of the genotyped plants. The .fam beside each .bed lists a subset of the samples;
+# the full sample list of the .bed is the _copy.fam (GENOTYPE_SAMPLES).
 GENOTYPES = {'central': data('miscPlant', 'SNP', 'bed', 'MsiC_annotated'),
              'south': data('miscPlant', 'SNP', 'bed', 'MsiS_annotated')}
 GENOTYPE_SAMPLES = {p: GENOTYPES[p].with_name(GENOTYPES[p].name + '_copy.fam')
@@ -54,7 +54,7 @@ def design(population):
     Returns a namespace: keep, (3900,) boolean, the plants used, to index the images with;
     families, plots, environment and fold of the kept plants. environment is (n, 2): rep and
     field column (plot number % 130), the fixed effects of the heritability (Henderson3, with
-    families as groups and plots as subgroups). fold (0-4) is the paper's fold of each plant:
+    families as groups and plots as subgroups). fold (0-4) is one of 5 random folds of plants:
     np.random.seed(1), randint(5) over all 3,900 plants."""
     table = np.loadtxt(plant_table(population), delimiter='\t', dtype=str, skiprows=1)
     family, plot, rep = np.char.strip(table[:, 7]), table[:, 2], table[:, 4]
@@ -98,9 +98,8 @@ def genotype_rows(population, fam):
     """Row in the .fam file fam of each kept plant (design order), -1 for a plant without
     genotypes. A sample ID is <plate well>_<population>_<plot>_<plant>, e.g. B2FP10D_MsiC_213_5.
 
-    A plant with two samples (9 in Central, 1 in South) gets -1: the two samples of each such
-    plant agree at 77-92% of SNPs, no more than two random plants (85%), so the label of at least
-    one of them is wrong and neither can be trusted."""
+    A plant with two samples gets -1 when its two samples agree at no more SNPs than two random
+    plants do: the label of at least one of them is wrong, and neither can be trusted."""
     table = np.loadtxt(plant_table(population), delimiter='\t', dtype=str, skiprows=1)
     plants = np.char.add(np.char.add(np.char.strip(table[:, 2]), '_'), np.char.strip(table[:, 3]))
     plants = plants[design(population).keep]
@@ -116,10 +115,9 @@ def clip_artifacts(images):
     99% quantiles over the plants and pixels.
 
     images: (n, channels, height, width). The crop surface model has reconstruction errors:
-    patches of heights of 10 m or more, or down to -50 m (e.g. South 06/18, 07/10, 10/05). After
-    scaling they are 10 to 20 times the largest regular value, and the CNN extrapolates on them.
-    The fence keeps every reflectance value but one (South 10/05) and clips 9,222 crop surface
-    model pixels in Central and 24,987 in South, of all dates."""
+    patches of heights of 10 m or more, or down to -50 m. After scaling they are 10 to 20 times
+    the largest regular value, and a CNN extrapolates on them. The fence clips these pixels and
+    leaves the reflectance channels essentially unchanged."""
     images = np.asarray(images, dtype=np.float32)
     low, high = np.quantile(images, [0.01, 0.99], axis=(0, 2, 3), keepdims=True)
     return np.clip(images, low - 2 * (high - low), high + 2 * (high - low))

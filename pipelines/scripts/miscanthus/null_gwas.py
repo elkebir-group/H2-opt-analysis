@@ -2,7 +2,7 @@
 
 The plants are permuted within reps, as the sorghum and Arabidopsis nulls (h2opt_analysis.nulls):
 a plant takes the family and the genotypes of another plant of its rep; its plot, rep and column
-stay with its images. On the permuted families, as the neighbor-adjusted run: hybrid H2-opt on
+stay with its images. On the permuted families: hybrid H2-opt on
 fold 0 as train_hybrid.py (the linear noise that choose_noise.py chose for fold 0 and the CNN level
 of choose_cnn_level.py; no new selection), trained on the heritability after the nearest-neighbor
 field adjustment (--neighbor-width), Henderson3 heritability scored after it (slope fitted on each

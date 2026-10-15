@@ -14,8 +14,7 @@
 #                           deletes) existing outputs. Force a rerun with
 #                           --forcerun <rule> and one target.
 #   --keep-going            One failed job does not stop the independent ones.
-#   --resources gpu=N       Small GPU jobs share the GPU, N at a time (default 8,
-#                           which scales about linearly on one RTX 3080).
+#   --resources gpu=N       Small GPU jobs share the GPU, N at a time (default 8).
 # --cores defaults to the machine's cores minus 2, for headroom. Each job's
 # OpenBLAS/OpenMP/MKL threads are capped at its rule's `threads`, so the jobs
 # together never use more than --cores.

@@ -1,6 +1,6 @@
 """The Miscanthus GWAS controls of the paper (miscNull), in the style of sorNull: H2-opt (CNN)
 trait 1 of the 5 folds on every date, its cross-fitted GWAS and the permutation null, after the
-nearest-neighbor field adjustment (the adjusted run). One row per population.
+nearest-neighbor field adjustment. One row per population.
 
 a: per date, the narrow-sense test heritability of the 5 folds (4 x Henderson3, not clipped; a box
 in the color of H2-opt (CNN) with a point per fold); at the right, the permutation null
