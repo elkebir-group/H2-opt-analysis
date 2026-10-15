@@ -9,7 +9,7 @@ description = "Analyses and figures of the H2-opt paper"
 readme = "README.md"
 # snakemake>=8 needs 3.11+; torch 2.4.1 has no wheels for 3.13.
 requires-python = ">=3.11,<3.13"
-license = { text = "MIT" }
+license = { text = "BSD-3-Clause" }
 authors = [
     { name = "El-Kebir Lab", email = "melkebir@illinois.edu" },
 ]
