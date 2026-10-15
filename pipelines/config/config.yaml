@@ -103,7 +103,7 @@ image_simulation:
   methods: [h2opt, h2opt_hybrid, pca, genetic_pca, pch, max_features]
   traits: 5
   # As in the spectral simulation; linear models take the flattened pixels. The noise levels are
-  # fixed for every instance, not selected; they were set by comparison with the true traits.
+  # fixed for every instance, not selected.
   h2opt:
     noise_level: 17.7828
     steps: 10000
