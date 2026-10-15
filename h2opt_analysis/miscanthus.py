@@ -19,25 +19,19 @@ POPULATIONS = ('central', 'south')
 DATES = ('05/06', '05/22', '06/08', '06/18', '07/02', '07/10', '07/24', '08/08', '08/18',
          '09/04', '09/19', '10/05', '11/06', '11/28')
 N_FOLDS = 5
-INPUTS = data('miscPlant', 'inputs')
-_TABLES = {'central': 'Miscanthus_C.tsv', 'south': 'Miscanthus_S.tsv'}
-_IMAGES = {'central': 'all.npz', 'south': 'south_all.npz'}
-# PLINK sets of the genotyped plants. The .fam beside each .bed lists a subset of the samples;
-# the full sample list of the .bed is the _copy.fam (GENOTYPE_SAMPLES).
-GENOTYPES = {'central': data('miscPlant', 'SNP', 'bed', 'MsiC_annotated'),
-             'south': data('miscPlant', 'SNP', 'bed', 'MsiS_annotated')}
-GENOTYPE_SAMPLES = {p: GENOTYPES[p].with_name(GENOTYPES[p].name + '_copy.fam')
-                    for p in POPULATIONS}
+# PLINK sets of the genotyped plants of each population, and their sample lists.
+GENOTYPES = {p: data('miscanthus', p, 'snps') for p in POPULATIONS}
+GENOTYPE_SAMPLES = {p: data('miscanthus', p, 'snps.fam') for p in POPULATIONS}
 
 
 def plant_table(population):
     """Path of the plant table (one row per plant, in the order of the images)."""
-    return INPUTS / 'data_process' / _TABLES[population]
+    return data('miscanthus', population, 'plants.tsv')
 
 
 def image_archive(population):
     """Path of the images as received: (3900, 14, 6, 63, 63) float64, compressed .npz."""
-    return INPUTS / 'MSI_combine' / _IMAGES[population]
+    return data('miscanthus', population, 'images.npz')
 
 
 def half_sib(family):

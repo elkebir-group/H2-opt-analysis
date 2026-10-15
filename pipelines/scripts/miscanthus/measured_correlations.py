@@ -21,9 +21,10 @@ import numpy as np
 from date_correlations import family_means, load_traits, pearson
 
 from h2opt_analysis import miscanthus
+from h2opt_analysis.paths import data
 
-TABLES = {population: miscanthus.INPUTS / 'data_process' / f'Msi_{p}_Japan_2019-URB-Plant_Data.tsv'
-          for population, p in (('central', 'C'), ('south', 'S'))}
+TABLES = {population: data('miscanthus', population, 'measured_traits.tsv')
+          for population in miscanthus.POPULATIONS}
 # Per population: name in the figures -> column of the plant data table (Central: the first column
 # of that name is 2020).
 MEASURED_TRAITS = {

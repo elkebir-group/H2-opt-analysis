@@ -5,7 +5,7 @@ run, and --out-dirs names one directory per instance. Writes, per instance, spec
 spectra, names: line of each plant, lines: .fam row of each line, test: test plants, dimensions:
 latent dimension of each trait) and truth.npz (traits: the true traits).
 
-    python pipelines/scripts/simulation/encode.py --autoencoder autoencode_2.pt \\
+    python pipelines/scripts/simulation/encode.py --autoencoder autoencoder.pt \\
         --reference X.npz --out-dirs instance0 ... instance9
 """
 

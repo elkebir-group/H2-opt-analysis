@@ -14,11 +14,10 @@ from .paths import data
 
 N_FOLDS = 10
 FIRST_WAVELENGTH = 350  # nm; column j of X is wavelength 350 + j nm
-PROCESSED = data('plant', 'processed', 'sor')
-SPECTRA = PROCESSED / 'X.npz'  # plants x wavelengths
-GENOTYPES = data('software', 'data', 'WEST_original')  # PLINK set of the 836 sequenced lines
+SPECTRA = data('sorghum', 'spectra.npz')  # plants x wavelengths
+GENOTYPES = data('sorghum', 'snps')  # PLINK set of the 836 sequenced lines
 # Genotype means of the measured traits (Ferguson et al. 2021, Supplemental Table S12).
-MEASURED_TRAITS = data('plant', 'processed', 'traits', 'SorgumTraits.tsv')
+MEASURED_TRAITS = data('sorghum', 'measured_traits.tsv')
 
 
 def band(X, low, high):
@@ -35,8 +34,8 @@ def ndvi(X):
 def load():
     """Measurements X, genotype labels and environment (field set) as an (n, 1) array."""
     X = load_npz(SPECTRA)
-    genotypes = load_npz(PROCESSED / 'names.npz')
-    environment = load_npz(PROCESSED / 'set1.npz').reshape((-1, 1))
+    genotypes = load_npz(data('sorghum', 'genotypes.npz'))
+    environment = load_npz(data('sorghum', 'field_sets.npz')).reshape((-1, 1))
     return X, genotypes, environment
 
 
@@ -54,11 +53,10 @@ def load_traits(path):
 def line_accessions():
     """Accessions (genotype labels of the plants) of each line of the .fam file, in .fam order.
 
-    From nameKey_corrected.tsv, which follows Supplemental Table S1 of Ferguson et al. (2021): 8
+    From genotype_names.tsv, which follows Supplemental Table S1 of Ferguson et al. (2021): 8
     sequenced lines stand for several field accessions each (2-7, of the same landrace), all
     assigned the line's genotype."""
-    key = np.loadtxt(data('software', 'data', 'nameKey_corrected.tsv'), dtype=str, delimiter='\t',
-                     skiprows=1)
+    key = np.loadtxt(data('sorghum', 'genotype_names.tsv'), dtype=str, delimiter='\t', skiprows=1)
     accessions = {}
     for fam_id, _, name in key:
         accessions.setdefault(fam_id, []).append(name.replace(' ', ''))

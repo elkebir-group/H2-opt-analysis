@@ -13,7 +13,7 @@ as in the paper (drawn by figures.gwas_fold_rows). Saves --out (.pdf) and a .png
 and prints the loci.
 
     python pipelines/scripts/sorghum/plot_paper_gwas.py --gwas h2opt_fold{0..9}.npz \\
-        --crossfit h2opt_crossfit_trait{1..10}.npz --genotypes WEST_original --r2 0.5 --kb 250 \\
+        --crossfit h2opt_crossfit_trait{1..10}.npz --genotypes snps --r2 0.5 --kb 250 \\
         --out figures/paper/sorGWAS.pdf
 """
 

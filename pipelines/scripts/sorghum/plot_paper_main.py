@@ -16,7 +16,7 @@ of each panel.
     python pipelines/scripts/sorghum/plot_paper_main.py --heritability heritability_h2opt.npz \\
         --coefficients pch_coefficients/fold0.npz --fold-traits h2opt/fold0.npz \\
         --traits-files h2opt/fold0.npz ... h2opt/fold9.npz \\
-        --measured-traits SorgumTraits.tsv --ndvi ndvi.npz \\
+        --measured-traits measured_traits.tsv --ndvi ndvi.npz \\
         --out figures/paper/sorFig.pdf --traits 4
 """
 

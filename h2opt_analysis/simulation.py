@@ -35,7 +35,7 @@ N_INSTANCES = 10
 N_TRAITS = 3
 N_QTNS = 100  # per trait
 N_LATENT = 5
-PAPER_AUTOENCODER = data('plant', 'models', 'autoencode_2.pt')  # pickled autoencoder
+PAPER_AUTOENCODER = data('simulation', 'autoencoder.pt')  # pickled autoencoder
 
 
 def make_cnn(X):
@@ -56,12 +56,12 @@ def correlations(truth, Y):
 
 def folder(instance):
     """Raw simplePHENOTYPES output of an instance."""
-    return data('plant', 'simulations', 'simPhen', 'seperate100SNP', str(instance))
+    return data('simulation', f'instance{instance}')
 
 
 def truth_file(instance):
-    """simplePHENOTYPES table of the plants of an instance (the folders also hold other runs)."""
-    return folder(instance) / 'Simulated_Data_2_Reps_Herit_0.6_0.4_0.2.txt'
+    """simplePHENOTYPES table of the plants of an instance."""
+    return folder(instance) / 'traits.txt'
 
 
 def load_truth(instance):
@@ -72,8 +72,8 @@ def load_truth(instance):
 
 def qtns(instance):
     """Chromosome and position of the QTNs, (3, 100, 2): trait t has the QTNs in rows
-    100t..100t+99 of Additive_Selected_QTNs.txt (simplePHENOTYPES keeps the effect order)."""
-    table = np.loadtxt(folder(instance) / 'Additive_Selected_QTNs.txt', dtype=str, delimiter='\t')
+    100t..100t+99 of qtns.txt (simplePHENOTYPES keeps the effect order)."""
+    table = np.loadtxt(folder(instance) / 'qtns.txt', dtype=str, delimiter='\t')
     header, rows = list(table[0]), table[1:]
     located = rows[:, [header.index('chr'), header.index('pos')]].astype(np.int64)
     return located.reshape(N_TRAITS, N_QTNS, 2)
@@ -83,9 +83,9 @@ def line_index(instance, names):
     """Row of each plant's line in the .fam of GENOTYPES.
 
     The genotype table given to simplePHENOTYPES has its lines in .fam order; 105 of them carry a
-    synonym of the .fam ID (nameKey_corrected.tsv), so lines are matched by position, not name.
+    synonym of the .fam ID (sorghum genotype_names.tsv), so lines are matched by position, not name.
     """
-    path = data('plant', 'SNP', 'simulation', 'specialSNP', f'random300SNP_{instance}.csv')
+    path = folder(instance) / 'random_snps.csv'
     with open(path) as f:
         columns = np.array(f.readline().strip().split(',')[5:])
     order = {name: i for i, name in enumerate(columns)}

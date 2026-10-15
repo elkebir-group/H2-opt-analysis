@@ -1,8 +1,9 @@
 # Config of the H2-opt analysis pipeline. Relative paths resolve against the
 # repository root, which is also the working directory of every job.
 
-# Raw data: the lab's H2-opt data directory (plant/, miscPlant/, metab/,
-# software/, ...). null means data/raw, a symlink to it. A path here is also
+# Raw data: the H2-opt data directory of the Illinois Data Bank deposit
+# (sorghum/, simulation/, miscanthus/, arabidopsis/). null means data/raw, a
+# symlink to it. A path here is also
 # exported as $H2OPT_DATA, which h2opt_analysis.paths reads.
 raw_root: null
 

@@ -1,7 +1,7 @@
 """Arabidopsis LC-MS metabolomics (Fernie lab): 1,112 samples of 280 accessions, two treatments.
 
 Each sample is an LC-MS run binned by integer m/z and 30 s of retention time, for MS1 and MS2
-(processed/imageMetab.npz: samples x 2 MS levels x 2,000 m/z x 60 bins, summed intensities). The
+(arabidopsis/spectra.npz: samples x 2 MS levels x 2,000 m/z x 60 bins, summed intensities). The
 treatments are normal growth ('0d') and 6 days of darkness ('6d'), each analyzed on its own; every
 accession has one sample per year in a treatment, and the year is the environment.
 
@@ -17,15 +17,13 @@ from .paths import data
 
 TREATMENTS = ('0d', '6d')
 N_FOLDS = 5
-PROCESSED = data('metab', 'metabData_Fernie', 'processed')
 # The crop: m/z 0-1499 and retention times 0-20 min.
 N_MZ, N_RT = 1500, 40
 # Labels of one accession: Col-0 sown as nine labeled lines.
 POOLED = {f'6909-{k}': '6909' for k in range(1, 10)}
-# PLINK set of the genotyped accessions (call method 75, TAIR8). The .fam beside it lists a subset
-# of the samples; the full sample list of the .bed is the _copy.fam.
-GENOTYPES = data('metab', 'metabData_Alex', 'call_method_75', 'call_method_75_TAIR8')
-GENOTYPE_SAMPLES = GENOTYPES.with_name(GENOTYPES.name + '_copy.fam')
+# PLINK set of the genotyped accessions (250k SNP panel, call method 75, TAIR8) and its samples.
+GENOTYPES = data('arabidopsis', 'snps')
+GENOTYPE_SAMPLES = data('arabidopsis', 'snps.fam')
 
 
 def precise_masses(treatment):
@@ -33,21 +31,21 @@ def precise_masses(treatment):
     10001 steps) float64, the steps splitting each integer m/z bin into m/z - 0.5 + step / 10000;
     the 4 sums over the treatment's samples are of the intensity, the retention time (s) times the
     intensity, (unused), and the squared intensity."""
-    return PROCESSED / f'massIntensitiesPrecise2_{treatment}.npz'
+    return data('arabidopsis', f'precise_masses_{treatment}.npz')
 
 
 def labels():
-    """Accession (pooled), treatment and year of every sample, in the order of imageMetab.npz."""
-    names = load_npz(PROCESSED / 'names.npz').astype(str)
+    """Accession (pooled), treatment and year of every sample, in the order of spectra.npz."""
+    names = load_npz(data('arabidopsis', 'accessions.npz')).astype(str)
     accessions = np.array([POOLED.get(name, name) for name in names])
-    return accessions, load_npz(PROCESSED / 'env.npz').astype(str), \
-        load_npz(PROCESSED / 'year.npz').astype(str)
+    return accessions, load_npz(data('arabidopsis', 'environments.npz')).astype(str), \
+        load_npz(data('arabidopsis', 'years.npz')).astype(str)
 
 
 def features():
     """Measurements of all samples, (1112, 2 * N_MZ * N_RT): the cropped intensities over their
     largest value, flattened in the order (MS level, m/z, retention time)."""
-    X = load_npz(PROCESSED / 'imageMetab.npz')[:, :, :N_MZ, :N_RT]
+    X = load_npz(data('arabidopsis', 'spectra.npz'))[:, :, :N_MZ, :N_RT]
     return (X / X.max()).reshape((len(X), -1))
 
 

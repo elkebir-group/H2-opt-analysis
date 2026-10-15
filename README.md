@@ -45,46 +45,33 @@ script by hand). The pipeline reads these files:
 
 ```
 data/raw/
-├── plant/                                    # sorghum
-│   ├── processed/
-│   │   ├── sor/
-│   │   │   ├── X.npz                         # hyperspectral measurements (plants x 2,151 wavelengths)
-│   │   │   ├── names.npz                     # genotype of each plant
-│   │   │   └── set1.npz                      # field set of each plant
-│   │   └── traits/SorgumTraits.tsv           # measured traits
-│   ├── models/autoencode_2.pt                # autoencoder of the simulations
-│   ├── simulations/simPhen/seperate100SNP/
-│   │   └── 0/ … 9/                           # simplePHENOTYPES run of each simulation instance
-│   │       ├── Simulated_Data_2_Reps_Herit_0.6_0.4_0.2.txt
-│   │       └── Additive_Selected_QTNs.txt
-│   └── SNP/simulation/specialSNP/
-│       └── random300SNP_0.csv … random300SNP_9.csv
-├── software/data/                            # sorghum genotypes
-│   ├── WEST_original.bed, .bim, .fam         # PLINK set of the 836 sequenced lines
-│   └── nameKey_corrected.tsv                 # genotype names to PLINK sample IDs
-├── miscPlant/                                # Miscanthus sinensis
-│   ├── inputs/
-│   │   ├── MSI_combine/all.npz               # multispectral images, Central population
-│   │   ├── MSI_combine/south_all.npz         # multispectral images, South population
-│   │   └── data_process/
-│   │       ├── Miscanthus_C.tsv, Miscanthus_S.tsv   # plants, families and field layout
-│   │       └── Msi_C_Japan_2019-URB-Plant_Data.tsv, Msi_S_Japan_2019-URB-Plant_Data.tsv
-│   │                                                 # measured traits
-│   └── SNP/bed/
-│       ├── MsiC_annotated.bed, .bim, .fam, MsiC_annotated_copy.fam
-│       └── MsiS_annotated.bed, .bim, .fam, MsiS_annotated_copy.fam
-└── metab/                                    # Arabidopsis thaliana
-    ├── metabData_Fernie/processed/
-    │   ├── imageMetab.npz                    # mass spectrometry, binned by m/z and retention time
-    │   ├── massIntensitiesPrecise2_0d.npz, massIntensitiesPrecise2_6d.npz
-    │   │                                     # precise masses (pathway enrichment)
-    │   └── names.npz, env.npz, year.npz      # accession, environment and year of each sample
-    └── metabData_Alex/call_method_75/
-        └── call_method_75_TAIR8.bed, .bim, .fam, call_method_75_TAIR8_copy.fam
-                                              # 250k SNP panel
+├── sorghum/
+│   ├── spectra.npz              # hyperspectral measurements (plants x 2,151 wavelengths)
+│   ├── genotypes.npz            # genotype of each plant
+│   ├── field_sets.npz           # field set of each plant
+│   ├── measured_traits.tsv      # genotype means of the measured traits
+│   ├── genotype_names.tsv       # genotype names of the PLINK samples
+│   └── snps.bed, .bim, .fam     # PLINK set of the 836 sequenced lines
+├── simulation/
+│   ├── autoencoder.pt           # autoencoder trained on the sorghum spectra
+│   └── instance0/ … instance9/
+│       ├── traits.txt           # simplePHENOTYPES traits of the simulated plants
+│       ├── qtns.txt             # causal SNPs of each trait
+│       └── random_snps.csv      # genotypes given to simplePHENOTYPES (lines in .fam order)
+├── miscanthus/
+│   └── central/, south/
+│       ├── images.npz           # multispectral images (plants x dates x channels x 63 x 63)
+│       ├── plants.tsv           # half-sibling family and field position of each plant
+│       ├── measured_traits.tsv  # measured traits of each plant
+│       └── snps.bed, .bim, .fam # PLINK set of the genotyped plants
+└── arabidopsis/
+    ├── spectra.npz              # mass spectrometry, binned by m/z and retention time
+    ├── precise_masses_0d.npz, precise_masses_6d.npz   # precise masses (pathway enrichment)
+    ├── accessions.npz, environments.npz, years.npz     # labels of each sample
+    └── snps.bed, .bim, .fam     # 250k SNP panel (call method 75, TAIR8 positions)
 ```
 
-The `_copy.fam` files list all samples of each `.bed`. The pipeline downloads the MetaboAnalyst
+The pipeline downloads the MetaboAnalyst
 pathway library (`arabi_download_pathway_library`) and clones Helios itself. Everything the
 pipeline writes goes to `data/derived/`. Nothing under `data/` is committed.
 
@@ -209,8 +196,7 @@ outputs are under `data/derived/miscanthus_adjusted/{population}/` (target
 
 The GWAS and the null are separate targets, `miscanthus_adjusted_gwas_all` and
 `miscanthus_adjusted_null_all`, run only on request. The genotypes are the PLINK sets
-`miscPlant/SNP/bed/Msi{C,S}_annotated` with their full sample lists (`_copy.fam`; the `.fam` beside
-each `.bed` lists a subset of the samples, and GEMMA reads shifted genotypes with it).
+`miscanthus/{central,south}/snps`.
 Plants with two conflicting samples are left out.
 
 | Rule | Output | Content |
@@ -267,8 +253,7 @@ the config (`arabidopsis.pathways`). The peak lists alone are the target
 | `arabi_pathway_enrichment` | `enrichment/trait{k}_pathways.csv` | MetaboAnalyst's pathway table of one peak list: the first 500 peaks are the significant peaks, all peaks the reference |
 
 The GWAS is a separate target, `arabidopsis_gwas_all`, run only on request. The genotypes are the
-250k SNP panel `metab/metabData_Alex/call_method_75/call_method_75_TAIR8` with its full sample list
-(`_copy.fam`; the `.fam` beside the `.bed` is a subset, as for Miscanthus).
+250k SNP panel `arabidopsis/snps` (call method 75, TAIR8 positions).
 
 | Rule | Output | Content |
 |---|---|---|

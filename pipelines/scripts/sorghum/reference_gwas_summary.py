@@ -8,7 +8,7 @@ largest -log10 p within --window bp of the locus. Also the genome-wide Bonferron
 prints it.
 
     python pipelines/scripts/sorghum/reference_gwas_summary.py --h2opt h2opt_fold*.npz \\
-        --genotypes WEST_original --r2 0.5 --kb 250 \\
+        --genotypes snps --r2 0.5 --kb 250 \\
         --reference reference/ndvi.npz reference/height_joint_model.npz \\
         --window 250000 --out reference/summary.tsv
 """
