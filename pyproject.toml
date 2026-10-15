@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "h2opt-analysis"
-version = "0.1.0"
+version = "1.0.0"
 description = "Analyses and figures of the H2-opt paper"
 readme = "README.md"
 # snakemake>=8 needs 3.11+; torch 2.4.1 has no wheels for 3.13.
