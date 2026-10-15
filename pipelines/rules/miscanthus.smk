@@ -235,7 +235,8 @@ rule misc_plot_paper_gwas:
 
 
 # miscNull: the adjusted run's GWAS of H2-opt (CNN) trait 1 of all folds and dates against its
-# cross-fit and the permutation null (largest -log10 p, lambda GC, QQ plot), in the style of sorNull.
+# cross-fit and the permutation null (test heritability, largest -log10 p, QQ plot, lambda GC), in the
+# style of sorNull.
 rule misc_plot_paper_null:
     input:
         **{f"{kind}{p}": [str(MISC_ADJ / p / "gwas" / f"{prefix}date{d}.npz") for d in MISC_DATES]
@@ -244,6 +245,7 @@ rule misc_plot_paper_null:
         **{f"null_{p}": [str(MISC_ADJ / p / "null" / f"perm{k}.npz")
                          for k in range(MISC["gwas"]["permutations"])]
            for p in miscanthus.POPULATIONS},
+        **{f"heritability_{p}": str(MISC_ADJ / p / "heritability.npz") for p in miscanthus.POPULATIONS},
     output:
         str(MISC_PAPER / "miscNull.pdf"),
     log:
@@ -254,6 +256,8 @@ rule misc_plot_paper_null:
         " --gwas-central {input.gwas_central} --crossfit-central {input.crossfit_central}"
         " --null-central {input.null_central} --gwas-south {input.gwas_south}"
         " --crossfit-south {input.crossfit_south} --null-south {input.null_south}"
+        " --heritability-central {input.heritability_central}"
+        " --heritability-south {input.heritability_south}"
         " --null-date {MISC[selection_date]} --out {output} > {log} 2>&1"
 
 

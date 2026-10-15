@@ -1,19 +1,21 @@
-"""The Miscanthus GWAS controls of the paper (miscNull), in the style of sorNull: the GWAS of H2-opt
-(CNN) trait 1 of the 5 folds on every date, its cross-fitted GWAS and the permutation null, after
-the nearest-neighbor field adjustment (the adjusted run). One row per population.
+"""The Miscanthus GWAS controls of the paper (miscNull), in the style of sorNull: H2-opt (CNN)
+trait 1 of the 5 folds on every date, its cross-fitted GWAS and the permutation null, after the
+nearest-neighbor field adjustment (the adjusted run). One row per population.
 
-a: per date, the largest -log10 p of the 5 folds (a box in the color of H2-opt (CNN) with a point
-per fold) and of the cross-fit (black diamond); at the right, the permutation null (null_gwas.py on
-the selection date, fold 0; a gray box with a point per permutation); the Bonferroni line
-0.05 / SNPs. b: the same for the genomic-control lambda, with a line at 1. c: the QQ plot of the
-date with significant SNPs in the most folds (the first such date on a tie): each fold, the
-cross-fit and each permutation. Drawn at the text width of the paper (6.5 in), saved as .pdf and,
+a: per date, the narrow-sense test heritability of the 5 folds (4 x Henderson3, not clipped; a box
+in the color of H2-opt (CNN) with a point per fold); at the right, the permutation null
+(null_gwas.py on the selection date, fold 0; a gray box with a point per permutation); a line at 0.
+b: the same for the largest -log10 p, with the cross-fit (black diamond) and the Bonferroni line
+0.05 / SNPs. c: the QQ plot of the date with significant SNPs in the most folds (the first such
+date on a tie): each fold, the cross-fit and each permutation. d: as b for the genomic-control
+lambda, with a line at 1. Drawn at the text width of the paper (6.5 in), saved as .pdf and,
 beside it, .png; the numbers are printed.
 
     python pipelines/scripts/miscanthus/plot_paper_null.py \\
         --gwas central/gwas/date0.npz ... central/gwas/date13.npz \\
         --crossfit central/gwas/crossfit_date0.npz ... --null central/null/perm*.npz \\
-        --gwas-south ... --crossfit-south ... --null-south ... --out figures/paper/miscNull.pdf
+        --heritability-central central/heritability.npz --gwas-south ... --crossfit-south ... \\
+        --null-south ... --heritability-south ... --out figures/paper/miscNull.pdf
 """
 
 import argparse
@@ -41,7 +43,9 @@ from h2opt_analysis.figures import (  # noqa: E402
     qq_real_vs_null,
 )
 
-FIG_SIZE = (6.5, 4.0)
+FIG_SIZE = (6.5, 4.4)
+# Narrow-sense heritability of half-sib families: 1 / (1/4) times the Henderson3 estimate.
+HALF_SIB = 4
 COLOR = COLORS['h2opt_hybrid']
 ROW_LABEL_SIZE = 7.5
 
@@ -84,6 +88,8 @@ def main():
                             help='gwas.py result of the cross-fitted trait of each date')
         parser.add_argument(f'--null-{population}', nargs='+', required=True,
                             help='null_gwas.py results')
+        parser.add_argument(f'--heritability-{population}', required=True,
+                            help='evaluate_heritability.py result (method h2opt_hybrid)')
     parser.add_argument('--null-date', type=int, required=True,
                         help='index into miscanthus.DATES of the permutation null')
     parser.add_argument('--out', required=True, help='.pdf; a .png is written beside it')
@@ -91,12 +97,16 @@ def main():
     null_label = f'null ({miscanthus.DATES[args.null_date]})'
 
     with plt.rc_context({**SIM_FIG_RC, **MATH_RC}):
-        fig, axes = plt.subplots(2, 3, figsize=FIG_SIZE,
-                                 gridspec_kw={'width_ratios': (2.1, 2.1, 1.1)})
+        fig, axes = plt.subplots(2, 4, figsize=FIG_SIZE,
+                                 gridspec_kw={'width_ratios': (2.1, 2.1, 1.2, 2.1)})
         for row, population in zip(axes, miscanthus.POPULATIONS, strict=True):
             folds = [np.load(p) for p in getattr(args, f'gwas_{population}')]
             crossfit = [np.load(p) for p in getattr(args, f'crossfit_{population}')]
             nulls = [np.load(p) for p in getattr(args, f'null_{population}')]
+            with np.load(getattr(args, f'heritability_{population}')) as f:
+                # folds x dates
+                h2 = HALF_SIB * f['test'][list(f['methods']).index('h2opt_hybrid')].T
+            null_h2 = HALF_SIB * np.array([float(n['h2_test'][0]) for n in nulls])
             n_snps = folds[0]['neg_log10_p'].shape[1]
             threshold = -np.log10(0.05 / n_snps)
             real_max = np.array([f['neg_log10_p'].max(axis=1) for f in folds]).T  # folds x dates
@@ -116,15 +126,19 @@ def main():
                   f'{real_lambda.min():.2f}-{real_lambda.max():.2f}, cross-fit '
                   f'{cross_lambda.min():.2f}-{cross_lambda.max():.2f}, null '
                   f'{null_lambda.min():.2f}-{null_lambda.max():.2f}; QQ date '
-                  f'{miscanthus.DATES[qq_date]}')
+                  f'{miscanthus.DATES[qq_date]}; test h2 on the null date: median of the folds '
+                  f'{np.median(h2[:, args.null_date]):.3f}, of the null {np.median(null_h2):.3f}')
 
-            a, b, c = row
-            boxes(a, real_max, cross_max, null_max, null_label)
-            a.axhline(threshold, color='black', linewidth=0.8, linestyle=':')
-            a.set_ylabel(r'largest $-\log_{10} p$')
-            boxes(b, real_lambda, cross_lambda, null_lambda, null_label)
-            b.axhline(1, color='0.3', linewidth=0.8, linestyle=':')
-            b.set_ylabel(r'$\lambda_\mathrm{GC}$')
+            a, b, c, d = row
+            boxes(a, h2, np.full(h2.shape[1], np.nan), null_h2, null_label)
+            a.axhline(0, color='0.3', linewidth=0.8, linestyle=':')
+            a.set_ylabel('test heritability')
+            boxes(b, real_max, cross_max, null_max, null_label)
+            b.axhline(threshold, color='black', linewidth=0.8, linestyle=':')
+            b.set_ylabel(r'largest $-\log_{10} p$')
+            boxes(d, real_lambda, cross_lambda, null_lambda, null_label)
+            d.axhline(1, color='0.3', linewidth=0.8, linestyle=':')
+            d.set_ylabel(r'$\lambda_\mathrm{GC}$')
             qq_real_vs_null(c, list(folds[qq_date]['neg_log10_p']),
                             [n['neg_log10_p'][0] for n in nulls],
                             crossfit[qq_date]['neg_log10_p'].ravel())
@@ -132,11 +146,11 @@ def main():
                 if line.get_color() == COLORS['h2opt']:
                     line.set_color(COLOR)
             c.set_ylabel(rf'observed $-\log_{{10}} p$ ({miscanthus.DATES[qq_date]})')
-            c.text(1.08, 0.5, population.capitalize(), transform=c.transAxes, rotation=-90,
+            d.text(1.04, 0.5, population.capitalize(), transform=d.transAxes, rotation=-90,
                    ha='left', va='center', fontsize=ROW_LABEL_SIZE, fontweight='bold')
-        for ax, text in zip(axes[0], 'abc', strict=True):
-            letter(ax, text, -0.22 if text != 'c' else -0.4)
-        for ax in axes[0, :2]:
+        for ax, text in zip(axes[0], 'abcd', strict=True):
+            letter(ax, text, -0.4 if text == 'c' else -0.25)
+        for ax in axes[0, [0, 1, 3]]:
             ax.set_xticklabels([])
         handles = [Line2D([], [], marker='s', color=COLOR, linestyle='', markersize=5),
                    Line2D([], [], marker='D', color=MARK_COLOR, markeredgecolor='white',
