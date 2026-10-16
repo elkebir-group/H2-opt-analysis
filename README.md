@@ -33,7 +33,7 @@ to use another binary.
 ## Data
 
 The raw data and the trained H2-opt models of all synthetic traits of the paper are deposited in
-the Illinois Data Bank: https://doi.org/10.13012/B2IDB-XXXXXXX_V1. Download `h2opt.tar`, unpack it
+the Illinois Data Bank: https://doi.org/10.13012/B2IDB-0166197_V1. Download `h2opt.tar`, unpack it
 and link its `data/` folder as `data/raw`:
 
 ```bash
